@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="version" content="20260924-responsive" />
+  <title>珍珍优质果菜</title>
+  <style>
+    /* ===== 管理端响应式 + 侧边栏收起 ===== */
+    .admin-hamburger {
+      display: none;
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 2000;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: #001529;
+      color: #fff;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    }
+    .admin-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 1500;
+    }
+    .app-layout.sidebar-collapsed .sidebar {
+      width: 0;
+      overflow: hidden;
+    }
+    .app-layout.sidebar-collapsed .sidebar * {
+      display: none;
+    }
+    .admin-toggle-btn {
+      position: fixed;
+      top: 12px;
+      left: 232px;
+      z-index: 2000;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      background: #001529;
+      color: #fff;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: left .2s;
+    }
+    .app-layout.sidebar-collapsed .admin-toggle-btn {
+      left: 12px;
+    }
+    @media (max-width: 768px) {
+      .admin-hamburger {
+        display: flex;
+      }
+      .admin-toggle-btn {
+        display: none !important;
+      }
+      .app-layout .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 1600;
+        width: 240px !important;
+        transform: translateX(-100%);
+        transition: transform .25s ease;
+        box-shadow: 2px 0 8px rgba(0,0,0,.2);
+      }
+      .app-layout.mobile-sidebar-open .sidebar {
+        transform: translateX(0);
+      }
+      .app-layout.mobile-sidebar-open .admin-overlay {
+        display: block;
+      }
+      .main-content {
+        padding: 60px 12px 12px !important;
+        min-width: 0;
+      }
+      .page-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 10px;
+      }
+      .stats-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+      }
+      .stat-card .value {
+        font-size: 22px !important;
+      }
+      .toolbar {
+        flex-wrap: wrap;
+      }
+      .toolbar input, .toolbar select {
+        width: 100% !important;
+      }
+      table {
+        font-size: 12px;
+      }
+      th, td {
+        padding: 8px 6px !important;
+      }
+      .modal {
+        width: 95vw !important;
+      }
+      .form-inline {
+        grid-template-columns: 1fr !important;
+      }
+      .action-btns {
+        flex-wrap: wrap;
+      }
+    }
+  </style>
+  <script>
+    (function() {
+      function initAdminSidebar() {
+        if (!location.pathname.startsWith('/admin')) return;
+        if (document.getElementById('admin-hamburger')) return;
+        var ham = document.createElement('button');
+        ham.id = 'admin-hamburger';
+        ham.className = 'admin-hamburger';
+        ham.innerHTML = '☰';
+        ham.style.display = 'none';
+        document.body.appendChild(ham);
+        var toggle = document.createElement('button');
+        toggle.className = 'admin-toggle-btn';
+        toggle.innerHTML = '◀';
+        toggle.style.display = 'none';
+        document.body.appendChild(toggle);
+        var overlay = document.createElement('div');
+        overlay.className = 'admin-overlay';
+        document.body.appendChild(overlay);
+        function refresh() {
+          var layout = document.querySelector('.app-layout');
+          if (!layout) return;
+          if (window.innerWidth <= 768) {
+            ham.style.display = 'flex';
+            toggle.style.display = 'none';
+            layout.classList.remove('sidebar-collapsed');
+          } else {
+            ham.style.display = 'none';
+            toggle.style.display = 'flex';
+            layout.classList.remove('mobile-sidebar-open');
+          }
+        }
+        ham.onclick = function() {
+          var l = document.querySelector('.app-layout');
+          if (l) l.classList.toggle('mobile-sidebar-open');
+        };
+        overlay.onclick = function() {
+          var l = document.querySelector('.app-layout');
+          if (l) l.classList.remove('mobile-sidebar-open');
+        };
+        toggle.onclick = function() {
+          var l = document.querySelector('.app-layout');
+          if (!l) return;
+          l.classList.toggle('sidebar-collapsed');
+          toggle.innerHTML = l.classList.contains('sidebar-collapsed') ? '▶' : '◀';
+        };
+        window.addEventListener('resize', refresh);
+        var obs = new MutationObserver(refresh);
+        obs.observe(document.body, { childList: true, subtree: true });
+        refresh();
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAdminSidebar);
+      } else {
+        initAdminSidebar();
+      }
+    })();
+  </script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+</html>

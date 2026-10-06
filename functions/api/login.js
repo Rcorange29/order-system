@@ -1,0 +1,21 @@
+import { verifyPassword, generateToken, json, cors, readBody } from './_utils'
+
+export async function onRequest(context) {
+  const { request, env } = context
+  if (request.method === 'OPTIONS') return cors()
+  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
+
+  const body = await readBody(request)
+  if (!body.username || !body.password) return json({ error: '账号和密码不能为空' }, 400)
+
+  const user = await env.DB.prepare('SELECT * FROM users WHERE username = ?').bind(body.username).first()
+  if (!user) return json({ error: '账号或密码错误' }, 401)
+
+  const valid = await verifyPassword(body.password, user.password_hash)
+  if (!valid) return json({ error: '账号或密码错误' }, 401)
+
+  const token = generateToken()
+  await env.DB.prepare('UPDATE users SET token = ? WHERE id = ?').bind(token, user.id).run()
+
+  return json({ token, username: user.username, phone: user.phone })
+}

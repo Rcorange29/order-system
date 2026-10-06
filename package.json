@@ -1,0 +1,23 @@
+{
+  "name": "order-system-cf",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3000",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "npm run build && wrangler pages deploy dist",
+    "db:init": "wrangler d1 execute order-db --file=migrations/schema.sql",
+    "db:seed": "wrangler d1 execute order-db --file=migrations/seed.sql"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.0",
+    "wrangler": "^3.78.0"
+  }
+}

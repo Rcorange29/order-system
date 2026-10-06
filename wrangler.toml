@@ -1,0 +1,8 @@
+name = "order-system"
+compatibility_date = "2024-09-01"
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "order-db"
+database_id = "6b2b33b7-1f20-46c8-bb53-2550972808e0"
