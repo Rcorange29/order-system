@@ -12,7 +12,7 @@ export async function onRequest(context) {
     const params = []
     if (categoryId) { sql += ' AND p.category_id = ?'; params.push(categoryId) }
     if (keyword) { sql += ' AND p.name LIKE ?'; params.push('%' + keyword + '%') }
-    sql += ' ORDER BY p.sort_order ASC, p.id DESC'
+    sql += ' ORDER BY p.is_active DESC, p.sort_order ASC, p.id DESC'
     const { results } = await env.DB.prepare(sql).bind(...params).all()
     const products = results.map(p => ({
       ...p,

@@ -182,6 +182,7 @@ export default function App() {
   const [onboardStep, setOnboardStep] = useState(0)
 
   const t = (key) => langPack[lang][key] || key
+  const rmb2hkd = (rmb) => (Number(rmb) * 1.08).toFixed(0)
   const pn = (pname) => {
     if (lang === 'zh_CN') return pname
     const m = productNameMap[pname]
@@ -968,7 +969,7 @@ export default function App() {
               </div>
             )}
             <div className="cart-footer">
-              <div className="cart-total">合计：<span>¥{cartTotal.toFixed(2)}</span></div>
+              <div className="cart-total">合计：<span>¥{cartTotal.toFixed(2)}</span> <small style={{fontSize:12,color:'#999',fontWeight:400}}>(≈HK${rmb2hkd(cartTotal)})</small></div>
               <button className="checkout-btn" disabled={cartCount === 0} onClick={openCheckout}>去结算</button>
             </div>
           </div>
@@ -1086,18 +1087,18 @@ export default function App() {
             <div style={{ marginBottom: 8, fontSize: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
                 <span style={{ color: '#666' }}>商品金额</span>
-                <span>¥{cartTotal.toFixed(2)}</span>
+                <span>¥{cartTotal.toFixed(2)} <small style={{color:'#999'}}>(≈HK${rmb2hkd(cartTotal)})</small></span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
                 <span style={{ color: '#666' }}>运费</span>
                 <span style={{ color: (deliveryType === 'delivery' || !stats?.reached) ? '#ff4444' : '#3cb043', fontWeight: 600 }}>
-                  {deliveryType === 'delivery' ? '¥30' : t('freeFee')}
+                  {deliveryType === 'delivery' ? 'HK$30' : t('freeFee')}
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0 4px', borderTop: '1px solid #eee', marginTop: 4 }}>
                 <span>共 {cartCount} 件</span>
                 <span style={{ color: '#ff4444', fontWeight: 'bold', fontSize: 18 }}>
-                  ¥{(cartTotal + (deliveryType === 'delivery' ? 30 : effectiveFee)).toFixed(2)}
+                  ¥{cartTotal.toFixed(2)} <small style={{fontSize:12,color:'#999',fontWeight:400}}>(≈HK${rmb2hkd(cartTotal)})</small>
                 </span>
               </div>
             </div>
