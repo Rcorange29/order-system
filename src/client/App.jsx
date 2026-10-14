@@ -179,11 +179,17 @@ export default function App() {
   const [showHelp, setShowHelp] = useState(false)
   const [showContact, setShowContact] = useState(false)
   const [lang, setLang] = useState(() => localStorage.getItem('lang') || 'zh_CN')
+  const [currency, setCurrency] = useState(() => localStorage.getItem('currency') || '')
+  const [exchangeRate, setExchangeRate] = useState(1.2)
   const [showOnboard, setShowOnboard] = useState(false)
   const [onboardStep, setOnboardStep] = useState(0)
 
   const t = (key) => langPack[lang][key] || key
-  const rmb2hkd = (rmb) => (Number(rmb) * 1.08).toFixed(0)
+  const fmt = (rmbPrice) => {
+    const n = Number(rmbPrice) || 0
+    if (currency === 'HKD') return 'HK$' + Math.round(n * exchangeRate)
+    return '¥' + n.toFixed(2)
+  }
   const pn = (pname) => {
     if (lang === 'zh_CN') return pname
     const m = productNameMap[pname]
@@ -203,12 +209,19 @@ export default function App() {
     let variants = []
     try { variants = p.variants ? JSON.parse(p.variants) : [] } catch(e) {}
     if (variants.length > 0) {
-      const prices = variants.map(v => Number(v.price))
+      const prices = variants.map(v => Number(v.price) * (currency === 'HKD' ? exchangeRate : 1))
       const min = Math.min(...prices)
       const max = Math.max(...prices)
-      return min === max ? min.toFixed(2) : `${min.toFixed(0)}~${max.toFixed(0)}`
+      const sym = currency === 'HKD' ? 'HK$' : '¥'
+      return sym + (min === max ? Math.round(min) : Math.round(min) + '~' + Math.round(max))
     }
-    return p.price.toFixed(2)
+    return fmt(p.price)
+  }
+  const variants_text = (p) => {
+    let variants = []
+    try { variants = p.variants ? JSON.parse(p.variants) : [] } catch(e) {}
+    if (variants.length > 0) return ''
+    return <small style={{fontSize:11,color:'#999',fontWeight:400}}>/{p.unit || '斤'}</small>
   }
   const hasVariants = (p) => {
     try { return p.variants && JSON.parse(p.variants).length > 0 } catch(e) { return false }
@@ -268,6 +281,8 @@ export default function App() {
   useEffect(() => {
     fetch(`${API}/products`).then(r => r.json()).then(setProducts)
     fetch(`${API}/categories`).then(r => r.json()).then(setCategories)
+    fetch(`${API}/settings`).then(r => r.json()).then(d => setExchangeRate(d.exchange_rate || 1.2)).catch(()=>{})
+    if (!localStorage.getItem('currency')) setShowOnboard(true)
   }, [])
 
   useEffect(() => {
@@ -571,7 +586,7 @@ export default function App() {
               <div className="info">
                 <div className="name">{pn(p.name)}</div>
                 <div className="bottom-row">
-                  <div className="price"><small>¥</small>{priceText(p)}</div>
+                  <div className="price">{priceText(p)}</div>
                   <button className="add-btn" onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>+</button>
                 </div>
               </div>
@@ -594,7 +609,7 @@ export default function App() {
               <span style={{ fontSize: 12, color: '#666' }}>▼</span>
             </div>
           )}
-          <div style={{ display: 'flex', gap: 4, fontSize: 11 }}>
+          <div style={{ display: 'flex', gap: 4, fontSize: 11, alignItems: 'center' }}>
             {Object.entries({ zh_CN:'简', zh_HK:'繁', en:'EN' }).map(([k,v]) => (
               <span key={k} onClick={() => switchLang(k)} style={{
                 padding: '2px 8px', borderRadius: 8, cursor: 'pointer',
@@ -602,6 +617,14 @@ export default function App() {
                 color: lang === k ? '#fff' : '#666',
                 fontWeight: lang === k ? 600 : 400
               }}>{v}</span>
+            ))}
+            <span onClick={() => {
+              const c = currency === 'HKD' ? 'CNY' : 'HKD'
+              setCurrency(c); localStorage.setItem('currency', c)
+            }} style={{
+              padding: '2px 8px', borderRadius: 8, cursor: 'pointer', marginLeft: 4,
+              background: '#ff4444', color: '#fff', fontWeight: 600
+            }}>{currency === 'HKD' ? 'HK$' : '¥'}</span>
             ))}
           </div>
         </div>
@@ -678,7 +701,7 @@ export default function App() {
                 {effectiveReached ? (
                   <span className="group-buy-reached">{t('reached')}</span>
                 ) : (
-                  <span className="group-buy-remain">{t('groupRemain')} <b>¥{(effectiveThreshold - stats.confirmed_total).toFixed(0)}</b> {t('need')}</span>
+                  <span className="group-buy-remain">{t('groupRemain')} <b>{fmt(effectiveThreshold - stats.confirmed_total)}</b> {t('need')}</span>
                 )}
               </div>
               <div className="group-buy-progress">
@@ -688,7 +711,7 @@ export default function App() {
                 />
               </div>
               <div className="group-buy-footer">
-                <span>{t('totalConfirmed')}：<b style={{ color: effectiveReached ? '#3cb043' : '#ff6b35' }}>¥{stats.confirmed_total.toFixed(0)}</b> / ¥{effectiveThreshold}</span>
+                <span>{t('totalConfirmed')}：<b style={{ color: effectiveReached ? '#3cb043' : '#ff6b35' }}>{fmt(stats.confirmed_total)}</b> / {fmt(effectiveThreshold)}</span>
                 <span>{stats.confirmed_count} {t('ordersConfirmed')}</span>
               </div>
             </div>
@@ -706,8 +729,8 @@ export default function App() {
                     <div className="emoji">{p.image ? <img src={p.image} alt={p.name} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:8}} /> : '🛒'}</div>
                     <span className="tag">新人价</span>
                     <div className="name">{pn(p.name)}</div>
-                    <div className="price">¥{priceText(p)}</div>
-                    <div className="orig-price">¥{p.original_price?.toFixed(2)}</div>
+                    <div className="price">{priceText(p)}</div>
+                    
                   </div>
                 ))}
               </div>
@@ -740,12 +763,12 @@ export default function App() {
                     <div className="name">{pn(p.name)}</div>
                     <div className="unit-line">
                       {p.original_price && p.original_price > p.price ? (
-                        <div className="orig-price">¥{p.original_price.toFixed(2)}</div>
+                        
                       ) : <div className="orig-price orig-placeholder">&nbsp;</div>}
                       <div className="sales">{p.is_hot ? '🔥 ' + t('tagHot') : ''}</div>
                     </div>
                     <div className="bottom-row">
-                      <div className="price"><small>¥</small>{priceText(p)}</div>
+                      <div className="price">{priceText(p)}</div>
                       {p.is_active !== false && <button className="add-btn" onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>+</button>}
                     </div>
                   </div>
@@ -785,12 +808,12 @@ export default function App() {
                     <div className="name">{pn(p.name)}</div>
                     <div className="unit-line">
                       {p.original_price && p.original_price > p.price ? (
-                        <div className="orig-price">¥{p.original_price.toFixed(2)}</div>
+                        
                       ) : <div className="orig-price orig-placeholder">&nbsp;</div>}
                       <div className="sales">{p.is_hot ? '🔥 ' + t('tagHot') : ''}</div>
                     </div>
                     <div className="bottom-row">
-                      <div className="price"><small>¥</small>{priceText(p)}</div>
+                      <div className="price">{priceText(p)}</div>
                       {p.is_active !== false && <button className="add-btn" onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>+</button>}
                     </div>
                   </div>
@@ -822,7 +845,7 @@ export default function App() {
                     <span className="order-status">{statusTxt[o.status] || o.status}</span>
                   </div>
                   <div className="order-goods">{o.items?.map(i => `${pn(i.product?.name)} x${i.quantity}`).join('，')}</div>
-                  <div className="order-total">{t('orderTotal')}：<span>¥{o.total?.toFixed(2)}</span></div>
+                  <div className="order-total">{t('orderTotal')}：<span>{fmt(o.total)}</span></div>
                 </div>
               ))
             })()}
@@ -937,7 +960,7 @@ export default function App() {
                   <div className="emoji">{item.product.image ? <img src={item.product.image} alt="" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:6}} /> : '🛒'}</div>
                   <div className="detail">
                     <div className="name">{pn(item.product.name)}{item.variantLabel && <small style={{color:'#ff4444',marginLeft:6,fontSize:12}}>({item.variantLabel})</small>}</div>
-                    <div className="price">¥{item.variantPrice.toFixed(2)}<small style={{fontSize:11,color:'#999'}}>{item.product.unit || '/斤'}</small></div>
+                    <div className="price">{fmt(item.variantPrice)}<small style={{fontSize:11,color:'#999'}}>{item.product.unit || '/斤'}</small></div>
                   </div>
                   <div className="qty-control">
                     <button className="qty-btn" onClick={() => updateQty(itemKey, -1)}>−</button>
@@ -955,7 +978,7 @@ export default function App() {
                   💡 {t('buyExtra')}
                 </div>
                 <div style={{ fontSize: 12, color: '#8a6d3b', marginBottom: 8 }}>
-                  {t('groupProgress')}：<b>¥{(stats.confirmed_total || 0).toFixed(0)}</b> / <b>¥{effectiveThreshold.toFixed(0)}</b> · {t('groupRemain')} <b>¥{(effectiveThreshold - (stats.confirmed_total || 0)).toFixed(0)}</b>
+                  {t('groupProgress')}：<b>{fmt(stats.confirmed_total || 0)}</b> / <b>{fmt(effectiveThreshold)}</b> · {t('groupRemain')} <b>{fmt(effectiveThreshold - (stats.confirmed_total || 0))}</b>
                 </div>
                 <div style={{ display: 'flex', gap: 8, overflowX: 'auto' }}>
                   {products.filter(p => p.price <= 20 && !cart[p.id]).slice(0, 5).map(p => (
@@ -963,14 +986,14 @@ export default function App() {
                       onClick={() => quickAdd(p)}>
                       <div style={{ fontSize: 24 }}>{p.image ? '' : '🛒'}</div>
                       <div style={{ fontSize: 11, color: '#333', margin: '4px 0' }}>{pn(p.name).slice(0, 4)}</div>
-                      <div style={{ fontSize: 12, color: '#ff4444', fontWeight: 600 }}>¥{p.price}</div>
+                      <div style={{ fontSize: 12, color: '#ff4444', fontWeight: 600 }}>{fmt(p.price)}</div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
             <div className="cart-footer">
-              <div className="cart-total">合计：<span>¥{cartTotal.toFixed(2)}</span> <small style={{fontSize:12,color:'#999',fontWeight:400}}>(≈HK${rmb2hkd(cartTotal)})</small></div>
+              <div className="cart-total">合计：<span>{fmt(cartTotal)}</span></div>
               <button className="checkout-btn" disabled={cartCount === 0} onClick={openCheckout}>去结算</button>
             </div>
           </div>
@@ -1088,18 +1111,18 @@ export default function App() {
             <div style={{ marginBottom: 8, fontSize: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
                 <span style={{ color: '#666' }}>商品金额</span>
-                <span>¥{cartTotal.toFixed(2)} <small style={{color:'#999'}}>(≈HK${rmb2hkd(cartTotal)})</small></span>
+                <span>{fmt(cartTotal)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
                 <span style={{ color: '#666' }}>运费</span>
                 <span style={{ color: (deliveryType === 'delivery' || !stats?.reached) ? '#ff4444' : '#3cb043', fontWeight: 600 }}>
-                  {deliveryType === 'delivery' ? 'HK$30' : t('freeFee')}
+                  {deliveryType === 'delivery' ? fmt(30) : t('freeFee')}
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0 4px', borderTop: '1px solid #eee', marginTop: 4 }}>
                 <span>共 {cartCount} 件</span>
                 <span style={{ color: '#ff4444', fontWeight: 'bold', fontSize: 18 }}>
-                  ¥{cartTotal.toFixed(2)} <small style={{fontSize:12,color:'#999',fontWeight:400}}>(≈HK${rmb2hkd(cartTotal)})</small>
+                  {fmt(cartTotal)}
                 </span>
               </div>
             </div>
@@ -1130,14 +1153,15 @@ export default function App() {
               <div style={{ flex: 1 }}>
                 <h3 style={{ fontSize: 18, marginBottom: 6 }}>{pn(selectedProduct.name)}</h3>
                 <div style={{ fontSize: 20, color: '#ff4444', fontWeight: 'bold' }}>
-                  ¥{(() => {
+                  {(() => {
                     let variants = []
                     try { variants = selectedProduct.variants ? JSON.parse(selectedProduct.variants) : [] } catch(e) {}
+                    const sym = currency === 'HKD' ? 'HK$' : '¥'
                     if (variants.length > 0) {
-                      const prices = variants.map(v => Number(v.price))
-                      return Math.min(...prices).toFixed(0) + '~' + Math.max(...prices).toFixed(0)
+                      const prices = variants.map(v => Number(v.price) * (currency === 'HKD' ? exchangeRate : 1))
+                      return sym + Math.round(Math.min(...prices)) + '~' + Math.round(Math.max(...prices))
                     }
-                    return selectedProduct.price.toFixed(2)
+                    return fmt(selectedProduct.price)
                   })()}<small style={{fontSize:13,color:'#999',fontWeight:400}}>/{selectedProduct.unit || '斤'}</small>
                 </div>
               </div>
@@ -1165,7 +1189,7 @@ export default function App() {
                                 background: isSel ? '#fff5f5' : '#fff',
                                 fontSize: 14, fontWeight: isSel ? 600 : 400,
                               }}>
-                              {v.label} <span style={{color:'#ff4444'}}>¥{Number(v.price).toFixed(0)}</span>
+                              {v.label} <span style={{color:'#ff4444'}}>{fmt(v.price)}</span>
                             </div>
                           )
                         })}
@@ -1291,6 +1315,26 @@ export default function App() {
       )}
 
       {/* 新手指引弹窗 */}
+      {/* 首次进入选择币种 */}
+      {!currency && (
+        <div className="checkout-overlay" style={{ zIndex: 6000 }}>
+          <div className="checkout-panel" style={{ maxWidth: 380, textAlign: 'center', padding: 24 }}>
+            <h3 style={{ marginBottom: 16 }}>请选择结算货币</h3>
+            <p style={{ fontSize: 13, color: '#999', marginBottom: 20 }}>Please select your currency</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <button onClick={() => { setCurrency('HKD'); localStorage.setItem('currency', 'HKD'); setShowOnboard(true) }}
+                style={{ padding: 16, borderRadius: 12, border: '2px solid #ff4444', background: '#fff5f5', color: '#ff4444', fontSize: 18, fontWeight: 700, cursor: 'pointer' }}>
+                HK$ 港币
+              </button>
+              <button onClick={() => { setCurrency('CNY'); localStorage.setItem('currency', 'CNY'); setShowOnboard(true) }}
+                style={{ padding: 16, borderRadius: 12, border: '2px solid #ddd', background: '#fff', color: '#333', fontSize: 18, fontWeight: 600, cursor: 'pointer' }}>
+                ¥ 人民币
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showOnboard && (
         <div className="checkout-overlay" style={{ zIndex: 5000 }} onClick={() => {}}>
           <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 380, textAlign: 'center' }}>
@@ -1636,15 +1680,15 @@ function OrderDetailPage({ order, onBack }) {
               <div className="emoji">{i.product?.image ? <img src={i.product.image} alt="" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:6}} /> : '🛒'}</div>
               <div className="g-info">
                 <div className="name">{pn(i.product?.name)}</div>
-                <div className="price">¥{i.price?.toFixed(2)}</div>
+                <div className="price">{fmt(i.price)}</div>
               </div>
               <div className="qty">x{i.quantity}</div>
             </div>
           ))}
           <div className="order-detail-summary">
-            <div className="row"><span>商品总额</span><span>¥{order.total?.toFixed(2)}</span></div>
-            <div className="row"><span>运费</span><span>¥0.00</span></div>
-            <div className="row total"><span>实付</span><span>¥{order.total?.toFixed(2)}</span></div>
+            <div className="row"><span>商品总额</span><span>{fmt(order.total)}</span></div>
+            <div className="row"><span>运费</span><span>{fmt(0)}</span></div>
+            <div className="row total"><span>实付</span><span>{fmt(order.total)}</span></div>
           </div>
         </div>
         <div className="order-detail-card">

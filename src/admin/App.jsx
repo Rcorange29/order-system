@@ -70,6 +70,7 @@ export default function App() {
     { key: 'orders', label: '📋 订单管理' },
     { key: 'users', label: '👥 用户管理' },
     { key: 'categories', label: '🏷️ 分类管理' },
+    { key: 'settings', label: '⚙️ 系统设置' },
   ]
 
   return (
@@ -91,6 +92,7 @@ export default function App() {
         {page === 'orders' && <OrderManage orders={orders} reload={reload} showToast={showToast} />}
         {page === 'users' && <UserManage users={users} showToast={showToast} />}
         {page === 'categories' && <CategoryManage categories={categories} reload={reload} showToast={showToast} />}
+        {page === 'settings' && <SettingsPage authFetch={authFetch} showToast={showToast} />}
       </div>
       {toast && <div style={{ position: 'fixed', top: 24, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.8)', color: '#fff', padding: '10px 24px', borderRadius: 6, zIndex: 9999, fontSize: 14 }}>{toast}</div>}
     </div>
@@ -708,6 +710,38 @@ function UserManage({ users, showToast }) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function SettingsPage({ authFetch, showToast }) {
+  const [rate, setRate] = useState(1.2)
+  useEffect(() => {
+    authFetch(`${API}/admin/settings`).then(r => r.json()).then(d => setRate(d.exchange_rate || 1.2)).catch(()=>{})
+  }, [])
+  const save = async () => {
+    const r = await authFetch(`${API}/admin/settings`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ exchange_rate: parseFloat(rate) }) })
+    const d = await r.json()
+    if (d.ok) showToast('已保存，用户端实时生效')
+    else showToast('保存失败')
+  }
+  return (
+    <div>
+      <h2>系统设置</h2>
+      <div style={{ background: '#fff', padding: 20, borderRadius: 8, maxWidth: 500 }}>
+        <h3 style={{ marginBottom: 12 }}>💱 汇率设置</h3>
+        <p style={{ fontSize: 13, color: '#999', marginBottom: 12 }}>
+          商品价格以人民币（CNY）录入。用户端选择港币时，自动乘以此汇率显示。<br/>
+          例如：汇率 1.2 = ¥1 = HK$1.2
+        </p>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <label style={{ fontSize: 14 }}>1 CNY =</label>
+          <input type="number" step="0.01" value={rate} onChange={e => setRate(e.target.value)}
+            style={{ width: 100, padding: 8, border: '1px solid #ddd', borderRadius: 6, fontSize: 16 }} />
+          <label style={{ fontSize: 14 }}>HKD</label>
+          <button onClick={save} style={{ padding: '8px 20px', background: '#ff4444', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>保存</button>
+        </div>
+      </div>
     </div>
   )
 }
