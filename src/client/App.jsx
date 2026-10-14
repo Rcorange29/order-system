@@ -762,9 +762,6 @@ export default function App() {
                   <div className="info">
                     <div className="name">{pn(p.name)}</div>
                     <div className="unit-line">
-                      {p.original_price && p.original_price > p.price ? (
-                        
-                      ) : <div className="orig-price orig-placeholder">&nbsp;</div>}
                       <div className="sales">{p.is_hot ? '🔥 ' + t('tagHot') : ''}</div>
                     </div>
                     <div className="bottom-row">
@@ -807,9 +804,6 @@ export default function App() {
                   <div className="info">
                     <div className="name">{pn(p.name)}</div>
                     <div className="unit-line">
-                      {p.original_price && p.original_price > p.price ? (
-                        
-                      ) : <div className="orig-price orig-placeholder">&nbsp;</div>}
                       <div className="sales">{p.is_hot ? '🔥 ' + t('tagHot') : ''}</div>
                     </div>
                     <div className="bottom-row">
