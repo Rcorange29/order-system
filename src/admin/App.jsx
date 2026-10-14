@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 const API = '/api'
 
@@ -208,6 +208,43 @@ function ProductManage({ products, categories, reload, showToast }) {
   const [search, setSearch] = useState('')
   const emptyForm = { name: '', price: '', original_price: '', image: '', category_id: '', stock: '', is_new: false, is_hot: false, description: '' }
   const [form, setForm] = useState(emptyForm)
+  const fileInputRef = useRef(null)
+
+  // 全局粘贴事件：模态框打开时监听 Ctrl+V / Cmd+V
+  useEffect(() => {
+    if (!showModal) return
+    const onPaste = (e) => {
+      const items = e.clipboardData?.items
+      if (!items) return
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault()
+          const file = item.getAsFile()
+          if (!file) continue
+          const reader = new FileReader()
+          reader.onload = (ev) => {
+            const img = new Image()
+            img.onload = () => {
+              const canvas = document.createElement('canvas')
+              const maxW = 800
+              const scale = Math.min(1, maxW / img.width)
+              canvas.width = img.width * scale
+              canvas.height = img.height * scale
+              const ctx = canvas.getContext('2d')
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+              setForm(f => ({ ...f, image: canvas.toDataURL('image/jpeg', 0.75) }))
+              showToast('已粘贴剪贴板图片')
+            }
+            img.src = ev.target.result
+          }
+          reader.readAsDataURL(file)
+          return
+        }
+      }
+    }
+    document.addEventListener('paste', onPaste)
+    return () => document.removeEventListener('paste', onPaste)
+  }, [showModal, showToast])
 
   const openAdd = () => { setEditing(null); setForm(emptyForm); setShowModal(true) }
   const openEdit = (p) => {
@@ -272,9 +309,48 @@ function ProductManage({ products, categories, reload, showToast }) {
               <div className="form-inline">
                 <div className="form-row"><label>商品名称 <span className="req">*</span></label><input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
                 <div className="form-row"><label>商品图片</label>
-                  <div style={{display:'flex',alignItems:'center',gap:10}}>
-                    {form.image ? <img src={form.image} style={{width:60,height:60,objectFit:'cover',borderRadius:6,border:'1px solid #eee'}} /> : <div style={{width:60,height:60,background:'#f5f5f5',borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',fontSize:24}}>📦</div>}
-                    <input type="file" accept="image/*" onChange={(e) => {
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#ff4444'; e.currentTarget.style.background = '#fff5f5' }}
+                    onDragLeave={(e) => { e.currentTarget.style.borderColor = '#ddd'; e.currentTarget.style.background = '#fff' }}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      e.currentTarget.style.borderColor = '#ddd'
+                      e.currentTarget.style.background = '#fff'
+                      const file = e.dataTransfer.files?.[0]
+                      if (!file || !file.type.startsWith('image/')) return
+                      const reader = new FileReader()
+                      reader.onload = (ev) => {
+                        const img = new Image()
+                        img.onload = () => {
+                          const canvas = document.createElement('canvas')
+                          const maxW = 800
+                          const scale = Math.min(1, maxW / img.width)
+                          canvas.width = img.width * scale
+                          canvas.height = img.height * scale
+                          const ctx = canvas.getContext('2d')
+                          ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+                          setForm({ ...form, image: canvas.toDataURL('image/jpeg', 0.75) })
+                          showToast('图片已拖入')
+                        }
+                        img.src = ev.target.result
+                      }
+                      reader.readAsDataURL(file)
+                    }}
+                    style={{
+                      border: '2px dashed #ddd', borderRadius: 8, padding: 16,
+                      display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {form.image
+                      ? <img src={form.image} style={{width:72,height:72,objectFit:'cover',borderRadius:8,border:'1px solid #eee'}} />
+                      : <div style={{width:72,height:72,background:'#f5f5f5',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28}}>📦</div>}
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:13,color:'#666',marginBottom:4}}>拖拽图片到这里，或点击选择文件</div>
+                      <div style={{fontSize:11,color:'#999'}}>支持从微信保存后直接拖入 · 也可 Ctrl+V 粘贴</div>
+                    </div>
+                    <input type="file" accept="image/*" style={{display:'none'}} ref={fileInputRef} onChange={(e) => {
                       const file = e.target.files[0]
                       if (!file) return
                       const reader = new FileReader()

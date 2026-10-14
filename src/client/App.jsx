@@ -7,9 +7,9 @@ const payStatusText = { pending: '待支付', paid: '已支付', confirmed: '已
 
 // ========== 多语言 ==========
 const langPack = {
-  zh_CN: { home:'首页',category:'分类',cart:'购物车',my:'我的',search:'搜索商品',welcome:'珍珍优质果菜',slogan:'新鲜直达 · 每日优选 · 一件送达',groupBuy:'今日凑单 满千免运',groupBuySlogan:'大家一起拼 越买越划算',hot:'热门推荐',pickPoint:'选择自取点',freeShipping:'每单HK$10，该点满千全免',deliveryHome:'配送到家',deliveryHomeFee:'运费HK$30',checkout:'确认订单',goodsAmount:'商品金额',shipping:'运费',submit:'提交订单',cancel:'取消',myOrders:'我的订单',viewAll:'查看全部 ›',address:'收货地址',contact:'联系客服',help:'配送规则 / 帮助',favorites:'我的收藏',logout:'退出登录',clickLogin:'点击登录',loginHint:'登录后查看订单和地址',login:'登录',register:'注册',back:'返回上一页',username:'账号',password:'密码',phone:'手机号',addToCart:'加入购物车',checkOut:'去结算',emptyCart:'购物车是空的',favoriteEmpty:'还没有收藏商品',groupRemain:'还差',buyExtra:'顺手买一件',groupProgress:'当前拼单进度',groupFull:'该自取点满 HK$1000，大家都免运费',introTitle:'下单前必读',introBtn:'我已知晓，开始购物',next:'下一步',gotIt:'我知道了',step1Title:'① 选自取点',step1Desc:'点左上角📍选你就近的自提点',step2Title:'② 逛商品加购物车',step2Desc:'点商品看详情，点+号加购',step3Title:'③ 凑单满额',step3Desc:'大家一起凑够HK$1000就免运费',step4Title:'④ 去结算',step4Desc:'选支付方式，扫码付款等配送',deliveryRule:'配送规则：中午12点前凑满当晚送，满1000免HK$10运费',details:'详情 ›',groupBuyBanner:'今日凑单',youGet:'已达起送门槛，今日可配送！',need:'起送',totalConfirmed:'已确认订单总额',ordersConfirmed:'笔订单已确认',all:'全部',emptySearch:'没有找到相关商品',emptyCat:'暂无商品',reached:'✓ 已达起送门槛，今日可配送！',searchResult:'搜索"{kw}"的结果',feeTitle:'运费说明：',feeEach:'· 每单先付 HK$10 运费',feeFree:'· 当天该自取点总订单额满 HK$1000，本单运费全免',feeNoRefund:'· 未满 1000 则运费不退，可加购凑单',feePerOrder:'本单运费 HK$10 · 该点满 HK$1000 全免',ustFee:'本单免运费 · 满 HK$500 起送',ustBenefit2:'🎓 学生优惠：免运费，满$500起送',feeHint:'每单HK$10，该点满千全免',confirmOrder:'确认订单',needPay:'待付款',paid:'已付款',selectPointFirst:'请先选择自取点',tagHot:'爆款',tagNew:'新品',noPhone:'未绑定手机号',comingSoon:'敬请期待',statusPending:'待付款',statusPaid:'已付款',statusShipped:'已发货',statusCompleted:'已完成',statusCancelled:'已取消',orderAll:'全部订单',orderPending:'待付款',orderGroup:'拼团中',orderShipping:'待收货',orderDone:'已完成',coupons:'优惠券',refundAfterSale:'退款售后',orderPcs:'件',orderTotal:'合计',noOrders:'暂无订单',orderNo:'订单号',orderStatus:'订单状态',clear:'清空' },
-  zh_HK: { home:'首頁',category:'分類',cart:'購物車',my:'我的',search:'搜尋商品',welcome:'珍珍優質果菜',slogan:'新鮮直達 · 每日優選 · 一件送達',groupBuy:'今日湊單 滿千免運',groupBuySlogan:'大家一起拼 越買越划算',hot:'熱門推薦',pickPoint:'選擇自取點',freeShipping:'每單HK$10，該點滿千全免',deliveryHome:'配送到家',deliveryHomeFee:'運費HK$30',checkout:'確認訂單',goodsAmount:'商品金額',shipping:'運費',submit:'提交訂單',cancel:'取消',myOrders:'我的訂單',viewAll:'查看全部 ›',address:'收貨地址',contact:'聯繫客服',help:'配送規則 / 幫助',favorites:'我的收藏',logout:'退出登錄',clickLogin:'點擊登錄',loginHint:'登錄後查看訂單和地址',login:'登錄',register:'註冊',back:'返回上一頁',username:'賬號',password:'密碼',phone:'手機號',addToCart:'加入購物車',checkOut:'去結算',emptyCart:'購物車是空的',favoriteEmpty:'還沒有收藏商品',groupRemain:'還差',buyExtra:'順手買一件',groupProgress:'當前拼單進度',groupFull:'該自取點滿 HK$1000，大家都免運費',introTitle:'下單前必讀',introBtn:'我已知曉，開始購物',next:'下一步',gotIt:'我知道了',step1Title:'① 選自取點',step1Desc:'點左上角📍選你就近的自提點',step2Title:'② 逛商品加購物車',step2Desc:'點商品看詳情，點+號加購',step3Title:'③ 湊單滿額',step3Desc:'大家一起湊夠HK$1000就免運費',step4Title:'④ 去結算',step4Desc:'選支付方式，掃碼付款等配送',deliveryRule:'配送規則：中午12點前湊滿當晚送，滿1000免HK$10運費',details:'詳情 ›',groupBuyBanner:'今日湊單',youGet:'已達起送門檻，今日可配送！',need:'起送',totalConfirmed:'已確認訂單總額',ordersConfirmed:'筆訂單已確認',all:'全部',emptySearch:'沒有找到相關商品',emptyCat:'暫無商品',reached:'✓ 已達起送門檻，今日可配送！',searchResult:'搜索"{kw}"的結果',feeTitle:'運費說明：',feeEach:'· 每單先付 HK$10 運費',feeFree:'· 當天該自取點總訂單額滿 HK$1000，本單運費全免',feeNoRefund:'· 未滿 1000 則運費不退，可加購湊單',feePerOrder:'本單運費 HK$10 · 該點滿 HK$1000 全免',ustFee:'本單免運費 · 滿 HK$500 起送',ustBenefit2:'🎓 學生優惠：免運費，滿$500起送',feeHint:'每單HK$10，該點滿千全免',confirmOrder:'確認訂單',needPay:'待付款',paid:'已付款',selectPointFirst:'請先選擇自取點',tagHot:'爆款',tagNew:'新品',noPhone:'未綁定手機號',comingSoon:'敬請期待',statusPending:'待付款',statusPaid:'已付款',statusShipped:'已發貨',statusCompleted:'已完成',statusCancelled:'已取消',orderAll:'全部訂單',orderPending:'待付款',orderGroup:'拼團中',orderShipping:'待收貨',orderDone:'已完成',coupons:'優惠券',refundAfterSale:'退款售後',orderPcs:'件',orderTotal:'合計',noOrders:'暫無訂單',orderNo:'訂單號',orderStatus:'訂單狀態',clear:'清空' },
-  en: { home:'Home',category:'Categories',cart:'Cart',my:'My Account',search:'Search products',welcome:'Zhenzhen Fresh',slogan:'Fresh Daily · Delivered to You',groupBuy:'Group Buy · Free at HK$1000',groupBuySlogan:'Group together to save more',hot:'Popular Picks',pickPoint:'Pickup Point',freeShipping:'HK$10/order, free at HK$1000',deliveryHome:'Home Delivery',deliveryHomeFee:'HK$30',checkout:'Confirm Order',goodsAmount:'Subtotal',shipping:'Shipping',submit:'Place Order',cancel:'Cancel',myOrders:'My Orders',viewAll:'View all ›',address:'Address',contact:'Contact Us',help:'Delivery Info / Help',favorites:'Favorites',logout:'Log Out',clickLogin:'Tap to Login',loginHint:'Login to see orders',login:'Login',register:'Register',back:'Back',username:'Username',password:'Password',phone:'Phone',addToCart:'Add to Cart',checkOut:'Checkout',emptyCart:'Your cart is empty',favoriteEmpty:'No favorites yet',groupRemain:'Need HK$',buyExtra:'Add one more',groupProgress:'Group progress',groupFull:'This point hits HK$1000 — free shipping!',introTitle:'Please Read First',introBtn:'Got it, shop now',next:'Next',gotIt:'Got it',step1Title:'1. Pick your point',step1Desc:'Tap 📍 top-left to choose',step2Title:'2. Browse & add',step2Desc:'Tap product to see, tap + to add',step3Title:'3. Group buy',step3Desc:'Group reaches HK$1000 = free shipping',step4Title:'4. Checkout',step4Desc:'Choose payment, scan QR, wait',deliveryRule:'Delivery: by noon = tonight; free at HK$1000',details:'Details ›',groupBuyBanner:'Group Buy Today',youGet:'Threshold reached! Delivering today.',need:'to go',totalConfirmed:'Confirmed total',ordersConfirmed:'orders',all:'All',emptySearch:'No products found',emptyCat:'No products',reached:'✓ Threshold reached! Delivering today.',searchResult:'Results for "{kw}"',feeTitle:'Shipping info:',feeEach:'· HK$10 per order',feeFree:'· Free when this point totals HK$1000 today',feeNoRefund:'· If under 1000, fee not refunded — add items',feePerOrder:'HK$10/order · free at HK$1000',ustFee:'No shipping · HK$500 to start',ustBenefit2:'🎓 Student deal: no shipping, HK$500 to start',feeHint:'HK$10/order, free at HK$1000',confirmOrder:'Confirm Order',needPay:'Pending',paid:'Paid',selectPointFirst:'Please select a pickup point',tagHot:'Hot',tagNew:'New',noPhone:'No phone linked',comingSoon:'Coming soon',statusPending:'To Pay',statusPaid:'Paid',statusShipped:'Shipped',statusCompleted:'Completed',statusCancelled:'Cancelled',orderAll:'All Orders',orderPending:'To Pay',orderGroup:'Group Buy',orderShipping:'To Receive',orderDone:'Completed',coupons:'Coupons',refundAfterSale:'Refund & After-sales',orderPcs:'items',orderTotal:'Total',noOrders:'No orders',orderNo:'Order No.',orderStatus:'Order Status',clear:'Clear' }
+  zh_CN: { home:'首页',category:'分类',cart:'购物车',my:'我的',search:'搜索商品',welcome:'珍珍优质果菜',slogan:'新鲜直达 · 每日优选 · 一件送达',groupBuy:'今日凑单 满千免运',groupBuySlogan:'大家一起拼 越买越划算',hot:'热门推荐',pickPoint:'选择自取点',freeShipping:'免运费 · 该点满额统一配送',freeFee:'免运费',deliveryHome:'配送到家',deliveryHomeFee:'运费HK$30',checkout:'确认订单',goodsAmount:'商品金额',shipping:'运费',submit:'提交订单',cancel:'取消',myOrders:'我的订单',viewAll:'查看全部 ›',address:'收货地址',contact:'联系客服',help:'配送规则 / 帮助',favorites:'我的收藏',logout:'退出登录',clickLogin:'点击登录',loginHint:'登录后查看订单和地址',login:'登录',register:'注册',back:'返回上一页',username:'账号',password:'密码',phone:'手机号',addToCart:'加入购物车',checkOut:'去结算',emptyCart:'购物车是空的',favoriteEmpty:'还没有收藏商品',groupRemain:'还差',buyExtra:'顺手买一件',groupProgress:'当前拼单进度',groupFull:'该自取点满 HK$1000，大家都免运费',introTitle:'下单前必读',introBtn:'我已知晓，开始购物',next:'下一步',gotIt:'我知道了',step1Title:'① 选自取点',step1Desc:'点左上角📍选你就近的自提点',step2Title:'② 逛商品加购物车',step2Desc:'点商品看详情，点+号加购',step3Title:'③ 凑单满额',step3Desc:'大家一起凑够HK$1000就免运费',step4Title:'④ 去结算',step4Desc:'选支付方式，扫码付款等配送',deliveryRule:'配送规则：凑满门槛统一配送，免运费',details:'详情 ›',groupBuyBanner:'今日凑单',youGet:'已达起送门槛，今日可配送！',need:'起送',totalConfirmed:'已确认订单总额',ordersConfirmed:'笔订单已确认',all:'全部',emptySearch:'没有找到相关商品',emptyCat:'暂无商品',reached:'✓ 已达起送门槛，今日可配送！',searchResult:'搜索"{kw}"的结果',feeTitle:'运费说明：',feeEach:'· 免运费',feeFree:'· 当天该自取点总订单额满 HK$1000 即起送统一配送',feeNoRefund:'· 未满门槛则暂不配送，可加购凑单',feePerOrder:'本单免运费 · 满 HK$1000 起送',ustFee:'本单免运费 · 满 HK$500 起送',ustBenefit2:'🎓 学生优惠：免运费，满$500起送',feeHint:'免运费 · 该点满额统一配送',confirmOrder:'确认订单',needPay:'待付款',paid:'已付款',selectPointFirst:'请先选择自取点',tagHot:'爆款',tagNew:'新品',noPhone:'未绑定手机号',comingSoon:'敬请期待',statusPending:'待付款',statusPaid:'已付款',statusShipped:'已发货',statusCompleted:'已完成',statusCancelled:'已取消',orderAll:'全部订单',orderPending:'待付款',orderGroup:'拼团中',orderShipping:'待收货',orderDone:'已完成',coupons:'优惠券',refundAfterSale:'退款售后',orderPcs:'件',orderTotal:'合计',noOrders:'暂无订单',orderNo:'订单号',orderStatus:'订单状态',clear:'清空' },
+  zh_HK: { home:'首頁',category:'分類',cart:'購物車',my:'我的',search:'搜尋商品',welcome:'珍珍優質果菜',slogan:'新鮮直達 · 每日優選 · 一件送達',groupBuy:'今日湊單 滿千免運',groupBuySlogan:'大家一起拼 越買越划算',hot:'熱門推薦',pickPoint:'選擇自取點',freeShipping:'免運費 · 該點滿額統一配送',freeFee:'免運費',deliveryHome:'配送到家',deliveryHomeFee:'運費HK$30',checkout:'確認訂單',goodsAmount:'商品金額',shipping:'運費',submit:'提交訂單',cancel:'取消',myOrders:'我的訂單',viewAll:'查看全部 ›',address:'收貨地址',contact:'聯繫客服',help:'配送規則 / 幫助',favorites:'我的收藏',logout:'退出登錄',clickLogin:'點擊登錄',loginHint:'登錄後查看訂單和地址',login:'登錄',register:'註冊',back:'返回上一頁',username:'賬號',password:'密碼',phone:'手機號',addToCart:'加入購物車',checkOut:'去結算',emptyCart:'購物車是空的',favoriteEmpty:'還沒有收藏商品',groupRemain:'還差',buyExtra:'順手買一件',groupProgress:'當前拼單進度',groupFull:'該自取點滿 HK$1000，大家都免運費',introTitle:'下單前必讀',introBtn:'我已知曉，開始購物',next:'下一步',gotIt:'我知道了',step1Title:'① 選自取點',step1Desc:'點左上角📍選你就近的自提點',step2Title:'② 逛商品加購物車',step2Desc:'點商品看詳情，點+號加購',step3Title:'③ 湊單滿額',step3Desc:'大家一起湊夠HK$1000就免運費',step4Title:'④ 去結算',step4Desc:'選支付方式，掃碼付款等配送',deliveryRule:'配送規則：湊滿門檻統一配送，免運費',details:'詳情 ›',groupBuyBanner:'今日湊單',youGet:'已達起送門檻，今日可配送！',need:'起送',totalConfirmed:'已確認訂單總額',ordersConfirmed:'筆訂單已確認',all:'全部',emptySearch:'沒有找到相關商品',emptyCat:'暫無商品',reached:'✓ 已達起送門檻，今日可配送！',searchResult:'搜索"{kw}"的結果',feeTitle:'運費說明：',feeEach:'· 免運費',feeFree:'· 當天該自取點總訂單額滿 HK$1000 即起送統一配送',feeNoRefund:'· 未滿門檻則暫不配送，可加購湊單',feePerOrder:'本單免運費 · 滿 HK$1000 起送',ustFee:'本單免運費 · 滿 HK$500 起送',ustBenefit2:'🎓 學生優惠：免運費，滿$500起送',feeHint:'免運費 · 該點滿額統一配送',confirmOrder:'確認訂單',needPay:'待付款',paid:'已付款',selectPointFirst:'請先選擇自取點',tagHot:'爆款',tagNew:'新品',noPhone:'未綁定手機號',comingSoon:'敬請期待',statusPending:'待付款',statusPaid:'已付款',statusShipped:'已發貨',statusCompleted:'已完成',statusCancelled:'已取消',orderAll:'全部訂單',orderPending:'待付款',orderGroup:'拼團中',orderShipping:'待收貨',orderDone:'已完成',coupons:'優惠券',refundAfterSale:'退款售後',orderPcs:'件',orderTotal:'合計',noOrders:'暫無訂單',orderNo:'訂單號',orderStatus:'訂單狀態',clear:'清空' },
+  en: { home:'Home',category:'Categories',cart:'Cart',my:'My Account',search:'Search products',welcome:'Zhenzhen Fresh',slogan:'Fresh Daily · Delivered to You',groupBuy:'Group Buy · Free at HK$1000',groupBuySlogan:'Group together to save more',hot:'Popular Picks',pickPoint:'Pickup Point',freeShipping:'Free shipping at HK$1000',freeFee:'Free shipping',deliveryHome:'Home Delivery',deliveryHomeFee:'HK$30',checkout:'Confirm Order',goodsAmount:'Subtotal',shipping:'Shipping',submit:'Place Order',cancel:'Cancel',myOrders:'My Orders',viewAll:'View all ›',address:'Address',contact:'Contact Us',help:'Delivery Info / Help',favorites:'Favorites',logout:'Log Out',clickLogin:'Tap to Login',loginHint:'Login to see orders',login:'Login',register:'Register',back:'Back',username:'Username',password:'Password',phone:'Phone',addToCart:'Add to Cart',checkOut:'Checkout',emptyCart:'Your cart is empty',favoriteEmpty:'No favorites yet',groupRemain:'Need HK$',buyExtra:'Add one more',groupProgress:'Group progress',groupFull:'This point hits HK$1000 — free shipping!',introTitle:'Please Read First',introBtn:'Got it, shop now',next:'Next',gotIt:'Got it',step1Title:'1. Pick your point',step1Desc:'Tap 📍 top-left to choose',step2Title:'2. Browse & add',step2Desc:'Tap product to see, tap + to add',step3Title:'3. Group buy',step3Desc:'Group reaches HK$1000 = free shipping',step4Title:'4. Checkout',step4Desc:'Choose payment, scan QR, wait',deliveryRule:'Group ships when threshold reached; free shipping',details:'Details ›',groupBuyBanner:'Group Buy Today',youGet:'Threshold reached! Delivering today.',need:'to go',totalConfirmed:'Confirmed total',ordersConfirmed:'orders',all:'All',emptySearch:'No products found',emptyCat:'No products',reached:'✓ Threshold reached! Delivering today.',searchResult:'Results for "{kw}"',feeTitle:'Shipping info:',feeEach:'· Free shipping',feeFree:'· Ship when this point totals HK$1000 today',feeNoRefund:'· If under threshold, wait — add items',feePerOrder:'Free shipping · HK$1000 to start',ustFee:'No shipping · HK$500 to start',ustBenefit2:'🎓 Student deal: no shipping, HK$500 to start',feeHint:'Free · ship at HK$1000',confirmOrder:'Confirm Order',needPay:'Pending',paid:'Paid',selectPointFirst:'Please select a pickup point',tagHot:'Hot',tagNew:'New',noPhone:'No phone linked',comingSoon:'Coming soon',statusPending:'To Pay',statusPaid:'Paid',statusShipped:'Shipped',statusCompleted:'Completed',statusCancelled:'Cancelled',orderAll:'All Orders',orderPending:'To Pay',orderGroup:'Group Buy',orderShipping:'To Receive',orderDone:'Completed',coupons:'Coupons',refundAfterSale:'Refund & After-sales',orderPcs:'items',orderTotal:'Total',noOrders:'No orders',orderNo:'Order No.',orderStatus:'Order Status',clear:'Clear' }
 }
 
 // ========== 商品名三语映射 ==========
@@ -171,9 +171,6 @@ export default function App() {
   const [showPointPicker, setShowPointPicker] = useState(false)
   const [deliveryType, setDeliveryType] = useState('pickup')
   const [ustBenefit, setUstBenefit] = useState(false)
-  const [refundChoice, setRefundChoice] = useState(null)
-  const [refundItems, setRefundItems] = useState([])
-  const [showRefundPicker, setShowRefundPicker] = useState(false)
   const [showIntro, setShowIntro] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [favorites, setFavorites] = useState(() => JSON.parse(localStorage.getItem('favorites') || '[]'))
@@ -296,6 +293,21 @@ export default function App() {
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 1800) }
 
+  const copyText = async (text, label) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      showToast(`${label || text} 已复制`)
+    } catch (e) {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      showToast(`${label || text} 已复制`)
+    }
+  }
+
   const toggleFavorite = (id) => {
     setFavorites(prev => {
       const next = prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]
@@ -340,7 +352,7 @@ export default function App() {
   const cartTotal = cartItems.reduce((sum, item) => sum + item.product.price * item.qty, 0)
   const currentPoint = deliveryPoints.find(p => p.id == selectedPointId)
   const isUstPoint = currentPoint && (currentPoint.name.includes('科技大学') || currentPoint.name.includes('科大') || currentPoint.name.includes('UST'))
-  const effectiveFee = isUstPoint ? 0 : (stats?.delivery_fee || 10)
+  const effectiveFee = 0
   const effectiveThreshold = isUstPoint ? 500 : (stats?.threshold || 1000)
   const effectiveReached = stats ? stats.confirmed_total >= effectiveThreshold : false
 
@@ -377,7 +389,6 @@ export default function App() {
       phone = addr.phone
       address = addr.detail
     }
-    if (!refundChoice) { showToast('请选择运费退还方式'); return }
     const res = await authFetch(`${API}/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -386,8 +397,6 @@ export default function App() {
         payment_method: paymentMethod,
         delivery_type: deliveryType,
         delivery_point_id: deliveryType === 'pickup' ? selectedPointId : null,
-        refund_choice: refundChoice,
-        refund_items: refundItems,
         items: cartItems.map(item => ({ product_id: item.product.id, quantity: item.qty }))
       })
     })
@@ -1048,7 +1057,7 @@ export default function App() {
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
                 <span style={{ color: '#666' }}>运费</span>
                 <span style={{ color: (deliveryType === 'delivery' || !stats?.reached) ? '#ff4444' : '#3cb043', fontWeight: 600 }}>
-                  {deliveryType === 'delivery' ? '¥30' : (isUstPoint ? '¥0（学生优惠）' : (effectiveReached ? '免运费' : `¥${effectiveFee}`))}
+                  {deliveryType === 'delivery' ? '¥30' : t('freeFee')}
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0 4px', borderTop: '1px solid #eee', marginTop: 4 }}>
@@ -1058,45 +1067,6 @@ export default function App() {
                 </span>
               </div>
             </div>
-            {deliveryType === 'pickup' && (
-            <div className="form-group" style={{ marginTop: 12 }}>
-              <label>如达到免运费门槛，请选择运费退还方式 <span style={{ color: '#ff4d4f' }}>*</span></label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <div onClick={() => setRefundChoice('original')} style={{
-                  flex: 1, padding: 10, textAlign: 'center', borderRadius: 8, cursor: 'pointer',
-                  border: refundChoice === 'original' ? '2px solid #3cb043' : '1px solid #eee',
-                  background: refundChoice === 'original' ? '#f0fff0' : '#fff', fontSize: 13
-                }}>
-                  💵 原渠道退回
-                </div>
-                <div onClick={() => setRefundChoice('produce')} style={{
-                  flex: 1, padding: 10, textAlign: 'center', borderRadius: 8, cursor: 'pointer',
-                  border: refundChoice === 'produce' ? '2px solid #3cb043' : '1px solid #eee',
-                  background: refundChoice === 'produce' ? '#f0fff0' : '#fff', fontSize: 13
-                }}>
-                  🥬 等值蔬菜水果
-                </div>
-              </div>
-              {refundChoice === 'produce' && (
-                <div style={{ marginTop: 8, padding: 10, background: '#f9f9f9', borderRadius: 8, fontSize: 13 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>已选 {refundItems.length} 件等值商品</span>
-                    <span style={{ color: '#3cb043', cursor: 'pointer' }} onClick={() => setShowRefundPicker(true)}>选择</span>
-                  </div>
-                  {refundItems.length > 0 && (
-                    <div style={{ marginTop: 6 }}>
-                      {refundItems.map(item => (
-                        <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: 12 }}>
-                          <span>{item.name} x{item.qty}</span>
-                          <span>¥{item.price}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            )}
             <div className="form-actions">
               <button className="btn-cancel" onClick={() => setShowCheckout(false)}>取消</button>
               <button className="btn-submit" onClick={submitOrder}>提交订单</button>
@@ -1133,38 +1103,6 @@ export default function App() {
           </div>
         </div>
       )}
-      {/* 等值商品选择弹窗 */}
-      {showRefundPicker && (
-        <div className="checkout-overlay" onClick={() => setShowRefundPicker(false)}>
-          <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
-            <h3>🥬 选择等值蔬菜水果</h3>
-            <p style={{ fontSize: 13, color: '#999', marginBottom: 12 }}>请选择总价约 HK$10 的商品（运费等值）</p>
-            <div style={{ maxHeight: 350, overflowY: 'auto' }}>
-              {products.slice(0, 20).map(p => (
-                <div key={p.id} style={{
-                  display: 'flex', alignItems: 'center', padding: 10, border: '1px solid #eee',
-                  borderRadius: 8, marginBottom: 6, cursor: 'pointer'
-                }} onClick={() => {
-                  const existing = refundItems.find(i => i.id === p.id)
-                  if (existing) {
-                    setRefundItems(refundItems.filter(i => i.id !== p.id))
-                  } else {
-                    setRefundItems([...refundItems, { id: p.id, name: p.name, price: p.price, qty: 1 }])
-                  }
-                }}>
-                  <input type="checkbox" checked={refundItems.some(i => i.id === p.id)} readOnly style={{ marginRight: 10 }} />
-                  <span style={{ flex: 1, fontSize: 14 }}>{pn(p.name)}</span>
-                  <span style={{ fontSize: 13, color: '#ff4444' }}>¥{p.price}</span>
-                </div>
-              ))}
-            </div>
-            <div style={{ textAlign: 'right', padding: '10px 0' }}>
-              <button className="btn-submit" onClick={() => setShowRefundPicker(false)}>确认</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* 配送点选择弹窗（强制选择） */}
       {showPointPicker && (
         <div className="checkout-overlay" style={{ zIndex: 3000 }} onClick={() => { if (localStorage.getItem('selectedPointId')) setShowPointPicker(false) }}>
@@ -1201,21 +1139,47 @@ export default function App() {
             <h3>{paymentMethod === 'wechat_transfer' ? '微信扫码付款' : paymentMethod === 'alipay_transfer' ? '支付宝扫码付款' : '转数快 FPS 扫码付款'}</h3>
             <div style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>订单号：{paidOrderNo}</div>
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
-              <div style={{
-                width: 200, height: 200, margin: '0 auto',
-                background: paymentMethod === 'wechat_transfer' ? '#f0f9eb' : paymentMethod === 'alipay_transfer' ? '#e6f4ff' : '#f9f0ff',
-                border: `2px solid ${paymentMethod === 'wechat_transfer' ? '#07c160' : paymentMethod === 'alipay_transfer' ? '#1677ff' : '#722ed1'}`,
-                borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64
-              }}>
-                {paymentMethod === 'wechat_transfer' ? '💚' : paymentMethod === 'alipay_transfer' ? '💙' : '💱'}
-              </div>
+              {paymentMethod === 'fps_transfer' ? (
+                <div style={{ width: 220, height: 220, margin: '0 auto', background: '#f9f0ff', border: '2px solid #722ed1', borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ fontSize: 44 }}>💱</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, marginTop: 10, color: '#722ed1' }}>95480721</div>
+                  <div style={{ fontSize: 12, color: '#666', marginTop: 6 }}>FPS 转数快收款手机号</div>
+                </div>
+              ) : (
+                <div style={{ position: 'relative', display: 'inline-block' }}>
+                  <img src={paymentMethod === 'wechat_transfer' ? '/images/pay/wechat.jpg' : '/images/pay/alipay.jpg'} alt="收款码" style={{ width: 220, borderRadius: 12, border: `2px solid ${paymentMethod === 'wechat_transfer' ? '#07c160' : '#1677ff'}`, display: 'block' }} />
+                  <div style={{ position: 'absolute', left: 8, bottom: 8, background: 'rgba(0,0,0,0.55)', color: '#fff', fontSize: 11, padding: '3px 8px', borderRadius: 10 }}>长按图片可保存</div>
+                </div>
+              )}
               <div style={{ fontSize: 14, marginTop: 10, fontWeight: 600, color: paymentMethod === 'wechat_transfer' ? '#07c160' : paymentMethod === 'alipay_transfer' ? '#1677ff' : '#722ed1' }}>
-                {paymentMethod === 'wechat_transfer' ? '微信收款码' : paymentMethod === 'alipay_transfer' ? '支付宝收款码' : '转数快 FPS 收款码'}
+                {paymentMethod === 'wechat_transfer' ? '微信收款码' : paymentMethod === 'alipay_transfer' ? '支付宝收款码' : '转数快 FPS'}
               </div>
             </div>
-            <div style={{ background: '#fff8e1', padding: 10, borderRadius: 8, fontSize: 12, color: '#f57c00', marginBottom: 16, textAlign: 'left' }}>
-              ⚠️ 转账时请备注订单号，付款后请截图发给老板微信确认。<br />
-              如收款码无法使用，请直接加老板微信付款。
+
+            {/* 操作按钮：保存图片 / 打开对应App / 复制账号 */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+              {paymentMethod !== 'fps_transfer' && (
+                <a
+                  href={paymentMethod === 'wechat_transfer' ? '/images/pay/wechat.jpg' : '/images/pay/alipay.jpg'}
+                  download={paymentMethod === 'wechat_transfer' ? 'wechat-pay.jpg' : 'alipay-pay.jpg'}
+                  style={{ fontSize: 13, padding: '8px 14px', borderRadius: 20, border: `1px solid ${paymentMethod === 'wechat_transfer' ? '#07c160' : '#1677ff'}`, color: paymentMethod === 'wechat_transfer' ? '#07c160' : '#1677ff', background: '#fff', textDecoration: 'none', cursor: 'pointer' }}
+                >⬇ 保存收款码</a>
+              )}
+              {paymentMethod === 'wechat_transfer' && (
+                <a href="weixin://" style={{ fontSize: 13, padding: '8px 14px', borderRadius: 20, border: '1px solid #07c160', color: '#fff', background: '#07c160', textDecoration: 'none', cursor: 'pointer' }}>打开微信</a>
+              )}
+              {paymentMethod === 'alipay_transfer' && (
+                <a href="alipay://" style={{ fontSize: 13, padding: '8px 14px', borderRadius: 20, border: '1px solid #1677ff', color: '#fff', background: '#1677ff', textDecoration: 'none', cursor: 'pointer' }}>打开支付宝</a>
+              )}
+              {paymentMethod === 'fps_transfer' && (
+                <button onClick={() => copyText('95480721', 'FPS手机号')} style={{ fontSize: 13, padding: '8px 14px', borderRadius: 20, border: '1px solid #722ed1', color: '#fff', background: '#722ed1', cursor: 'pointer' }}>📋 复制手机号</button>
+              )}
+            </div>
+
+            <div style={{ background: '#fff8e1', padding: 10, borderRadius: 8, fontSize: 12, color: '#f57c00', marginBottom: 16, textAlign: 'left', lineHeight: 1.7 }}>
+              {paymentMethod === 'wechat_transfer' && <>📌 操作：点「保存收款码」→ 点「打开微信」→ 右上角 + → 扫一扫 → 相册选刚保存的图付款。<br />转账时备注订单号，付完截图发给老板微信。</>}
+              {paymentMethod === 'alipay_transfer' && <>📌 操作：点「保存收款码」→ 点「打开支付宝」→ 扫一扫 → 相册选刚保存的图付款。<br />转账时备注订单号，付完截图发给老板微信。</>}
+              {paymentMethod === 'fps_transfer' && <>📌 操作：转数快 FPS 转账到 <b>95480721</b>，备注订单号，付完截图发给老板微信。</>}
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button className="btn-cancel" style={{ flex: 1 }} onClick={() => { setShowPaymentQR(false); setTab('myOrders') }}>稍后支付</button>
@@ -1327,12 +1291,12 @@ export default function App() {
             <h3 style={{ color: '#3cb043', marginBottom: 8 }}>UST 科大学生优惠</h3>
             <div style={{ fontSize: 14, color: '#333', lineHeight: 1.8, marginBottom: 16 }}>
               <div style={{ background: '#e8f5e9', padding: 12, borderRadius: 8, marginBottom: 8 }}>
-                ✅ <b>免自取运费</b><br/>
-                每单不收 HK$10 自取费
+                🎓 <b>学生优惠</b><br/>
+                免运费 · 满 HK$500 即起送
               </div>
               <div style={{ background: '#e3f2fd', padding: 12, borderRadius: 8 }}>
                 🎯 <b>起送门槛 HK$500</b><br/>
-                当天该点总订单满 HK$500 即起送<br/>
+                当天该点总订单满 HK$500 即起送统一配送<br/>
                 比其他自取点低一半！
               </div>
             </div>
@@ -1348,24 +1312,37 @@ export default function App() {
         <div className="checkout-overlay" onClick={() => setShowContact(false)}>
           <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 380, textAlign: 'center' }}>
             <h3>💬 联系客服</h3>
-            <div style={{ fontSize: 13, color: '#666', marginBottom: 16 }}>有任何问题直接加微信联系我们</div>
+            <div style={{ fontSize: 13, color: '#666', marginBottom: 16 }}>有问题直接加微信 / WhatsApp 联系我们，点账号可一键复制</div>
 
-            <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-              <div style={{ flex: 1, border: '1px solid #eee', borderRadius: 10, padding: 14 }}>
-                <div style={{ width: 120, height: 120, margin: '0 auto', background: '#f5f5f5', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40 }}>
-                  💚
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16, textAlign: 'left' }}>
+              <div style={{ border: '1px solid #e8f5e9', background: '#f6fff8', borderRadius: 10, padding: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#3cb043' }}>🎓 UST科大学生 · 菜神</div>
+                <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>加微信进群 / 咨询订单</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#222' }}>ustshucaizhishen</div>
+                  <button onClick={() => copyText('ustshucaizhishen', '微信号')} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #3cb043', color: '#3cb043', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>复制</button>
                 </div>
-                <div style={{ fontWeight: 600, marginTop: 10, fontSize: 14 }}>UST科大学生</div>
-                <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>加「菜神」微信进群</div>
-                <div style={{ fontSize: 12, color: '#3cb043', marginTop: 4, fontWeight: 600 }}>微信号：待替换</div>
               </div>
-              <div style={{ flex: 1, border: '1px solid #eee', borderRadius: 10, padding: 14 }}>
-                <div style={{ width: 120, height: 120, margin: '0 auto', background: '#f5f5f5', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40 }}>
-                  👤
+
+              <div style={{ border: '1px solid #e8f5e9', background: '#f6fff8', borderRadius: 10, padding: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#3cb043' }}>🏠 小区居民 · 老板</div>
+                <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>加微信咨询订单 / 售后</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#222' }}>jennybabi1988</div>
+                  <button onClick={() => copyText('jennybabi1988', '微信号')} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #3cb043', color: '#3cb043', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>复制</button>
                 </div>
-                <div style={{ fontWeight: 600, marginTop: 10, fontSize: 14 }}>小区居民</div>
-                <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>加老板微信</div>
-                <div style={{ fontSize: 12, color: '#3cb043', marginTop: 4, fontWeight: 600 }}>微信号：待替换</div>
+              </div>
+
+              <div style={{ border: '1px solid #e6f4ff', background: '#f4faff', borderRadius: 10, padding: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#128c7e' }}>💬 WhatsApp 客服</div>
+                <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>海外 / 非微信用户首选</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#222' }}>+852 95228191</div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => copyText('+85295228191', 'WhatsApp号')} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #128c7e', color: '#128c7e', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>复制</button>
+                    <a href="https://wa.me/85295228191" target="_blank" rel="noreferrer" style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #128c7e', color: '#fff', background: '#128c7e', borderRadius: 14, cursor: 'pointer', textDecoration: 'none' }}>打开</a>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1388,8 +1365,8 @@ export default function App() {
               </div>
               <div style={{ background: '#e8f5e9', padding: 12, borderRadius: 8, marginBottom: 10 }}>
                 <b>🚚 运费规则</b><br />
-                · 每单先付 HK$10 自取运费<br />
-                · 当天该自取点总订单满 HK$1000 → 全员免运费<br />
+                · 自取免运费<br />
+                · 当天该自取点总订单满 HK$1000 即起送统一配送<br />
                 · 单独送到家：HK$30
               </div>
               <div style={{ background: '#fff8e1', padding: 12, borderRadius: 8, marginBottom: 10 }}>
