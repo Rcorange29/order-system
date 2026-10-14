@@ -622,9 +622,20 @@ export default function App() {
               const c = currency === 'HKD' ? 'CNY' : 'HKD'
               setCurrency(c); localStorage.setItem('currency', c)
             }} style={{
-              padding: '2px 8px', borderRadius: 8, cursor: 'pointer', marginLeft: 4,
-              background: '#ff4444', color: '#fff', fontWeight: 600
-            }}>{currency === 'HKD' ? 'HK$' : '¥'}</span>
+              padding: '3px 10px', borderRadius: 8, cursor: 'pointer', marginLeft: 4,
+              fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 2
+            }}>
+              <span style={{
+                padding: '1px 5px', borderRadius: 5,
+                background: currency === 'HKD' ? '#ff4444' : '#f2f3f5',
+                color: currency === 'HKD' ? '#fff' : '#999'
+              }}>HK$</span>
+              <span style={{
+                padding: '1px 5px', borderRadius: 5,
+                background: currency === 'CNY' ? '#ff4444' : '#f2f3f5',
+                color: currency === 'CNY' ? '#fff' : '#999'
+              }}>¥</span>
+            </span>
           </div>
         </div>
         {(tab === 'category' || search) && (
