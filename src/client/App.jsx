@@ -165,6 +165,8 @@ export default function App() {
   const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery')
   const [showPaymentQR, setShowPaymentQR] = useState(false)
   const [paidOrderNo, setPaidOrderNo] = useState('')
+  const [lastOrderId, setLastOrderId] = useState(null)
+  const [showUploadProof, setShowUploadProof] = useState(false)
   const [stats, setStats] = useState(null)
   const [deliveryPoints, setDeliveryPoints] = useState([])
   const [selectedPointId, setSelectedPointId] = useState(() => localStorage.getItem('selectedPointId') || null)
@@ -455,6 +457,7 @@ export default function App() {
       authFetch(`${API}/orders`).then(r => r.ok ? r.json() : []).then(setOrders)
       if (paymentMethod === 'wechat_transfer' || paymentMethod === 'alipay_transfer' || paymentMethod === 'fps_transfer') {
         setPaidOrderNo(data.order_no)
+        setLastOrderId(data.id)
         setShowPaymentQR(true)
       } else {
         setTab('myOrders')
@@ -1316,8 +1319,36 @@ export default function App() {
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button className="btn-cancel" style={{ flex: 1 }} onClick={() => { setShowPaymentQR(false); setTab('myOrders') }}>稍后支付</button>
-              <button className="btn-submit" style={{ flex: 1 }} onClick={() => { setShowPaymentQR(false); setTab('myOrders'); showToast('请等待老板确认收款') }}>我已付款</button>
+              <button className="btn-submit" style={{ flex: 1 }} onClick={() => { setShowPaymentQR(false); setShowUploadProof(true) }}>我已付款</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 上传付款凭证弹窗 */}
+      {showUploadProof && (
+        <div className="checkout-overlay" style={{ zIndex: 5000 }} onClick={() => { setShowUploadProof(false); setTab('myOrders') }}>
+          <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 360, textAlign: 'center' }}>
+            <h3 style={{ marginBottom: 12 }}>📸 上传付款截图</h3>
+            <p style={{ fontSize: 13, color: '#666', lineHeight: 1.7, marginBottom: 16, textAlign: 'left' }}>
+              付款后请截图支付成功页面（<b>确保付款时间和金额清晰可见</b>），上传后我们会尽快确认。
+            </p>
+            <input type="file" accept="image/*" onChange={async (e) => {
+              const file = e.target.files[0]
+              if (!file) return
+              const reader = new FileReader()
+              reader.onload = async () => {
+                const res = await authFetch(`${API}/orders/upload-proof`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ order_id: lastOrderId, screenshot: reader.result })
+                })
+                if (res.ok) { showToast('已上传，请等待确认'); setShowUploadProof(false); setTab('myOrders') }
+                else showToast('上传失败，请重试')
+              }
+              reader.readAsDataURL(file)
+            }} style={{ marginBottom: 16 }} />
+            <button className="btn-cancel" style={{ width: '100%', padding: 12 }} onClick={() => { setShowUploadProof(false); setTab('myOrders') }}>稍后上传</button>
           </div>
         </div>
       )}

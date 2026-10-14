@@ -564,6 +564,11 @@ function OrderManage({ orders, reload, showToast }) {
                 <div className="form-row"><label>支付状态</label><div>{payStatusText[detail.payment_status] || detail.payment_status}</div></div>
               </div>
               <div className="form-row"><label>状态</label><span className={`tag tag-${detail.status}`}>{statusText[detail.status]}</span></div>
+              {detail.payment_screenshot && (
+                <div className="form-row"><label>付款截图</label>
+                  <div><img src={detail.payment_screenshot} alt="付款凭证" style={{ maxWidth: 300, borderRadius: 8, border: '1px solid #ddd' }} /></div>
+                </div>
+              )}
             </div>
             <div className="modal-footer"><button className="btn btn-default" onClick={() => setDetail(null)}>关闭</button></div>
           </div>
