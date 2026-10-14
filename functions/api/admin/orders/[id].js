@@ -1,9 +1,20 @@
-import { json, cors, readBody, getAdminUser } from '../../_utils'
+import { json, cors, readBody, getAdminUser } from '../../_utils.js'
 
 export async function onRequest(context) {
   const { request, env } = context
   const id = context.params.id
   if (request.method === 'OPTIONS') return cors()
+
+  if (request.method === 'GET') {
+    const admin = await getAdminUser(request, env)
+    if (!admin) return json({ error: '需要管理员权限' }, 403)
+    const order = await env.DB.prepare('SELECT * FROM orders WHERE id = ?').bind(id).first()
+    if (!order) return json({ error: 'not found' }, 404)
+    const { results: items } = await env.DB.prepare(
+      'SELECT oi.*, p.name as product_name, p.image as product_image FROM order_items oi LEFT JOIN products p ON oi.product_id = p.id WHERE oi.order_id = ?'
+    ).bind(id).all()
+    return json({ ...order, items: items.map(i => ({ ...i, product: { id: i.product_id, name: i.product_name, image: i.product_image } })) })
+  }
 
   if (request.method === 'PUT') {
     const admin = await getAdminUser(request, env)

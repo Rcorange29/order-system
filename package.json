@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "vite --port 3000",
     "build": "vite build",
+    "test": "node --test tests/*.test.mjs",
     "preview": "vite preview",
     "deploy": "npm run build && wrangler pages deploy dist",
     "db:init": "wrangler d1 execute order-db --file=migrations/schema.sql",
+    "db:upgrade": "node scripts/upgrade-db.mjs",
     "db:seed": "wrangler d1 execute order-db --file=migrations/seed.sql"
   },
   "dependencies": {

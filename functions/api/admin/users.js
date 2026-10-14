@@ -1,4 +1,4 @@
-import { json, cors, getAdminUser } from '../_utils'
+import { json, cors, getAdminUser } from '../_utils.js'
 
 export async function onRequest(context) {
   const { request, env } = context
@@ -10,7 +10,7 @@ export async function onRequest(context) {
   const users = await env.DB.prepare(`
     SELECT u.id, u.username, u.phone, u.created_at,
       COUNT(o.id) as order_count,
-      COALESCE(SUM(o.total_amount), 0) as total_spent,
+      COALESCE(SUM(CASE WHEN o.payment_status = 'confirmed' THEN o.total + COALESCE(o.delivery_fee, 0) ELSE 0 END), 0) as total_spent,
       MAX(o.created_at) as last_order_at
     FROM users u
     LEFT JOIN orders o ON u.id = o.user_id

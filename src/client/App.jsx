@@ -141,6 +141,25 @@ function authFetch(url, options = {}) {
   return fetch(url, { ...options, headers })
 }
 
+async function uploadProofFile(file, orderId) {
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return '请选择 PNG、JPEG 或 WebP 图片'
+  if (file.size > 1024 * 1024) return '图片不能超过1MB'
+  const screenshot = await new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+  const response = await authFetch(`${API}/orders/upload-proof`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ order_id: orderId, screenshot })
+  })
+  if (response.ok) return null
+  const data = await response.json().catch(() => ({}))
+  return data.error || '上传失败，请重试'
+}
+
 export default function App() {
   const [tab, setTab] = useState('home')
   const [orderFilter, setOrderFilter] = useState('all')
@@ -165,6 +184,7 @@ export default function App() {
   const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery')
   const [showPaymentQR, setShowPaymentQR] = useState(false)
   const [paidOrderNo, setPaidOrderNo] = useState('')
+  const [paidOrderAmount, setPaidOrderAmount] = useState(0)
   const [lastOrderId, setLastOrderId] = useState(null)
   const [showUploadProof, setShowUploadProof] = useState(false)
   const [stats, setStats] = useState(null)
@@ -380,7 +400,7 @@ export default function App() {
 
   const addToCart = (id, variantLabel, variantPrice) => {
     const key = variantLabel ? `${id}::${variantLabel}` : String(id)
-    setCart(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }))
+    setCart(prev => ({ ...prev, [key]: Math.min((prev[key] || 0) + 1, 99) }))
     showToast('已加入购物车')
   }
 
@@ -400,14 +420,16 @@ export default function App() {
   const cartTotal = cartItems.reduce((sum, item) => sum + item.variantPrice * item.qty, 0)
   const currentPoint = deliveryPoints.find(p => p.id == selectedPointId)
   const isUstPoint = currentPoint && (currentPoint.name.includes('科技大学') || currentPoint.name.includes('科大') || currentPoint.name.includes('UST'))
-  const effectiveFee = 0
-  const effectiveThreshold = isUstPoint ? 500 : (stats?.threshold || 1000)
+  const effectiveFee = deliveryType === 'delivery' ? 30 / exchangeRate : currentPoint
+    ? (Number(stats?.confirmed_total || 0) + cartTotal >= Number(stats?.threshold || Number(currentPoint.threshold) / exchangeRate) ? 0 : Number(stats?.delivery_fee || Number(currentPoint.fee) / exchangeRate))
+    : 0
+  const effectiveThreshold = stats?.threshold || (isUstPoint ? 500 : 1000) / exchangeRate
   const effectiveReached = stats ? stats.confirmed_total >= effectiveThreshold : false
 
   const updateQty = (id, delta) => {
     setCart(prev => {
       const next = { ...prev }
-      next[id] = (next[id] || 0) + delta
+      next[id] = Math.min((next[id] || 0) + delta, 99)
       if (next[id] <= 0) delete next[id]
       return next
     })
@@ -424,6 +446,7 @@ export default function App() {
 
   const submitOrder = async () => {
     if (!requireLogin()) return
+    if (cartItems.length === 0) { showToast('请先选择商品'); return }
     let customer = '', phone = '', address = ''
     if (deliveryType === 'pickup') {
       if (!selectedPointId) { showToast(t('selectPointFirst')); setShowPointPicker(true); return }
@@ -445,7 +468,7 @@ export default function App() {
         payment_method: paymentMethod,
         delivery_type: deliveryType,
         delivery_point_id: deliveryType === 'pickup' ? selectedPointId : null,
-        items: cartItems.map(item => ({ product_id: item.product.id, quantity: item.qty, variant: item.variantLabel || '', price: item.variantPrice }))
+        items: cartItems.map(item => ({ product_id: item.product.id, quantity: item.qty, variant: item.variantLabel || '' }))
       })
     })
     if (res.ok) {
@@ -457,6 +480,7 @@ export default function App() {
       authFetch(`${API}/orders`).then(r => r.ok ? r.json() : []).then(setOrders)
       if (paymentMethod === 'wechat_transfer' || paymentMethod === 'alipay_transfer' || paymentMethod === 'fps_transfer') {
         setPaidOrderNo(data.order_no)
+        setPaidOrderAmount(Number(data.total) + Number(data.delivery_fee || 0))
         setLastOrderId(data.id)
         setShowPaymentQR(true)
       } else {
@@ -548,7 +572,7 @@ export default function App() {
   }
 
   if (tab === 'orderDetail' && selectedOrder) {
-    return <OrderDetailPage order={selectedOrder} onBack={() => setTab('myOrders')} />
+    return <OrderDetailPage order={selectedOrder} onBack={() => setTab('myOrders')} pn={pn} fmt={fmt} t={t} statusTxt={statusTxt} showToast={showToast} />
   }
 
   if (tab === 'address') {
@@ -855,8 +879,8 @@ export default function App() {
                     <span>{t('orderNo')}：{o.order_no}</span>
                     <span className="order-status">{statusTxt[o.status] || o.status}</span>
                   </div>
-                  <div className="order-goods">{o.items?.map(i => `${pn(i.product?.name)} x${i.quantity}`).join('，')}</div>
-                  <div className="order-total">{t('orderTotal')}：<span>{fmt(o.total)}</span></div>
+                  <div className="order-goods">{o.items?.map(i => `${pn(i.product?.name)}${i.variant ? `（${i.variant}）` : ''} x${i.quantity}`).join('，')}</div>
+                  <div className="order-total">{t('orderTotal')}：<span>{fmt(Number(o.total) + Number(o.delivery_fee || 0))}</span></div>
                 </div>
               ))
             })()}
@@ -1035,7 +1059,7 @@ export default function App() {
                   background: deliveryType === 'delivery' ? '#f0fff0' : '#fff', fontSize: 14
                 }}>
                   🏠 配送到家
-                  <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>运费$30</div>
+                  <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>运费 HK$30</div>
                 </div>
               </div>
             </div>
@@ -1126,14 +1150,14 @@ export default function App() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
                 <span style={{ color: '#666' }}>运费</span>
-                <span style={{ color: (deliveryType === 'delivery' || !stats?.reached) ? '#ff4444' : '#3cb043', fontWeight: 600 }}>
-                  {deliveryType === 'delivery' ? fmt(30) : t('freeFee')}
+                <span style={{ color: effectiveFee ? '#ff4444' : '#3cb043', fontWeight: 600 }}>
+                  {effectiveFee ? fmt(effectiveFee) : t('freeFee')}
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0 4px', borderTop: '1px solid #eee', marginTop: 4 }}>
                 <span>共 {cartCount} 件</span>
                 <span style={{ color: '#ff4444', fontWeight: 'bold', fontSize: 18 }}>
-                  {fmt(cartTotal)}
+                  {fmt(cartTotal + effectiveFee)}
                 </span>
               </div>
             </div>
@@ -1274,6 +1298,7 @@ export default function App() {
           <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 340, textAlign: 'center' }}>
             <h3>{paymentMethod === 'wechat_transfer' ? '微信扫码付款' : paymentMethod === 'alipay_transfer' ? '支付宝扫码付款' : '转数快 FPS 扫码付款'}</h3>
             <div style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>订单号：{paidOrderNo}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#ff4444', marginBottom: 12 }}>应付 HK${Math.round(paidOrderAmount * exchangeRate)}</div>
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
               {paymentMethod === 'fps_transfer' ? (
                 <div style={{ width: 220, height: 220, margin: '0 auto', background: '#f9f0ff', border: '2px solid #722ed1', borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -1333,20 +1358,14 @@ export default function App() {
             <p style={{ fontSize: 13, color: '#666', lineHeight: 1.7, marginBottom: 16, textAlign: 'left' }}>
               付款后请截图支付成功页面（<b>确保付款时间和金额清晰可见</b>），上传后我们会尽快确认。
             </p>
-            <input type="file" accept="image/*" onChange={async (e) => {
+            <input type="file" accept="image/png,image/jpeg,image/webp" onChange={async (e) => {
               const file = e.target.files[0]
               if (!file) return
-              const reader = new FileReader()
-              reader.onload = async () => {
-                const res = await authFetch(`${API}/orders/upload-proof`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ order_id: lastOrderId, screenshot: reader.result })
-                })
-                if (res.ok) { showToast('已上传，请等待确认'); setShowUploadProof(false); setTab('myOrders') }
-                else showToast('上传失败，请重试')
-              }
-              reader.readAsDataURL(file)
+              try {
+                const error = await uploadProofFile(file, lastOrderId)
+                if (error) showToast(error)
+                else { showToast('已上传，请等待确认'); setShowUploadProof(false); setTab('myOrders') }
+              } catch { showToast('上传失败，请重试') }
             }} style={{ marginBottom: 16 }} />
             <button className="btn-cancel" style={{ width: '100%', padding: 12 }} onClick={() => { setShowUploadProof(false); setTab('myOrders') }}>稍后上传</button>
           </div>
@@ -1421,7 +1440,7 @@ export default function App() {
 
               <div style={{ background: '#e8f5e9', padding: 12, borderRadius: 8, marginBottom: 10 }}>
                 <b>💰 运费</b><br />
-                · 自取点免运费，满 ¥1000 起送<br />
+                · 自取点满 HK$1000 免运费并起送<br />
                 · 配送到家运费 ¥30<br />
                 · 未满门槛可先下单凑单，着急也可单独付运费配送
               </div>
@@ -1688,7 +1707,7 @@ function AddressEditPage({ addr, onSave, onBack }) {
 }
 
 /* ========== 订单详情页 ========== */
-function OrderDetailPage({ order, onBack }) {
+function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast }) {
   return (
     <div>
       <div className="back-btn" onClick={onBack}>‹ 返回</div>
@@ -1710,7 +1729,7 @@ function OrderDetailPage({ order, onBack }) {
             <div className="order-detail-goods-item" key={i.id}>
               <div className="emoji">{i.product?.image ? <img src={i.product.image} alt="" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:6}} /> : '🛒'}</div>
               <div className="g-info">
-                <div className="name">{pn(i.product?.name)}</div>
+                <div className="name">{pn(i.product?.name)}{i.variant ? `（${i.variant}）` : ''}</div>
                 <div className="price">{fmt(i.price)}</div>
               </div>
               <div className="qty">x{i.quantity}</div>
@@ -1718,8 +1737,8 @@ function OrderDetailPage({ order, onBack }) {
           ))}
           <div className="order-detail-summary">
             <div className="row"><span>商品总额</span><span>{fmt(order.total)}</span></div>
-            <div className="row"><span>运费</span><span>{fmt(0)}</span></div>
-            <div className="row total"><span>实付</span><span>{fmt(order.total)}</span></div>
+            <div className="row"><span>运费</span><span>{fmt(order.delivery_fee || 0)}</span></div>
+            <div className="row total"><span>应付</span><span>{fmt(Number(order.total) + Number(order.delivery_fee || 0))}</span></div>
           </div>
         </div>
         <div className="order-detail-card">
@@ -1729,6 +1748,16 @@ function OrderDetailPage({ order, onBack }) {
             <div>{t('orderStatus')}：{statusTxt[order.status] || order.status}</div>
             <div>支付方式：{paymentText[order.payment_method] || order.payment_method}</div>
             <div>支付状态：{payStatusText[order.payment_status] || order.payment_status}</div>
+            {order.payment_method !== 'cash_on_delivery' && order.payment_status !== 'confirmed' && (
+              <div>上传付款凭证（PNG、JPEG 或 WebP，最多1MB）：
+                <input type="file" accept="image/png,image/jpeg,image/webp" onChange={async e => {
+                  const file = e.target.files[0]
+                  if (!file) return
+                  try { showToast(await uploadProofFile(file, order.id) || '已上传，请等待确认') }
+                  catch { showToast('上传失败，请重试') }
+                }} />
+              </div>
+            )}
             <div>下单时间：{order.created_at?.slice(0, 19).replace('T', ' ')}</div>
             {order.remark && <div>备注：{order.remark}</div>}
           </div>
