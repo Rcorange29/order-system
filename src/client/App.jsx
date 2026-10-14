@@ -625,7 +625,6 @@ export default function App() {
               padding: '2px 8px', borderRadius: 8, cursor: 'pointer', marginLeft: 4,
               background: '#ff4444', color: '#fff', fontWeight: 600
             }}>{currency === 'HKD' ? 'HK$' : '¥'}</span>
-            ))}
           </div>
         </div>
         <div className="search-box">
