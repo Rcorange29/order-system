@@ -28,10 +28,10 @@ export async function onRequest(context) {
     if (!admin) return json({ error: '需要管理员权限' }, 403)
     const body = await readBody(request)
     const result = await env.DB.prepare(
-      'INSERT INTO products (name, price, original_price, image, category_id, stock, is_new, is_hot, description, unit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO products (name, price, original_price, image, category_id, stock, is_new, is_hot, description, unit, variants) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     ).bind(
       body.name || '', body.price || 0, body.original_price || 0, body.image || '',
-      body.category_id || null, body.stock || 0, body.is_new ? 1 : 0, body.is_hot ? 1 : 0, body.description || '', body.unit || '/斤'
+      body.category_id || null, body.stock || 0, body.is_new ? 1 : 0, body.is_hot ? 1 : 0, body.description || '', body.unit || '/斤', body.variants || null
     ).run()
     const product = await env.DB.prepare('SELECT * FROM products WHERE id = ?').bind(result.meta.last_row_id).first()
     return json({ ...product, is_new: !!product.is_new, is_hot: !!product.is_hot }, 201)

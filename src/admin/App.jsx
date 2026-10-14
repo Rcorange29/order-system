@@ -210,7 +210,7 @@ function ProductManage({ products, categories, reload, showToast }) {
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState(null)
   const [search, setSearch] = useState('')
-  const emptyForm = { name: '', price: '', original_price: '', image: '', category_id: '', stock: '', is_new: false, is_hot: false, description: '', unit: '/斤' }
+  const emptyForm = { name: '', price: '', original_price: '', image: '', category_id: '', stock: '', is_new: false, is_hot: false, description: '', unit: '/斤', variants: [] }
   const [form, setForm] = useState(emptyForm)
   const fileInputRef = useRef(null)
 
@@ -253,13 +253,15 @@ function ProductManage({ products, categories, reload, showToast }) {
   const openAdd = () => { setEditing(null); setForm(emptyForm); setShowModal(true) }
   const openEdit = (p) => {
     setEditing(p)
-    setForm({ name: p.name, price: p.price, original_price: p.original_price, image: p.image, category_id: p.category_id, stock: p.stock, is_new: p.is_new, is_hot: p.is_hot, description: p.description || '', unit: p.unit || '/斤' })
+    let parsedVariants = []
+    try { parsedVariants = p.variants ? JSON.parse(p.variants) : [] } catch(e) {}
+    setForm({ name: p.name, price: p.price, original_price: p.original_price, image: p.image, category_id: p.category_id, stock: p.stock, is_new: p.is_new, is_hot: p.is_hot, description: p.description || '', unit: p.unit || '/斤', variants: parsedVariants })
     setShowModal(true)
   }
 
   const save = async (navDir) => {
     if (!form.name) { showToast('请输入商品名称'); return }
-    const body = { ...form, price: Number(form.price), original_price: Number(form.original_price), stock: Number(form.stock), category_id: Number(form.category_id) }
+    const body = { ...form, price: Number(form.price), original_price: Number(form.original_price), stock: Number(form.stock), category_id: Number(form.category_id), variants: form.variants.length > 0 ? JSON.stringify(form.variants) : null }
     const url = editing ? `${API}/products/${editing.id}` : `${API}/products`
     const method = editing ? 'PUT' : 'POST'
     const res = await authFetch(url, { method, body })
@@ -411,6 +413,29 @@ function ProductManage({ products, categories, reload, showToast }) {
               <div className="form-inline">
                 <div className="form-row"><label><input type="checkbox" checked={form.is_new} onChange={e => setForm({ ...form, is_new: e.target.checked })} style={{ width: 'auto', marginRight: 6 }} />新人专享</label></div>
                 <div className="form-row"><label><input type="checkbox" checked={form.is_hot} onChange={e => setForm({ ...form, is_hot: e.target.checked })} style={{ width: 'auto', marginRight: 6 }} />热门推荐</label></div>
+              </div>
+              <div className="form-row">
+                <label>多规格（可选）</label>
+                <div style={{ marginTop: 4 }}>
+                  {form.variants.map((v, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' }}>
+                      <input placeholder="规格名，如：半磅" value={v.label} onChange={e => {
+                        const vs = [...form.variants]; vs[i] = { ...vs[i], label: e.target.value }
+                        setForm({ ...form, variants: vs })
+                      }} style={{ flex: 1 }} />
+                      <input type="number" placeholder="价格" value={v.price} onChange={e => {
+                        const vs = [...form.variants]; vs[i] = { ...vs[i], price: Number(e.target.value) }
+                        setForm({ ...form, variants: vs })
+                      }} style={{ width: 80 }} />
+                      <button type="button" className="btn btn-danger btn-sm" onClick={() => {
+                        setForm({ ...form, variants: form.variants.filter((_, j) => j !== i) })
+                      }}>×</button>
+                    </div>
+                  ))}
+                  <button type="button" className="btn btn-default btn-sm" onClick={() => {
+                    setForm({ ...form, variants: [...form.variants, { label: '', price: '' }] })
+                  }}>+ 添加规格</button>
+                </div>
               </div>
               <div className="form-row"><label>描述</label><textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
             </div>

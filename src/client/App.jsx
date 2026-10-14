@@ -340,16 +340,26 @@ export default function App() {
 
   const newUserProducts = products.filter(p => p.is_new).slice(0, 4)
 
-  const addToCart = (id) => {
-    setCart(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }))
+  const addToCart = (id, variantLabel, variantPrice) => {
+    const key = variantLabel ? `${id}::${variantLabel}` : String(id)
+    setCart(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }))
     showToast('已加入购物车')
   }
 
   const cartCount = Object.values(cart).reduce((a, b) => a + b, 0)
   const cartItems = Object.entries(cart)
-    .map(([id, qty]) => ({ product: products.find(p => p.id === Number(id)), qty }))
+    .map(([key, qty]) => {
+      const [pidStr, vLabel] = key.split('::')
+      const product = products.find(p => p.id === Number(pidStr))
+      if (!product) return null
+      let variants = []
+      try { variants = product.variants ? JSON.parse(product.variants) : [] } catch(e) {}
+      const variant = vLabel ? variants.find(v => v.label === vLabel) : null
+      const price = variant ? variant.price : product.price
+      return { product, qty, variantLabel: vLabel || '', variantPrice: price }
+    })
     .filter(item => item.product)
-  const cartTotal = cartItems.reduce((sum, item) => sum + item.product.price * item.qty, 0)
+  const cartTotal = cartItems.reduce((sum, item) => sum + item.variantPrice * item.qty, 0)
   const currentPoint = deliveryPoints.find(p => p.id == selectedPointId)
   const isUstPoint = currentPoint && (currentPoint.name.includes('科技大学') || currentPoint.name.includes('科大') || currentPoint.name.includes('UST'))
   const effectiveFee = 0
@@ -397,7 +407,7 @@ export default function App() {
         payment_method: paymentMethod,
         delivery_type: deliveryType,
         delivery_point_id: deliveryType === 'pickup' ? selectedPointId : null,
-        items: cartItems.map(item => ({ product_id: item.product.id, quantity: item.qty }))
+        items: cartItems.map(item => ({ product_id: item.product.id, quantity: item.qty, variant: item.variantLabel || '', price: item.variantPrice }))
       })
     })
     if (res.ok) {
@@ -897,20 +907,23 @@ export default function App() {
             </div>
             <div className="cart-items">
               {cartItems.length === 0 && <div className="empty-state"><div className="icon">🛒</div>购物车是空的</div>}
-              {cartItems.map(item => (
-                <div className="cart-item" key={item.product.id}>
+              {cartItems.map(item => {
+                const itemKey = item.variantLabel ? `${item.product.id}::${item.variantLabel}` : String(item.product.id)
+                return (
+                <div className="cart-item" key={itemKey}>
                   <div className="emoji">{item.product.image ? <img src={item.product.image} alt="" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:6}} /> : '🛒'}</div>
                   <div className="detail">
-                    <div className="name">{pn(item.product.name)}</div>
-                    <div className="price">¥{item.product.price.toFixed(2)}<small style={{fontSize:11,color:'#999'}}>{item.product.unit || '/斤'}</small></div>
+                    <div className="name">{pn(item.product.name)}{item.variantLabel && <small style={{color:'#ff4444',marginLeft:6,fontSize:12}}>({item.variantLabel})</small>}</div>
+                    <div className="price">¥{item.variantPrice.toFixed(2)}<small style={{fontSize:11,color:'#999'}}>{item.product.unit || '/斤'}</small></div>
                   </div>
                   <div className="qty-control">
-                    <button className="qty-btn" onClick={() => updateQty(item.product.id, -1)}>−</button>
+                    <button className="qty-btn" onClick={() => updateQty(itemKey, -1)}>−</button>
                     <span className="qty-num">{item.qty}</span>
-                    <button className="qty-btn plus" onClick={() => updateQty(item.product.id, 1)}>+</button>
+                    <button className="qty-btn plus" onClick={() => updateQty(itemKey, 1)}>+</button>
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
             {/* 凑单推荐 */}
             {deliveryType === 'pickup' && stats && !effectiveReached && (
@@ -1094,11 +1107,33 @@ export default function App() {
                   {favorites.includes(selectedProduct.id) ? '❤️' : '🤍'}
                 </span>
               </h3>
-              <div style={{ fontSize: 24, color: '#ff4444', fontWeight: 'bold', marginBottom: 12 }}>¥{selectedProduct.price.toFixed(2)}</div>
-              {selectedProduct.description && (
-                <p style={{ fontSize: 14, color: '#666', lineHeight: 1.6, marginBottom: 16 }}>{selectedProduct.description}</p>
-              )}
-              <button className="btn-submit" style={{ width: '100%' }} onClick={() => { addToCart(selectedProduct.id); setSelectedProduct(null) }}>加入购物车</button>
+              {(() => {
+                let variants = []
+                try { variants = selectedProduct.variants ? JSON.parse(selectedProduct.variants) : [] } catch(e) {}
+                if (variants.length === 0) return (
+                  <>
+                    <div style={{ fontSize: 24, color: '#ff4444', fontWeight: 'bold', marginBottom: 12 }}>¥{selectedProduct.price.toFixed(2)}<small style={{fontSize:13,color:'#999',fontWeight:400}}>{selectedProduct.unit || '/斤'}</small></div>
+                    {selectedProduct.description && <p style={{ fontSize: 14, color: '#666', lineHeight: 1.6, marginBottom: 16 }}>{selectedProduct.description}</p>}
+                    <button className="btn-submit" style={{ width: '100%' }} onClick={() => { addToCart(selectedProduct.id); setSelectedProduct(null) }}>加入购物车</button>
+                  </>
+                )
+                // Has variants: show selector
+                return (
+                  <>
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 13, color: '#999', marginBottom: 6 }}>选择规格：</div>
+                      {variants.map((v, i) => (
+                        <div key={i} onClick={() => { addToCart(selectedProduct.id, v.label, v.price); setSelectedProduct(null) }}
+                          style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', marginBottom: 6, border: '1px solid #ff4444', borderRadius: 8, cursor: 'pointer', background: '#fff5f5' }}>
+                          <span style={{ fontWeight: 600 }}>{v.label}</span>
+                          <span style={{ color: '#ff4444', fontWeight: 700 }}>¥{Number(v.price).toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {selectedProduct.description && <p style={{ fontSize: 14, color: '#666', lineHeight: 1.6, marginBottom: 16 }}>{selectedProduct.description}</p>}
+                  </>
+                )
+              })()}
             </div>
           </div>
         </div>
