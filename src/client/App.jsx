@@ -197,6 +197,17 @@ export default function App() {
     const m = pointNameMap[pname]
     return (m && m[lang]) || pname
   }
+  const priceText = (p) => {
+    let variants = []
+    try { variants = p.variants ? JSON.parse(p.variants) : [] } catch(e) {}
+    if (variants.length > 0) {
+      const prices = variants.map(v => Number(v.price))
+      const min = Math.min(...prices)
+      const max = Math.max(...prices)
+      return min === max ? min.toFixed(2) : `${min.toFixed(0)}~${max.toFixed(0)}`
+    }
+    return p.price.toFixed(2)
+  }
   const statusTxt = { pending: t('statusPending'), paid: t('statusPaid'), shipped: t('statusShipped'), completed: t('statusCompleted'), cancelled: t('statusCancelled') }
 
   const switchLang = (l) => {
@@ -550,7 +561,7 @@ export default function App() {
               <div className="info">
                 <div className="name">{pn(p.name)}</div>
                 <div className="bottom-row">
-                  <div className="price"><small>¥</small>{p.price.toFixed(2)}<small style={{fontSize:11,color:'#999'}}>{p.unit || '/斤'}</small></div>
+                  <div className="price"><small>¥</small>{priceText(p)}</div>
                   <button className="add-btn" onClick={(e) => { e.stopPropagation(); addToCart(p.id) }}>+</button>
                 </div>
               </div>
@@ -685,7 +696,7 @@ export default function App() {
                     <div className="emoji">{p.image ? <img src={p.image} alt={p.name} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:8}} /> : '🛒'}</div>
                     <span className="tag">新人价</span>
                     <div className="name">{pn(p.name)}</div>
-                    <div className="price">¥{p.price.toFixed(2)}<small style={{fontSize:11,color:'#999'}}>{p.unit || '/斤'}</small></div>
+                    <div className="price">¥{priceText(p)}</div>
                     <div className="orig-price">¥{p.original_price?.toFixed(2)}</div>
                   </div>
                 ))}
@@ -724,7 +735,7 @@ export default function App() {
                       <div className="sales">{p.is_hot ? '🔥 ' + t('tagHot') : ''}</div>
                     </div>
                     <div className="bottom-row">
-                      <div className="price"><small>¥</small>{p.price.toFixed(2)}<small style={{fontSize:11,color:'#999'}}>{p.unit || '/斤'}</small></div>
+                      <div className="price"><small>¥</small>{priceText(p)}</div>
                       {p.is_active !== false && <button className="add-btn" onClick={(e) => { e.stopPropagation(); addToCart(p.id) }}>+</button>}
                     </div>
                   </div>
@@ -769,7 +780,7 @@ export default function App() {
                       <div className="sales">{p.is_hot ? '🔥 ' + t('tagHot') : ''}</div>
                     </div>
                     <div className="bottom-row">
-                      <div className="price"><small>¥</small>{p.price.toFixed(2)}<small style={{fontSize:11,color:'#999'}}>{p.unit || '/斤'}</small></div>
+                      <div className="price"><small>¥</small>{priceText(p)}</div>
                       {p.is_active !== false && <button className="add-btn" onClick={(e) => { e.stopPropagation(); addToCart(p.id) }}>+</button>}
                     </div>
                   </div>
