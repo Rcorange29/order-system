@@ -1377,48 +1377,40 @@ export default function App() {
       {showIntro && (
         <div className="checkout-overlay" style={{ zIndex: 5000 }} onClick={() => {}}>
           <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 420, maxHeight: '85vh', overflowY: 'auto' }}>
-            <h3 style={{ textAlign: 'center', marginBottom: 16 }}>📋 下单前必读</h3>
+            <h3 style={{ textAlign: 'center', marginBottom: 16 }}>📋 下单须知</h3>
 
             <div style={{ fontSize: 13, lineHeight: 1.8, color: '#333' }}>
-              <div style={{ background: '#fff8e1', padding: 12, borderRadius: 8, marginBottom: 12 }}>
-                <b>🚚 关于凑单配送</b><br />
-                · 本站是<b>拼单模式</b>：大家一起买，凑够起送金额才配送<br />
-                · 不是单笔订单满额，是<b>当天该自取点所有人加起来满额</b><br />
-                · 想单独送到家？运费 HK$30，可选"配送到家"
+              <div style={{ background: '#e3f2fd', padding: 12, borderRadius: 8, marginBottom: 10 }}>
+                <b>🚚 配送时间</b><br />
+                · 每天中午12:00前凑满起送额 → 当晚配送<br />
+                · 12:00后凑满 → 次日配送<br />
+                · 每天晚上12:00截单<br />
+                · 配送通知会在对应微信群/WhatsApp群及本网站同步，下单后请及时加群或关注发货通知
               </div>
 
-              <div style={{ background: '#e8f5e9', padding: 12, borderRadius: 8, marginBottom: 12 }}>
-                <b>⏰ 配送时间</b><br />
-                · 当天 <b>中午12:00前</b> 凑满起送额 → 当天晚上配送<br />
-                · 当天 <b>中午12:00后</b> 才满额 → 第二天配送<br />
-                · 每天 <b>晚上12:00</b> 截止当天下单
+              <div style={{ background: '#e8f5e9', padding: 12, borderRadius: 8, marginBottom: 10 }}>
+                <b>💰 运费</b><br />
+                · 自取点免运费，满 ¥1000 起送<br />
+                · 配送到家运费 ¥30<br />
+                · 未满门槛可先下单凑单，着急也可单独付运费配送
               </div>
 
-              <div style={{ background: '#e3f2fd', padding: 12, borderRadius: 8, marginBottom: 12 }}>
-                <b>✅ 关于订单确认</b><br />
-                · 下单后老板会当天确认，没及时确认也不用紧张<br />
-                · 确认可能有延时，<b>只要付了钱就放心，一定会确认</b><br />
-                · 凑单进度条实时更新，大家都能看到还差多少
+              <div style={{ background: '#fff8e1', padding: 12, borderRadius: 8, marginBottom: 10 }}>
+                <b>📍 自取点</b><br />
+                日出康城站 / 科技大学 / 坑口站 / 宝琳站 / 将军澳站 / 调景岭站
               </div>
 
-              <div style={{ background: '#fce4ec', padding: 12, borderRadius: 8, marginBottom: 12 }}>
-                <b>💳 关于付款</b><br />
-                · 选微信/支付宝/转数快付款后，会弹出收款二维码<br />
-                · <b>请截图扫码转账给老板</b>，转账后联系老板确认<br />
-                · 货到付款：取货时给现金
+              <div style={{ background: '#fce4ec', padding: 12, borderRadius: 8, marginBottom: 10 }}>
+                <b>💳 付款</b><br />
+                提交订单后弹出收款码，截图或保存后用微信/支付宝/转数快转账即可。人工确认可能延迟，付款成功即可放心。
               </div>
 
-              <div style={{ background: '#f3e5f5', padding: 12, borderRadius: 8, marginBottom: 12 }}>
-                <b>📞 联系我们</b><br />
-                · <b>UST科大学生</b>：请加「菜神」微信进群<br />
-                · <b>小区居民</b>：请加老板微信<br />
-                · 有任何问题（退货、退款、缺货）都直接微信联系
-              </div>
-
-              <div style={{ background: '#fafafa', padding: 12, borderRadius: 8, marginBottom: 12, fontSize: 12, color: '#666' }}>
-                <b>📦 关于退货</b><br />
-                · 生鲜类商品不支持无理由退货<br />
-                · 如有质量问题（坏果、缺斤少两），拍照联系老板退款
+              <div style={{ background: '#f3e5f5', padding: 12, borderRadius: 8, marginBottom: 10 }}>
+                <b>📞 联系</b><br />
+                · 老板微信：jennybabi1988<br />
+                · WhatsApp：+852 95228191<br />
+                · 科大学生加菜神微信进群：ustshucaizhishen<br />
+                · 技术问题联系微信：ustshucaizhishen
               </div>
             </div>
 
