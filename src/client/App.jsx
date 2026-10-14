@@ -173,6 +173,7 @@ export default function App() {
   const [ustBenefit, setUstBenefit] = useState(false)
   const [showIntro, setShowIntro] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
+  const [selectedVariant, setSelectedVariant] = useState(null)
   const [favorites, setFavorites] = useState(() => JSON.parse(localStorage.getItem('favorites') || '[]'))
   const [searchHistory, setSearchHistory] = useState(() => JSON.parse(localStorage.getItem('searchHistory') || '[]'))
   const [showHelp, setShowHelp] = useState(false)
@@ -214,7 +215,7 @@ export default function App() {
   }
   const quickAdd = (p) => {
     if (p.is_active === false) return
-    if (hasVariants(p)) { setSelectedProduct(p); return }
+    if (hasVariants(p)) { setSelectedProduct(p); setSelectedVariant(null); return }
     addToCart(p.id)
   }
   const statusTxt = { pending: t('statusPending'), paid: t('statusPaid'), shipped: t('statusShipped'), completed: t('statusCompleted'), cancelled: t('statusCancelled') }
@@ -558,7 +559,7 @@ export default function App() {
         <h3 style={{ fontSize: 18, padding: '0 16px 12px' }}>❤️ 我的收藏</h3>
         <div className="product-grid" style={{ padding: '0 12px 80px' }}>
           {favProducts.map(p => (
-            <div className="product-card" key={p.id} onClick={() => setSelectedProduct(p)}>
+            <div className="product-card" key={p.id} onClick={() => { setSelectedProduct(p); setSelectedVariant(null) }}>
               <div className="emoji">
                 {p.image ? <img src={p.image} alt={p.name} /> : '🛒'}
                 <span onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id) }} style={{
@@ -726,7 +727,7 @@ export default function App() {
             <div className="product-list-title">{search ? t('searchResult').replace('{kw}', search) : '🔥 ' + t('hot')}</div>
             <div className="product-grid">
               {filteredProducts.map(p => (
-                <div className="product-card" key={p.id} onClick={() => setSelectedProduct(p)} style={p.is_active === false ? { opacity: 0.5, filter: 'grayscale(1)' } : {}}>
+                <div className="product-card" key={p.id} onClick={() => { setSelectedProduct(p); setSelectedVariant(null) }} style={p.is_active === false ? { opacity: 0.5, filter: 'grayscale(1)' } : {}}>
                   <div className="emoji">
                     {p.image ? <img src={p.image} alt={p.name} /> : '🛒'}
                     {(p.is_hot || p.is_new) && <div className="promo-tag">{p.is_hot ? t('tagHot') : t('tagNew')}</div>}
@@ -771,7 +772,7 @@ export default function App() {
           <div className="cat-main">
             <div className="product-grid">
               {filteredProducts.map(p => (
-                <div className="product-card" key={p.id} onClick={() => setSelectedProduct(p)} style={p.is_active === false ? { opacity: 0.5, filter: 'grayscale(1)' } : {}}>
+                <div className="product-card" key={p.id} onClick={() => { setSelectedProduct(p); setSelectedVariant(null) }} style={p.is_active === false ? { opacity: 0.5, filter: 'grayscale(1)' } : {}}>
                   <div className="emoji">
                     {p.image ? <img src={p.image} alt={p.name} /> : '🛒'}
                     {(p.is_hot || p.is_new) && <div className="promo-tag">{p.is_hot ? t('tagHot') : t('tagNew')}</div>}
@@ -1148,15 +1149,31 @@ export default function App() {
                   <>
                     <div style={{ marginBottom: 12 }}>
                       <div style={{ fontSize: 13, color: '#999', marginBottom: 6 }}>选择规格：</div>
-                      {variants.map((v, i) => (
-                        <div key={i} onClick={() => { addToCart(selectedProduct.id, v.label, v.price); setSelectedProduct(null) }}
-                          style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', marginBottom: 6, border: '1px solid #ff4444', borderRadius: 8, cursor: 'pointer', background: '#fff5f5' }}>
-                          <span style={{ fontWeight: 600 }}>{v.label}</span>
-                          <span style={{ color: '#ff4444', fontWeight: 700 }}>¥{Number(v.price).toFixed(2)}</span>
-                        </div>
-                      ))}
+                      {variants.map((v, i) => {
+                        const isSel = selectedVariant === i
+                        return (
+                          <div key={i} onClick={() => setSelectedVariant(i)}
+                            style={{
+                              display: 'flex', justifyContent: 'space-between', padding: '10px 14px', marginBottom: 6,
+                              border: isSel ? '2px solid #ff4444' : '1px solid #ddd',
+                              borderRadius: 8, cursor: 'pointer',
+                              background: isSel ? '#fff5f5' : '#fff',
+                              fontWeight: isSel ? 600 : 400
+                            }}>
+                            <span>{v.label}</span>
+                            <span style={{ color: '#ff4444', fontWeight: 700 }}>¥{Number(v.price).toFixed(2)}</span>
+                          </div>
+                        )
+                      })}
                     </div>
                     {selectedProduct.description && <p style={{ fontSize: 14, color: '#666', lineHeight: 1.6, marginBottom: 16 }}>{selectedProduct.description}</p>}
+                    <button className="btn-submit" style={{ width: '100%', opacity: selectedVariant === null ? 0.5 : 1 }}
+                      onClick={() => {
+                        if (selectedVariant === null) { showToast('请先选择规格'); return }
+                        const v = variants[selectedVariant]
+                        addToCart(selectedProduct.id, v.label, Number(v.price))
+                        setSelectedProduct(null); setSelectedVariant(null)
+                      }}>加入购物车</button>
                   </>
                 )
               })()}
