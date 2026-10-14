@@ -208,6 +208,14 @@ export default function App() {
     }
     return p.price.toFixed(2)
   }
+  const hasVariants = (p) => {
+    try { return p.variants && JSON.parse(p.variants).length > 0 } catch(e) { return false }
+  }
+  const quickAdd = (p) => {
+    if (p.is_active === false) return
+    if (hasVariants(p)) { setSelectedProduct(p); return }
+    addToCart(p.id)
+  }
   const statusTxt = { pending: t('statusPending'), paid: t('statusPaid'), shipped: t('statusShipped'), completed: t('statusCompleted'), cancelled: t('statusCancelled') }
 
   const switchLang = (l) => {
@@ -562,7 +570,7 @@ export default function App() {
                 <div className="name">{pn(p.name)}</div>
                 <div className="bottom-row">
                   <div className="price"><small>¥</small>{priceText(p)}</div>
-                  <button className="add-btn" onClick={(e) => { e.stopPropagation(); addToCart(p.id) }}>+</button>
+                  <button className="add-btn" onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>+</button>
                 </div>
               </div>
             </div>
@@ -692,7 +700,7 @@ export default function App() {
               </div>
               <div className="product-scroll">
                 {newUserProducts.map(p => (
-                  <div className="product-card-mini" key={p.id} onClick={() => addToCart(p.id)}>
+                  <div className="product-card-mini" key={p.id} onClick={() => quickAdd(p)}>
                     <div className="emoji">{p.image ? <img src={p.image} alt={p.name} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:8}} /> : '🛒'}</div>
                     <span className="tag">新人价</span>
                     <div className="name">{pn(p.name)}</div>
@@ -736,7 +744,7 @@ export default function App() {
                     </div>
                     <div className="bottom-row">
                       <div className="price"><small>¥</small>{priceText(p)}</div>
-                      {p.is_active !== false && <button className="add-btn" onClick={(e) => { e.stopPropagation(); addToCart(p.id) }}>+</button>}
+                      {p.is_active !== false && <button className="add-btn" onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>+</button>}
                     </div>
                   </div>
                 </div>
@@ -781,7 +789,7 @@ export default function App() {
                     </div>
                     <div className="bottom-row">
                       <div className="price"><small>¥</small>{priceText(p)}</div>
-                      {p.is_active !== false && <button className="add-btn" onClick={(e) => { e.stopPropagation(); addToCart(p.id) }}>+</button>}
+                      {p.is_active !== false && <button className="add-btn" onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>+</button>}
                     </div>
                   </div>
                 </div>
@@ -950,7 +958,7 @@ export default function App() {
                 <div style={{ display: 'flex', gap: 8, overflowX: 'auto' }}>
                   {products.filter(p => p.price <= 20 && !cart[p.id]).slice(0, 5).map(p => (
                     <div key={p.id} style={{ minWidth: 80, background: '#fff', borderRadius: 8, padding: 6, textAlign: 'center', cursor: 'pointer' }}
-                      onClick={() => addToCart(p.id)}>
+                      onClick={() => quickAdd(p)}>
                       <div style={{ fontSize: 24 }}>{p.image ? '' : '🛒'}</div>
                       <div style={{ fontSize: 11, color: '#333', margin: '4px 0' }}>{pn(p.name).slice(0, 4)}</div>
                       <div style={{ fontSize: 12, color: '#ff4444', fontWeight: 600 }}>¥{p.price}</div>
