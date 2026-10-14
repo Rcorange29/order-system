@@ -706,10 +706,11 @@ export default function App() {
             <div className="product-list-title">{search ? t('searchResult').replace('{kw}', search) : '🔥 ' + t('hot')}</div>
             <div className="product-grid">
               {filteredProducts.map(p => (
-                <div className="product-card" key={p.id} onClick={() => setSelectedProduct(p)}>
+                <div className="product-card" key={p.id} onClick={() => setSelectedProduct(p)} style={p.is_active === false ? { opacity: 0.5, filter: 'grayscale(1)' } : {}}>
                   <div className="emoji">
                     {p.image ? <img src={p.image} alt={p.name} /> : '🛒'}
                     {(p.is_hot || p.is_new) && <div className="promo-tag">{p.is_hot ? t('tagHot') : t('tagNew')}</div>}
+                    {p.is_active === false && <div className="promo-tag" style={{background:'#999'}}>{t('offShelf') || '已下架'}</div>}
                     <span onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id) }} className="fav-btn">
                       {favorites.includes(p.id) ? '❤️' : '🤍'}
                     </span>
@@ -724,7 +725,7 @@ export default function App() {
                     </div>
                     <div className="bottom-row">
                       <div className="price"><small>¥</small>{p.price.toFixed(2)}<small style={{fontSize:11,color:'#999'}}>{p.unit || '/斤'}</small></div>
-                      <button className="add-btn" onClick={(e) => { e.stopPropagation(); addToCart(p.id) }}>+</button>
+                      {p.is_active !== false && <button className="add-btn" onClick={(e) => { e.stopPropagation(); addToCart(p.id) }}>+</button>}
                     </div>
                   </div>
                 </div>
@@ -750,10 +751,11 @@ export default function App() {
           <div className="cat-main">
             <div className="product-grid">
               {filteredProducts.map(p => (
-                <div className="product-card" key={p.id} onClick={() => setSelectedProduct(p)}>
+                <div className="product-card" key={p.id} onClick={() => setSelectedProduct(p)} style={p.is_active === false ? { opacity: 0.5, filter: 'grayscale(1)' } : {}}>
                   <div className="emoji">
                     {p.image ? <img src={p.image} alt={p.name} /> : '🛒'}
                     {(p.is_hot || p.is_new) && <div className="promo-tag">{p.is_hot ? t('tagHot') : t('tagNew')}</div>}
+                    {p.is_active === false && <div className="promo-tag" style={{background:'#999'}}>{t('offShelf') || '已下架'}</div>}
                     <span onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id) }} className="fav-btn">
                       {favorites.includes(p.id) ? '❤️' : '🤍'}
                     </span>
@@ -768,7 +770,7 @@ export default function App() {
                     </div>
                     <div className="bottom-row">
                       <div className="price"><small>¥</small>{p.price.toFixed(2)}<small style={{fontSize:11,color:'#999'}}>{p.unit || '/斤'}</small></div>
-                      <button className="add-btn" onClick={(e) => { e.stopPropagation(); addToCart(p.id) }}>+</button>
+                      {p.is_active !== false && <button className="add-btn" onClick={(e) => { e.stopPropagation(); addToCart(p.id) }}>+</button>}
                     </div>
                   </div>
                 </div>
@@ -1114,7 +1116,11 @@ export default function App() {
                   <>
                     <div style={{ fontSize: 24, color: '#ff4444', fontWeight: 'bold', marginBottom: 12 }}>¥{selectedProduct.price.toFixed(2)}<small style={{fontSize:13,color:'#999',fontWeight:400}}>{selectedProduct.unit || '/斤'}</small></div>
                     {selectedProduct.description && <p style={{ fontSize: 14, color: '#666', lineHeight: 1.6, marginBottom: 16 }}>{selectedProduct.description}</p>}
-                    <button className="btn-submit" style={{ width: '100%' }} onClick={() => { addToCart(selectedProduct.id); setSelectedProduct(null) }}>加入购物车</button>
+                    {selectedProduct.is_active !== false ? (
+                      <button className="btn-submit" style={{ width: '100%' }} onClick={() => { addToCart(selectedProduct.id); setSelectedProduct(null) }}>加入购物车</button>
+                    ) : (
+                      <div style={{ width: '100%', textAlign: 'center', padding: '12px', background: '#f0f0f0', color: '#999', borderRadius: 8, fontWeight: 600 }}>已下架，暂不可购买</div>
+                    )}
                   </>
                 )
                 // Has variants: show selector

@@ -210,7 +210,7 @@ function ProductManage({ products, categories, reload, showToast }) {
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState(null)
   const [search, setSearch] = useState('')
-  const emptyForm = { name: '', price: '', original_price: '', image: '', category_id: '', stock: '', is_new: false, is_hot: false, description: '', unit: '/斤', variants: [] }
+  const emptyForm = { name: '', price: '', original_price: '', image: '', category_id: '', stock: '', is_new: false, is_hot: false, description: '', unit: '/斤', variants: [], is_active: true }
   const [form, setForm] = useState(emptyForm)
   const fileInputRef = useRef(null)
 
@@ -255,7 +255,7 @@ function ProductManage({ products, categories, reload, showToast }) {
     setEditing(p)
     let parsedVariants = []
     try { parsedVariants = p.variants ? JSON.parse(p.variants) : [] } catch(e) {}
-    setForm({ name: p.name, price: p.price, original_price: p.original_price, image: p.image, category_id: p.category_id, stock: p.stock, is_new: p.is_new, is_hot: p.is_hot, description: p.description || '', unit: p.unit || '/斤', variants: parsedVariants })
+    setForm({ name: p.name, price: p.price, original_price: p.original_price, image: p.image, category_id: p.category_id, stock: p.stock, is_new: p.is_new, is_hot: p.is_hot, description: p.description || '', unit: p.unit || '/斤', variants: parsedVariants, is_active: p.is_active !== false })
     setShowModal(true)
   }
 
@@ -315,7 +315,7 @@ function ProductManage({ products, categories, reload, showToast }) {
                 <td style={{ color: '#ff4444', fontWeight: 600 }}>¥{p.price?.toFixed(2)}{p.unit || '/斤'}</td>
                 <td><s style={{ color: '#999' }}>¥{p.original_price?.toFixed(2)}{p.unit || '/斤'}</s></td>
                 <td>{p.stock}</td>
-                <td>{p.is_new && <span className="tag tag-pending" style={{ marginRight: 4 }}>新人</span>}{p.is_hot && <span className="tag tag-paid">热门</span>}</td>
+                <td>{p.is_new && <span className="tag tag-pending" style={{ marginRight: 4 }}>新人</span>}{p.is_hot && <span className="tag tag-paid" style={{ marginRight: 4 }}>热门</span>}{p.is_active === false && <span style={{background:'#999',color:'#fff',padding:'2px 8px',borderRadius:4,fontSize:11}}>已下架</span>}</td>
                 <td><div className="action-btns"><button className="btn btn-default btn-sm" onClick={() => openEdit(p)}>编辑</button><button className="btn btn-danger btn-sm" onClick={() => del(p.id)}>删除</button></div></td>
               </tr>
             ))}
@@ -413,6 +413,7 @@ function ProductManage({ products, categories, reload, showToast }) {
               <div className="form-inline">
                 <div className="form-row"><label><input type="checkbox" checked={form.is_new} onChange={e => setForm({ ...form, is_new: e.target.checked })} style={{ width: 'auto', marginRight: 6 }} />新人专享</label></div>
                 <div className="form-row"><label><input type="checkbox" checked={form.is_hot} onChange={e => setForm({ ...form, is_hot: e.target.checked })} style={{ width: 'auto', marginRight: 6 }} />热门推荐</label></div>
+                <div className="form-row"><label><input type="checkbox" checked={form.is_active} onChange={e => setForm({ ...form, is_active: e.target.checked })} style={{ width: 'auto', marginRight: 6 }} />上架中</label></div>
               </div>
               <div className="form-row">
                 <label>多规格（可选）</label>
