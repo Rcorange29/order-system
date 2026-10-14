@@ -257,13 +257,30 @@ function ProductManage({ products, categories, reload, showToast }) {
     setShowModal(true)
   }
 
-  const save = async () => {
+  const save = async (navDir) => {
     if (!form.name) { showToast('请输入商品名称'); return }
     const body = { ...form, price: Number(form.price), original_price: Number(form.original_price), stock: Number(form.stock), category_id: Number(form.category_id) }
     const url = editing ? `${API}/products/${editing.id}` : `${API}/products`
     const method = editing ? 'PUT' : 'POST'
     const res = await authFetch(url, { method, body })
-    if (res.ok) { showToast(editing ? '修改成功' : '添加成功'); setShowModal(false); reload() }
+    if (!res.ok) { showToast('保存失败'); return }
+    
+    // If navigating, load next/prev product from filtered list
+    if (navDir && editing) {
+      const idx = filtered.findIndex(p => p.id === editing.id)
+      const nextIdx = navDir === 'next' ? idx + 1 : idx - 1
+      if (nextIdx >= 0 && nextIdx < filtered.length) {
+        const np = filtered[nextIdx]
+        setEditing(np)
+        setForm({ name: np.name, price: np.price, original_price: np.original_price, image: np.image, category_id: np.category_id, stock: np.stock, is_new: np.is_new, is_hot: np.is_hot, description: np.description || '', unit: np.unit || '/斤' })
+        showToast(`已保存，跳转至 ${np.name}`)
+        return
+      } else {
+        showToast('已是最后一个商品')
+      }
+    }
+    showToast(editing ? '修改成功' : '添加成功')
+    setShowModal(false); reload()
   }
 
   const del = async (id) => {
@@ -397,9 +414,19 @@ function ProductManage({ products, categories, reload, showToast }) {
               </div>
               <div className="form-row"><label>描述</label><textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
             </div>
-            <div className="modal-footer">
-              <button className="btn btn-default" onClick={() => setShowModal(false)}>取消</button>
-              <button className="btn btn-primary" onClick={save}>保存</button>
+            <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                {editing && (
+                  <>
+                    <button className="btn btn-default" onClick={() => save('prev')} style={{ marginRight: 8 }}>← 上一个</button>
+                    <button className="btn btn-default" onClick={() => save('next')}>下一个 →</button>
+                  </>
+                )}
+              </div>
+              <div>
+                <button className="btn btn-default" onClick={() => setShowModal(false)}>关闭</button>
+                <button className="btn btn-primary" onClick={() => save()}>保存</button>
+              </div>
             </div>
           </div>
         </div>
