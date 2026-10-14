@@ -210,7 +210,7 @@ function ProductManage({ products, categories, reload, showToast }) {
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState(null)
   const [search, setSearch] = useState('')
-  const emptyForm = { name: '', price: '', original_price: '', image: '', category_id: '', stock: '', is_new: false, is_hot: false, description: '' }
+  const emptyForm = { name: '', price: '', original_price: '', image: '', category_id: '', stock: '', is_new: false, is_hot: false, description: '', unit: '/斤' }
   const [form, setForm] = useState(emptyForm)
   const fileInputRef = useRef(null)
 
@@ -253,7 +253,7 @@ function ProductManage({ products, categories, reload, showToast }) {
   const openAdd = () => { setEditing(null); setForm(emptyForm); setShowModal(true) }
   const openEdit = (p) => {
     setEditing(p)
-    setForm({ name: p.name, price: p.price, original_price: p.original_price, image: p.image, category_id: p.category_id, stock: p.stock, is_new: p.is_new, is_hot: p.is_hot, description: p.description || '' })
+    setForm({ name: p.name, price: p.price, original_price: p.original_price, image: p.image, category_id: p.category_id, stock: p.stock, is_new: p.is_new, is_hot: p.is_hot, description: p.description || '', unit: p.unit || '/斤' })
     setShowModal(true)
   }
 
@@ -293,8 +293,8 @@ function ProductManage({ products, categories, reload, showToast }) {
                 <td>{p.image ? <img src={p.image} style={{width:50,height:50,objectFit:'cover',borderRadius:6}} /> : '📦'}</td>
                 <td>{p.name}</td>
                 <td>{p.category?.name || '-'}</td>
-                <td style={{ color: '#ff4444', fontWeight: 600 }}>¥{p.price?.toFixed(2)}</td>
-                <td><s style={{ color: '#999' }}>¥{p.original_price?.toFixed(2)}</s></td>
+                <td style={{ color: '#ff4444', fontWeight: 600 }}>¥{p.price?.toFixed(2)}{p.unit || '/斤'}</td>
+                <td><s style={{ color: '#999' }}>¥{p.original_price?.toFixed(2)}{p.unit || '/斤'}</s></td>
                 <td>{p.stock}</td>
                 <td>{p.is_new && <span className="tag tag-pending" style={{ marginRight: 4 }}>新人</span>}{p.is_hot && <span className="tag tag-paid">热门</span>}</td>
                 <td><div className="action-btns"><button className="btn btn-default btn-sm" onClick={() => openEdit(p)}>编辑</button><button className="btn btn-danger btn-sm" onClick={() => del(p.id)}>删除</button></div></td>
@@ -380,6 +380,7 @@ function ProductManage({ products, categories, reload, showToast }) {
               <div className="form-inline">
                 <div className="form-row"><label>售价 <span className="req">*</span></label><input type="number" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} /></div>
                 <div className="form-row"><label>原价</label><input type="number" value={form.original_price} onChange={e => setForm({ ...form, original_price: e.target.value })} /></div>
+                <div className="form-row"><label>单位</label><input value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })} placeholder="/斤" /></div>
               </div>
               <div className="form-inline">
                 <div className="form-row"><label>分类</label>

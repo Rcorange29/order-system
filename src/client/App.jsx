@@ -540,7 +540,7 @@ export default function App() {
               <div className="info">
                 <div className="name">{pn(p.name)}</div>
                 <div className="bottom-row">
-                  <div className="price"><small>¥</small>{p.price.toFixed(2)}</div>
+                  <div className="price"><small>¥</small>{p.price.toFixed(2)}<small style={{fontSize:11,color:'#999'}}>{p.unit || '/斤'}</small></div>
                   <button className="add-btn" onClick={(e) => { e.stopPropagation(); addToCart(p.id) }}>+</button>
                 </div>
               </div>
@@ -675,7 +675,7 @@ export default function App() {
                     <div className="emoji">{p.image ? <img src={p.image} alt={p.name} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:8}} /> : '🛒'}</div>
                     <span className="tag">新人价</span>
                     <div className="name">{pn(p.name)}</div>
-                    <div className="price">¥{p.price.toFixed(2)}</div>
+                    <div className="price">¥{p.price.toFixed(2)}<small style={{fontSize:11,color:'#999'}}>{p.unit || '/斤'}</small></div>
                     <div className="orig-price">¥{p.original_price?.toFixed(2)}</div>
                   </div>
                 ))}
@@ -713,7 +713,7 @@ export default function App() {
                       <div className="sales">{p.is_hot ? '🔥 ' + t('tagHot') : ''}</div>
                     </div>
                     <div className="bottom-row">
-                      <div className="price"><small>¥</small>{p.price.toFixed(2)}</div>
+                      <div className="price"><small>¥</small>{p.price.toFixed(2)}<small style={{fontSize:11,color:'#999'}}>{p.unit || '/斤'}</small></div>
                       <button className="add-btn" onClick={(e) => { e.stopPropagation(); addToCart(p.id) }}>+</button>
                     </div>
                   </div>
@@ -757,7 +757,7 @@ export default function App() {
                       <div className="sales">{p.is_hot ? '🔥 ' + t('tagHot') : ''}</div>
                     </div>
                     <div className="bottom-row">
-                      <div className="price"><small>¥</small>{p.price.toFixed(2)}</div>
+                      <div className="price"><small>¥</small>{p.price.toFixed(2)}<small style={{fontSize:11,color:'#999'}}>{p.unit || '/斤'}</small></div>
                       <button className="add-btn" onClick={(e) => { e.stopPropagation(); addToCart(p.id) }}>+</button>
                     </div>
                   </div>
@@ -902,7 +902,7 @@ export default function App() {
                   <div className="emoji">{item.product.image ? <img src={item.product.image} alt="" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:6}} /> : '🛒'}</div>
                   <div className="detail">
                     <div className="name">{pn(item.product.name)}</div>
-                    <div className="price">¥{item.product.price.toFixed(2)}</div>
+                    <div className="price">¥{item.product.price.toFixed(2)}<small style={{fontSize:11,color:'#999'}}>{item.product.unit || '/斤'}</small></div>
                   </div>
                   <div className="qty-control">
                     <button className="qty-btn" onClick={() => updateQty(item.product.id, -1)}>−</button>
