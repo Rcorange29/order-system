@@ -20,12 +20,14 @@ export default function App() {
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [orders, setOrders] = useState([])
+  const [users, setUsers] = useState([])
   const [toast, setToast] = useState('')
 
   const reload = () => {
     authFetch(`${API}/products`).then(r => r.json()).then(setProducts)
     authFetch(`${API}/categories`).then(r => r.json()).then(setCategories)
     authFetch(`${API}/admin/orders`).then(r => r.json()).then(setOrders)
+    authFetch(`${API}/admin/users`).then(r => r.json()).then(setUsers)
   }
 
   useEffect(() => {
@@ -66,6 +68,7 @@ export default function App() {
     { key: 'dashboard', label: '📊 数据概览' },
     { key: 'products', label: '📦 商品管理' },
     { key: 'orders', label: '📋 订单管理' },
+    { key: 'users', label: '👥 用户管理' },
     { key: 'categories', label: '🏷️ 分类管理' },
   ]
 
@@ -86,6 +89,7 @@ export default function App() {
         {page === 'dashboard' && <Dashboard products={products} orders={orders} categories={categories} />}
         {page === 'products' && <ProductManage products={products} categories={categories} reload={reload} showToast={showToast} />}
         {page === 'orders' && <OrderManage orders={orders} reload={reload} showToast={showToast} />}
+        {page === 'users' && <UserManage users={users} showToast={showToast} />}
         {page === 'categories' && <CategoryManage categories={categories} reload={reload} showToast={showToast} />}
       </div>
       {toast && <div style={{ position: 'fixed', top: 24, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.8)', color: '#fff', padding: '10px 24px', borderRadius: 6, zIndex: 9999, fontSize: 14 }}>{toast}</div>}
@@ -573,6 +577,79 @@ function CategoryManage({ categories, reload, showToast }) {
             <div className="modal-footer">
               <button className="btn btn-default" onClick={() => setShowModal(false)}>取消</button>
               <button className="btn btn-primary" onClick={save}>保存</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ========== 用户管理 ========== */
+function UserManage({ users, showToast }) {
+  const [search, setSearch] = useState('')
+  const [detail, setDetail] = useState(null)
+  const [userOrders, setUserOrders] = useState([])
+
+  const filtered = users.filter(u =>
+    !search || (u.username || '').includes(search) || (u.phone || '').includes(search)
+  )
+
+  const viewOrders = async (u) => {
+    setDetail(u)
+    const r = await authFetch(`${API}/admin/orders?user_id=${u.id}`)
+    if (r.ok) setUserOrders(await r.json())
+  }
+
+  return (
+    <div>
+      <div className="page-header">
+        <h2>用户管理</h2>
+        <span style={{ color: '#999', fontSize: 14 }}>共 {users.length} 位注册用户</span>
+      </div>
+      <div className="card">
+        <div className="toolbar">
+          <input placeholder="搜索用户名或手机号" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <table>
+          <thead><tr><th>ID</th><th>用户名</th><th>手机号</th><th>订单数</th><th>累计消费</th><th>注册时间</th><th>最后下单</th><th>操作</th></tr></thead>
+          <tbody>
+            {filtered.map(u => (
+              <tr key={u.id}>
+                <td>{u.id}</td>
+                <td>{u.username}</td>
+                <td>{u.phone || '—'}</td>
+                <td>{u.order_count || 0}</td>
+                <td>HK${(u.total_spent || 0).toFixed(1)}</td>
+                <td>{(u.created_at || '').substring(0, 16)}</td>
+                <td>{(u.last_order_at || '从未下单').substring(0, 16)}</td>
+                <td><button className="btn btn-default btn-sm" onClick={() => viewOrders(u)}>查看订单</button></td>
+              </tr>
+            ))}
+            {filtered.length === 0 && <tr><td colSpan={8} style={{ textAlign: 'center', color: '#999', padding: 30 }}>暂无用户</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      {detail && (
+        <div className="modal-overlay" onClick={() => setDetail(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header"><h3>{detail.username} 的订单记录</h3><button className="modal-close" onClick={() => setDetail(null)}>×</button></div>
+            <div className="modal-body" style={{ maxHeight: 400, overflowY: 'auto' }}>
+              <div className="form-row"><label>手机号</label><div>{detail.phone || '未填写'}</div></div>
+              <div className="form-row"><label>订单数</label><div>{detail.order_count}</div></div>
+              <div className="form-row"><label>累计消费</label><div>HK${(detail.total_spent || 0).toFixed(1)}</div></div>
+              <hr style={{ margin: '16px 0' }} />
+              {userOrders.length === 0 ? <div style={{ color: '#999', textAlign: 'center' }}>暂无订单</div> :
+                userOrders.map(o => (
+                  <div key={o.id} style={{ padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
+                    <div style={{ fontWeight: 600 }}>{o.order_no} · HK${o.total_amount}</div>
+                    <div style={{ fontSize: 13, color: '#999' }}>{(o.items || '').substring(0, 60)} · {(o.created_at || '').substring(0, 16)}</div>
+                  </div>
+                ))}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-default" onClick={() => setDetail(null)}>关闭</button>
             </div>
           </div>
         </div>
