@@ -627,6 +627,8 @@ export default function App() {
             }}>{currency === 'HKD' ? 'HK$' : '¥'}</span>
           </div>
         </div>
+        {(tab === 'category' || search) && (
+        <>
         <div className="search-box">
           🔍 <input
             placeholder={t('search')}
@@ -648,6 +650,8 @@ export default function App() {
               </span>
             ))}
           </div>
+        )}
+        </>
         )}
       </div>
 
