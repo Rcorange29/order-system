@@ -1111,73 +1111,96 @@ export default function App() {
         </div>
       )}
 
-      {/* 商品详情弹窗 */}
+      {/* 商品详情底部弹层 */}
       {selectedProduct && (
-        <div className="checkout-overlay" onClick={() => setSelectedProduct(null)}>
-          <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
-            <div style={{ position: 'relative' }}>
+        <div className="checkout-overlay" onClick={() => { setSelectedProduct(null); setSelectedVariant(null) }}
+          style={{ alignItems: 'flex-end' }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{
+              background: '#fff', borderRadius: '16px 16px 0 0', maxWidth: 400, width: '100%',
+              maxHeight: '85vh', overflowY: 'auto', paddingBottom: 0
+            }}>
+            {/* 顶部商品信息行 */}
+            <div style={{ display: 'flex', gap: 12, padding: 16, position: 'relative' }}>
               {selectedProduct.image ? (
-                <img src={selectedProduct.image} alt={pn(selectedProduct.name)} style={{ width: '100%', borderRadius: '12px 12px 0 0', aspectRatio: '1/1', objectFit: 'cover' }} />
+                <img src={selectedProduct.image} alt={pn(selectedProduct.name)} style={{ width: 80, height: 80, borderRadius: 10, objectFit: 'cover' }} />
               ) : (
-                <div style={{ width: '100%', aspectRatio: '1/1', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 60, borderRadius: '12px 12px 0 0' }}>🛒</div>
+                <div style={{ width: 80, height: 80, background: '#fafafa', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>🛒</div>
               )}
-              <span onClick={() => setSelectedProduct(null)} style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(0,0,0,0.5)', color: '#fff', width: 30, height: 30, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 16 }}>✕</span>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: 18, marginBottom: 6 }}>{pn(selectedProduct.name)}</h3>
+                <div style={{ fontSize: 20, color: '#ff4444', fontWeight: 'bold' }}>
+                  ¥{(() => {
+                    let variants = []
+                    try { variants = selectedProduct.variants ? JSON.parse(selectedProduct.variants) : [] } catch(e) {}
+                    if (variants.length > 0) {
+                      const prices = variants.map(v => Number(v.price))
+                      return Math.min(...prices).toFixed(0) + '~' + Math.max(...prices).toFixed(0)
+                    }
+                    return selectedProduct.price.toFixed(2)
+                  })()}<small style={{fontSize:13,color:'#999',fontWeight:400}}>/{selectedProduct.unit || '斤'}</small>
+                </div>
+              </div>
+              <span onClick={() => { setSelectedProduct(null); setSelectedVariant(null) }}
+                style={{ position: 'absolute', top: 12, right: 12, background: '#f0f0f0', width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 14, color: '#999' }}>✕</span>
             </div>
-            <div style={{ padding: 16 }}>
-              <h3 style={{ fontSize: 18, marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                {pn(selectedProduct.name)}
-                <span onClick={() => toggleFavorite(selectedProduct.id)} style={{ fontSize: 24, cursor: 'pointer' }}>
-                  {favorites.includes(selectedProduct.id) ? '❤️' : '🤍'}
-                </span>
-              </h3>
-              {(() => {
-                let variants = []
-                try { variants = selectedProduct.variants ? JSON.parse(selectedProduct.variants) : [] } catch(e) {}
-                if (variants.length === 0) return (
-                  <>
-                    <div style={{ fontSize: 24, color: '#ff4444', fontWeight: 'bold', marginBottom: 12 }}>¥{selectedProduct.price.toFixed(2)}<small style={{fontSize:13,color:'#999',fontWeight:400}}>{selectedProduct.unit || '/斤'}</small></div>
-                    {selectedProduct.description && <p style={{ fontSize: 14, color: '#666', lineHeight: 1.6, marginBottom: 16 }}>{selectedProduct.description}</p>}
-                    {selectedProduct.is_active !== false ? (
-                      <button className="btn-submit" style={{ width: '100%' }} onClick={() => { addToCart(selectedProduct.id); setSelectedProduct(null) }}>加入购物车</button>
-                    ) : (
-                      <div style={{ width: '100%', textAlign: 'center', padding: '12px', background: '#f0f0f0', color: '#999', borderRadius: 8, fontWeight: 600 }}>已下架，暂不可购买</div>
-                    )}
-                  </>
-                )
-                // Has variants: show selector
-                return (
-                  <>
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 13, color: '#999', marginBottom: 6 }}>选择规格：</div>
-                      {variants.map((v, i) => {
-                        const isSel = selectedVariant === i
-                        return (
-                          <div key={i} onClick={() => setSelectedVariant(i)}
-                            style={{
-                              display: 'flex', justifyContent: 'space-between', padding: '10px 14px', marginBottom: 6,
-                              border: isSel ? '2px solid #ff4444' : '1px solid #ddd',
-                              borderRadius: 8, cursor: 'pointer',
-                              background: isSel ? '#fff5f5' : '#fff',
-                              fontWeight: isSel ? 600 : 400
-                            }}>
-                            <span>{v.label}</span>
-                            <span style={{ color: '#ff4444', fontWeight: 700 }}>¥{Number(v.price).toFixed(2)}</span>
-                          </div>
-                        )
-                      })}
+
+            {(() => {
+              let variants = []
+              try { variants = selectedProduct.variants ? JSON.parse(selectedProduct.variants) : [] } catch(e) {}
+              return (
+                <>
+                  {/* 规格选择 */}
+                  {variants.length > 0 && (
+                    <div style={{ padding: '0 16px', borderTop: '8px solid #f7f7f7' }}>
+                      <div style={{ fontSize: 14, color: '#333', fontWeight: 600, padding: '12px 0 8px' }}>规格</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingBottom: 12 }}>
+                        {variants.map((v, i) => {
+                          const isSel = selectedVariant === i
+                          return (
+                            <div key={i} onClick={() => setSelectedVariant(i)}
+                              style={{
+                                padding: '8px 16px', borderRadius: 20, cursor: 'pointer',
+                                border: isSel ? '2px solid #ff4444' : '1px solid #ddd',
+                                background: isSel ? '#fff5f5' : '#fff',
+                                fontSize: 14, fontWeight: isSel ? 600 : 400,
+                              }}>
+                              {v.label} <span style={{color:'#ff4444'}}>¥{Number(v.price).toFixed(0)}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
-                    {selectedProduct.description && <p style={{ fontSize: 14, color: '#666', lineHeight: 1.6, marginBottom: 16 }}>{selectedProduct.description}</p>}
-                    <button className="btn-submit" style={{ width: '100%', opacity: selectedVariant === null ? 0.5 : 1 }}
-                      onClick={() => {
-                        if (selectedVariant === null) { showToast('请先选择规格'); return }
-                        const v = variants[selectedVariant]
-                        addToCart(selectedProduct.id, v.label, Number(v.price))
-                        setSelectedProduct(null); setSelectedVariant(null)
-                      }}>加入购物车</button>
-                  </>
-                )
-              })()}
-            </div>
+                  )}
+
+                  {/* 描述 */}
+                  {selectedProduct.description && (
+                    <div style={{ padding: '0 16px', borderTop: '8px solid #f7f7f7' }}>
+                      <p style={{ fontSize: 14, color: '#666', lineHeight: 1.6, padding: '12px 0' }}>{selectedProduct.description}</p>
+                    </div>
+                  )}
+
+                  {/* 底部按钮 */}
+                  <div style={{ position: 'sticky', bottom: 0, background: '#fff', padding: '12px 16px', borderTop: '1px solid #f0f0f0' }}>
+                    {selectedProduct.is_active !== false ? (
+                      <button className="btn-submit" style={{ width: '100%', background: '#ff4444', opacity: (variants.length > 0 && selectedVariant === null) ? 0.5 : 1 }}
+                        onClick={() => {
+                          if (variants.length > 0 && selectedVariant === null) { showToast('请先选择规格'); return }
+                          if (variants.length > 0) {
+                            const v = variants[selectedVariant]
+                            addToCart(selectedProduct.id, v.label, Number(v.price))
+                          } else {
+                            addToCart(selectedProduct.id)
+                          }
+                          setSelectedProduct(null); setSelectedVariant(null)
+                        }}>添加到购物车</button>
+                    ) : (
+                      <div style={{ width: '100%', textAlign: 'center', padding: '14px', background: '#f0f0f0', color: '#999', borderRadius: 8, fontWeight: 600 }}>已下架，暂不可购买</div>
+                    )}
+                  </div>
+                </>
+              )
+            })()}
           </div>
         </div>
       )}
