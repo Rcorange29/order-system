@@ -89,6 +89,8 @@ test('records the chosen payment currency and server-calculated amount', async (
   assert.equal(invalid.status, 400)
   assert.equal((await call(orders, database(), '/api/orders', 'POST', { ...orderBody(), payment_currency: 'HKD' })).status, 400)
   assert.equal((await call(orders, database(), '/api/orders', 'POST', { ...orderBody(), payment_method: 'fps_transfer', payment_currency: 'CNY' })).status, 400)
+  assert.equal((await call(orders, database(), '/api/orders', 'POST', { ...orderBody(), payment_method: 'cash_on_delivery' })).status, 400)
+  assert.equal((await call(orders, database(), '/api/orders', 'POST', { ...orderBody(), payment_method: undefined })).status, 400)
   assert.equal((await call(orders, database(), '/api/orders', 'POST', { ...orderBody(), payment_method: 'fps_transfer', payment_currency: 'HKD', expected_payment_amount: 35 })).status, 409)
 })
 

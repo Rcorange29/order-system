@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS orders (
   delivery_fee REAL DEFAULT 0,
   delivery_point_id INTEGER,
   remark TEXT DEFAULT '',
-  payment_method TEXT DEFAULT 'cash_on_delivery',
+  payment_method TEXT DEFAULT 'wechat_transfer',
   payment_status TEXT DEFAULT 'pending',
   payment_currency TEXT NOT NULL DEFAULT 'CNY',
   payment_amount REAL,

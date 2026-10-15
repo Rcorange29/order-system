@@ -1389,3 +1389,17 @@ body { background: var(--market-paper); color: var(--market-ink); }
 .message-card h3 { font-size: 17px; margin: 8px 0; }
 .message-card p { font-size: 14px; line-height: 1.65; white-space: pre-wrap; }
 @media (max-width: 360px) { .shop-wordmark { font-size: 20px; } .banner-title { font-size: 23px; } }
+
+.unpaid-home-reminder { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 12px 12px 0; padding: 14px 15px; background: #fffaf0; border: 1px solid #e5c886; color: #3d392f; }
+.unpaid-home-reminder strong { font-size: 16px; }
+.unpaid-home-reminder p { margin: 5px 0 0; font-size: 13px; line-height: 1.45; color: #6f6656; }
+.unpaid-home-reminder button { flex: none; max-width: 45%; border: 0; background: var(--market-green); color: #fff; font-size: 13px; font-weight: 700; line-height: 1.35; padding: 11px 12px; cursor: pointer; }
+.order-upload-link { display: block; width: 100%; margin-top: 11px; padding: 10px 12px; border: 1px solid var(--market-green); color: var(--market-green); background: #fff; text-align: center; font-size: 14px; font-weight: 700; cursor: pointer; }
+.proof-priority-card { border: 1px solid #ddcfab; background: #fffdf7; }
+.proof-priority-card h4 { font-size: 18px; }
+.proof-priority-card p { font-size: 14px; line-height: 1.55; color: #535d54; margin: 7px 0 10px; }
+.proof-file-picker { display: block; position: relative; overflow: hidden; width: 100%; padding: 12px; border: 1px solid var(--market-green); color: var(--market-green); background: #fff; font-size: 15px; font-weight: 700; text-align: center; cursor: pointer; }
+.proof-file-picker input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.proof-priority-card .proof-selected { display: block; margin: 9px 0; }
+.proof-priority-card .proof-confirm { margin: 0 0 8px; }
+.proof-file-hint { display: block; margin: 8px 0 0; font-size: 12px; color: #747c73; }

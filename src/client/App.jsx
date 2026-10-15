@@ -191,7 +191,7 @@ export default function App() {
   const [bannerIdx, setBannerIdx] = useState(0)
   const [checkoutAddrId, setCheckoutAddrId] = useState(null)
   const [remark, setRemark] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery')
+  const [paymentMethod, setPaymentMethod] = useState('wechat_transfer')
   const [showPaymentQR, setShowPaymentQR] = useState(false)
   const [paidOrderNo, setPaidOrderNo] = useState('')
   const [paidOrderAmount, setPaidOrderAmount] = useState(0)
@@ -471,8 +471,6 @@ export default function App() {
     return true
   })
 
-  const newUserProducts = products.filter(p => p.is_new).slice(0, 4)
-
   const addToCart = (id, variantLabel, variantPrice) => {
     const key = variantLabel ? `${id}::${variantLabel}` : String(id)
     setCart(prev => ({ ...prev, [key]: Math.min((prev[key] || 0) + 1, 99) }))
@@ -503,6 +501,7 @@ export default function App() {
   const effectiveThreshold = stats?.threshold || 1000
   const effectiveReached = stats ? stats.confirmed_total >= effectiveThreshold : false
   const unreadNotices = announcements.filter(n => !seenNoticeIds.includes(n.id))
+  const unpaidOrders = orders.filter(o => o.status === 'pending' && o.payment_status === 'pending' && o.payment_method !== 'cash_on_delivery')
   const noticeStorageKey = `seenNotices_${currentUser?.id || 'guest'}_${selectedPointId || 'all'}`
   const markNoticesRead = () => {
     const ids = [...new Set([...seenNoticeIds, ...announcements.map(n => n.id)])]
@@ -570,15 +569,11 @@ export default function App() {
       setSelectedCouponId('')
       loadCoupons()
       authFetch(`${API}/orders`).then(r => r.ok ? r.json() : []).then(setOrders)
-      if (paymentMethod === 'wechat_transfer' || paymentMethod === 'alipay_transfer' || paymentMethod === 'fps_transfer') {
-        setPaidOrderNo(displayOrderNo(data))
-        setPaidOrderAmount(Number(data.payment_amount ?? (Number(data.total) + Number(data.delivery_fee || 0))))
-        setPaidOrderCurrency(data.payment_currency || 'CNY')
-        setLastOrderId(data.id)
-        setShowPaymentQR(true)
-      } else {
-        setTab('myOrders')
-      }
+      setPaidOrderNo(displayOrderNo(data))
+      setPaidOrderAmount(Number(data.payment_amount ?? (Number(data.total) + Number(data.delivery_fee || 0))))
+      setPaidOrderCurrency(data.payment_currency || 'CNY')
+      setLastOrderId(data.id)
+      setShowPaymentQR(true)
     } else {
       const data = await res.json().catch(() => ({}))
       showToast(data.error || '下单失败')
@@ -807,6 +802,13 @@ export default function App() {
             </div>
           </div>
 
+          {unpaidOrders.length > 0 && (
+            <div className="unpaid-home-reminder">
+              <div><strong>有 {unpaidOrders.length} 笔订单待付款</strong><p>已经转账？上传付款截图后，店主才能确认订单。</p></div>
+              <button type="button" onClick={() => { if (unpaidOrders.length === 1) { setSelectedOrder(unpaidOrders[0]); setTab('orderDetail') } else { setOrderFilter('pending'); setTab('myOrders') } }}>去付款／上传凭证 ›</button>
+            </div>
+          )}
+
           {/* 配送规则小横幅 */}
           <div className="delivery-rule-strip"
             onClick={() => setShowHelp(true)}>
@@ -847,26 +849,6 @@ export default function App() {
             <div className="notice-board-heading"><span>配送公告 {unreadNotices.length > 0 && <i className="notice-dot" aria-label="有未读公告" />}</span><small>查看全部 ›</small></div>
             {announcements.length ? <><strong>{announcements[0].title}</strong><p>{announcements[0].content}</p></> : <p className="notice-empty">取货时间会在配送前一天公布，点此查看消息。</p>}
           </section>
-
-          {newUserProducts.length > 0 && (
-            <div className="new-user-section">
-              <div className="section-header">
-                <h3>新人专享（任选一件）</h3>
-                <span className="more">更多 ›</span>
-              </div>
-              <div className="product-scroll">
-                {newUserProducts.map(p => (
-                  <div className="product-card-mini" key={p.id} onClick={() => quickAdd(p)}>
-                    <div className="emoji">{p.image ? <img src={p.image} alt={p.name} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:8}} /> : '🛒'}</div>
-                    <span className="tag">新人价</span>
-                    <div className="name">{pn(p.name)}</div>
-                    <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}{hasVariants(p) ? " · 多规格" : ""}</small></div>
-                    
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           <div className="product-list">
             <div className="product-list-title">{search ? t('searchResult').replace('{kw}', search) : t('hot')}</div>
@@ -984,6 +966,7 @@ export default function App() {
                   </div>
                   <div className="order-goods">{o.items?.map(i => `${pn(i.product?.name)}${i.variant ? `（${i.variant}）` : ''} x${i.quantity}`).join('，')}</div>
                   <div className="order-total">{t('orderTotal')}：<span>{orderPaymentText(o)} · {o.payment_currency || 'CNY'}</span></div>
+                  {o.status === 'pending' && o.payment_status === 'pending' && o.payment_method !== 'cash_on_delivery' && <button type="button" className="order-upload-link" onClick={e => { e.stopPropagation(); setSelectedOrder(o); setTab('orderDetail') }}>付款或上传付款凭证 ›</button>}
                 </div>
               ))
             })()}
@@ -1239,14 +1222,6 @@ export default function App() {
             <div className="form-group">
               <label>支付方式</label>
               <div style={{ display: 'flex', gap: 6 }}>
-                <div onClick={() => setPaymentMethod('cash_on_delivery')} style={{
-                  flex: 1, padding: '8px 4px', textAlign: 'center', borderRadius: 8, cursor: 'pointer',
-                  border: paymentMethod === 'cash_on_delivery' ? '2px solid var(--market-green)' : '1px solid #eee',
-                  background: paymentMethod === 'cash_on_delivery' ? 'var(--market-green-soft)' : '#fff'
-                }}>
-                  <div style={{ fontSize: 18 }}>💵</div>
-                  <div style={{ fontSize: 11, marginTop: 2 }}>货到付款</div>
-                </div>
                 {paymentCurrency === 'CNY' && <div onClick={() => setPaymentMethod('wechat_transfer')} style={{
                   flex: 1, padding: '8px 4px', textAlign: 'center', borderRadius: 8, cursor: 'pointer',
                   border: paymentMethod === 'wechat_transfer' ? '2px solid var(--market-green)' : '1px solid #eee',
@@ -1917,6 +1892,24 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast, onRe
       <div className="back-btn" onClick={onBack}>‹ 返回</div>
       <h3 style={{ fontSize: 18, padding: '0 16px 12px' }}>订单详情</h3>
       <div className="order-detail-page">
+        {order.payment_method !== 'cash_on_delivery' && ['pending', 'awaiting_confirmation'].includes(order.status) && (
+          <div className="order-detail-card proof-priority-card">
+            <h4>{order.status === 'pending' ? '待付款 · 上传付款凭证' : '付款凭证待确认'}</h4>
+            <p>{order.status === 'pending' ? `本单应付 ${orderPaymentText(order)}。完成转账后，在这里上传付款截图。` : '截图已提交，店主确认后订单会进入拼团中。需要更换截图也可以重新上传。'}</p>
+            <button type="button" className="payment-info-open" onClick={() => setShowPaymentDetails(true)}>查看收款方式与应付金额 ›</button>
+            <label className="proof-file-picker">选择付款截图<input type="file" accept="image/png,image/jpeg,image/webp" onChange={e => setProofFile(e.target.files[0] || null)} /></label>
+            {proofFile && <><small className="proof-selected">已选择：{proofFile.name}</small><button className="btn-submit proof-confirm" disabled={proofUploading} onClick={async () => {
+              setProofUploading(true)
+              try {
+                const error = await uploadProofFile(proofFile, order.id)
+                if (error) showToast(error)
+                else { showToast('凭证已保存，等待店主确认'); setProofFile(null); await onRefresh() }
+              } catch { showToast('上传失败，请重试') }
+              finally { setProofUploading(false) }
+            }}>{proofUploading ? '正在上传…' : '确认上传付款凭证'}</button></>}
+            <small className="proof-file-hint">支持 PNG、JPEG、WebP，图片不超过 1MB</small>
+          </div>
+        )}
         <div className="order-detail-card">
           <h4>收货信息</h4>
           <div className="order-detail-addr">
@@ -1955,21 +1948,6 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast, onRe
             {order.request && <div>最新申请：{order.request.type === 'refund' ? '取消退款' : '加费单独配送'} · {order.request.status === 'pending' ? '待店主处理' : order.request.status === 'approved' ? '已处理' : '未通过'}{order.request.admin_note ? `（${order.request.admin_note}）` : ''}</div>}
             {order.request?.status === 'pending' && <div>{order.request.type === 'refund' ? '店主线下退款后会在后台标记，请留意订单状态。' : `请联系店主支付额外 ${orderFmt(30)}（运费基准 ¥30）；店主确认收款后改为送货到家。`}</div>}
             {order.payment_screenshot && <div className="saved-proof"><strong>已保存的付款凭证</strong><img src={order.payment_screenshot} alt="付款凭证" /></div>}
-            {order.payment_method !== 'cash_on_delivery' && ['pending', 'awaiting_confirmation'].includes(order.status) && (
-              <div className="proof-detail-upload">上传付款凭证（PNG、JPEG 或 WebP，最多1MB）：
-                <button type="button" className="payment-info-open" onClick={() => setShowPaymentDetails(true)}>查看收款方式与应付金额 ›</button>
-                <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e => setProofFile(e.target.files[0] || null)} />
-                {proofFile && <><small>已选择：{proofFile.name}</small><button className="btn-submit proof-confirm" disabled={proofUploading} onClick={async () => {
-                  setProofUploading(true)
-                  try {
-                    const error = await uploadProofFile(proofFile, order.id)
-                    if (error) showToast(error)
-                    else { showToast('凭证已保存，等待店主确认'); setProofFile(null); await onRefresh() }
-                  } catch { showToast('上传失败，请重试') }
-                  finally { setProofUploading(false) }
-                }}>{proofUploading ? '正在上传…' : '确认上传付款凭证'}</button></>}
-              </div>
-            )}
             <div>下单时间：{order.created_at?.slice(0, 19).replace('T', ' ')}</div>
             {order.remark && <div>备注：{order.remark}</div>}
           </div>
