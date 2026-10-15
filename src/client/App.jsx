@@ -617,7 +617,7 @@ export default function App() {
           {favProducts.map(p => (
             <div className="product-card" key={p.id} onClick={() => { setSelectedProduct(p); setSelectedVariant(null) }}>
               <div className="emoji">
-                {p.image ? <img src={p.image} alt={p.name} /> : '🛒'}
+                {p.image ? <img src={p.image} alt={p.name} /> : <span className="product-no-image">{pn(p.name).replace(/^\[[^\]]+\]/, '').slice(0, 2)}</span>}
                 <span onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id) }} style={{
                   position: 'absolute', top: 6, right: 6, fontSize: 16,
                   background: 'rgba(255,255,255,0.9)', borderRadius: '50%', width: 26, height: 26,
@@ -642,40 +642,25 @@ export default function App() {
   return (
     <div>
       {/* 顶部栏 - 去掉服务点 */}
-      <div className="top-bar" style={{ paddingTop: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+      <div className="top-bar">
+        <div className="top-bar-main">
+          <strong className="shop-wordmark">{t('welcome')}</strong>
           {deliveryPoints.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14, color: '#1a1a1a' }} onClick={() => setShowPointPicker(true)}>
-              📍 <b>{dn(deliveryPoints.find(p => p.id == selectedPointId)?.name) || t('pickPoint')}</b>
-              <span style={{ fontSize: 12, color: '#666' }}>▼</span>
+            <div className="header-location" onClick={() => setShowPointPicker(true)}>
+              <span>{t('pickPoint')}</span><b>{dn(deliveryPoints.find(p => p.id == selectedPointId)?.name) || t('pickPoint')}</b>
+              <span aria-hidden="true">⌄</span>
             </div>
           )}
-          <div style={{ display: 'flex', gap: 4, fontSize: 11, alignItems: 'center' }}>
+          <div className="header-options">
             {Object.entries({ zh_CN:'简', zh_HK:'繁', en:'EN' }).map(([k,v]) => (
-              <span key={k} onClick={() => switchLang(k)} style={{
-                padding: '2px 8px', borderRadius: 8, cursor: 'pointer',
-                background: lang === k ? '#2eb85c' : '#f2f3f5',
-                color: lang === k ? '#fff' : '#666',
-                fontWeight: lang === k ? 600 : 400
-              }}>{v}</span>
+              <span key={k} onClick={() => switchLang(k)} className={`header-option ${lang === k ? 'active' : ''}`}>{v}</span>
             ))}
             <span onClick={() => {
               const c = currency === 'HKD' ? 'CNY' : 'HKD'
               setCurrency(c); localStorage.setItem('currency', c)
-            }} style={{
-              padding: '3px 8px', borderRadius: 8, cursor: 'pointer', marginLeft: 4,
-              fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 2
-            }}>
-              <span style={{
-                padding: '2px 6px', borderRadius: 5,
-                background: currency === 'HKD' ? 'var(--market-green)' : '#f2f3f5',
-                color: currency === 'HKD' ? '#fff' : '#999'
-              }}>💲HKD</span>
-              <span style={{
-                padding: '2px 6px', borderRadius: 5,
-                background: currency === 'CNY' ? 'var(--market-green)' : '#f2f3f5',
-                color: currency === 'CNY' ? '#fff' : '#999'
-              }}>¥CNY</span>
+            }} className="currency-switch">
+              <span className={currency === 'HKD' ? 'active' : ''}>HKD</span>
+              <span className={currency === 'CNY' ? 'active' : ''}>CNY</span>
             </span>
           </div>
         </div>
@@ -713,13 +698,13 @@ export default function App() {
             <div className={`banner-slide banner-poster ${bannerIdx === 0 ? 'banner-green' : 'banner-orange'}`}>
               {bannerIdx === 0 ? (
                 <>
-                  <div className="banner-title">🥬 {t('welcome')}</div>
+                  <div className="banner-title">{t('welcome')}</div>
                   <div className="banner-sub">{t('slogan')}</div>
                 </>
               ) : (
                 <>
-                  <div className="banner-title">🚚 {ruleText('groupBuy', effectiveThreshold)}</div>
-                  <div className="banner-sub">{t('groupBuySlogan')}</div>
+                  <div className="banner-title">{t('groupBuyBanner')}</div>
+                  <div className="banner-sub">{lang === 'en' ? `Group delivery at ${fmt(effectiveThreshold)}` : lang === 'zh_HK' ? `滿 ${fmt(effectiveThreshold)} 統一配送` : `满 ${fmt(effectiveThreshold)} 统一配送`}</div>
                 </>
               )}
             </div>
@@ -742,9 +727,9 @@ export default function App() {
           )}
 
           {/* 配送规则小横幅 */}
-          <div style={{ margin: '8px 12px 0', background: 'var(--market-green-soft)', padding: '8px 12px', borderRadius: 8, fontSize: 12, color: 'var(--market-green)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+          <div className="delivery-rule-strip"
             onClick={() => setShowHelp(true)}>
-            <span>📦 {t('deliveryRule')}</span>
+            <span>{t('deliveryRule')}</span>
             <span>{t('details')}</span>
           </div>
 
@@ -752,7 +737,7 @@ export default function App() {
           {stats && (
             <div className="group-buy-banner">
               <div className="group-buy-row">
-                <span className="group-buy-label">🚚 {dn(deliveryPoints.find(p => p.id == selectedPointId)?.name) || t('groupBuyBanner')}</span>
+                <span className="group-buy-label">{dn(deliveryPoints.find(p => p.id == selectedPointId)?.name) || t('groupBuyBanner')}</span>
                 {effectiveReached ? (
                   <span className="group-buy-reached">{t('reached')}</span>
                 ) : (
@@ -773,7 +758,7 @@ export default function App() {
           )}
 
           <section className="notice-board" aria-label="配送公告">
-            <div className="notice-board-heading"><span>📣 配送公告</span><small>取货时间会在配送前一天公布</small></div>
+            <div className="notice-board-heading"><span>配送公告</span><small>取货时间会在配送前一天公布</small></div>
             {announcements.length ? announcements.slice(0, 3).map(notice => (
               <article className="notice-item" key={notice.id}>
                 <strong>{notice.title}</strong><time>{notice.created_at?.slice(0, 16)}</time>
@@ -802,22 +787,13 @@ export default function App() {
             </div>
           )}
 
-          <div className="category-grid">
-            {categories.map(c => (
-              <div className="category-item" key={c.id} onClick={() => { setActiveCategory(c.id); setTab('category'); window.scrollTo(0, 0) }}>
-                <div className="icon">{c.icon || '📦'}</div>
-                <span className="name">{cn(c.name)}</span>
-              </div>
-            ))}
-          </div>
-
           <div className="product-list">
-            <div className="product-list-title">{search ? t('searchResult').replace('{kw}', search) : '🔥 ' + t('hot')}</div>
+            <div className="product-list-title">{search ? t('searchResult').replace('{kw}', search) : t('hot')}</div>
             <div className="product-grid">
               {filteredProducts.map(p => (
                 <div className="product-card" key={p.id} onClick={() => { setSelectedProduct(p); setSelectedVariant(null) }} style={p.is_active === false ? { opacity: 0.5, filter: 'grayscale(1)' } : {}}>
                   <div className="emoji">
-                    {p.image ? <img src={p.image} alt={p.name} /> : '🛒'}
+                    {p.image ? <img src={p.image} alt={p.name} /> : <span className="product-no-image">{pn(p.name).replace(/^\[[^\]]+\]/, '').slice(0, 2)}</span>}
                     {(p.is_hot || p.is_new) && <div className="promo-tag">{p.is_hot ? t('tagHot') : t('tagNew')}</div>}
                     {p.is_active === false && <div className="promo-tag" style={{background:'#999'}}>{t('offShelf') || '已下架'}</div>}
                     <span onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id) }} className="fav-btn">
@@ -859,7 +835,7 @@ export default function App() {
               {filteredProducts.map(p => (
                 <div className="product-card" key={p.id} onClick={() => { setSelectedProduct(p); setSelectedVariant(null) }} style={p.is_active === false ? { opacity: 0.5, filter: 'grayscale(1)' } : {}}>
                   <div className="emoji">
-                    {p.image ? <img src={p.image} alt={p.name} /> : '🛒'}
+                    {p.image ? <img src={p.image} alt={p.name} /> : <span className="product-no-image">{pn(p.name).replace(/^\[[^\]]+\]/, '').slice(0, 2)}</span>}
                     {(p.is_hot || p.is_new) && <div className="promo-tag">{p.is_hot ? t('tagHot') : t('tagNew')}</div>}
                     {p.is_active === false && <div className="promo-tag" style={{background:'#999'}}>{t('offShelf') || '已下架'}</div>}
                     <span onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id) }} className="fav-btn">
@@ -1018,7 +994,7 @@ export default function App() {
                 <div className="cart-item" key={itemKey}>
                   <div className="emoji">{item.product.image ? <img src={item.product.image} alt="" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:6}} /> : '🛒'}</div>
                   <div className="detail">
-                    <div className="name">{pn(item.product.name)}{item.variantLabel && <small style={{color:'#ff4444',marginLeft:6,fontSize:12}}>({item.variantLabel})</small>}</div>
+                    <div className="name">{pn(item.product.name)}{item.variantLabel && <small style={{color:'var(--market-accent)',marginLeft:6,fontSize:12}}>({item.variantLabel})</small>}</div>
                     <div className="price">{fmt(item.variantPrice)}<small style={{fontSize:11,color:'#999'}}>{item.product.unit || '/斤'}</small></div>
                   </div>
                   <div className="qty-control">
@@ -1045,7 +1021,7 @@ export default function App() {
                       onClick={() => quickAdd(p)}>
                       <div style={{ fontSize: 24 }}>{p.image ? '' : '🛒'}</div>
                       <div style={{ fontSize: 11, color: '#333', margin: '4px 0' }}>{pn(p.name).slice(0, 4)}</div>
-                      <div style={{ fontSize: 12, color: '#ff4444', fontWeight: 600 }}>{fmt(p.price)}</div>
+                      <div style={{ fontSize: 12, color: 'var(--market-accent)', fontWeight: 600 }}>{fmt(p.price)}</div>
                     </div>
                   ))}
                 </div>
@@ -1092,7 +1068,7 @@ export default function App() {
               <label>自取点</label>
               <div style={{ padding: 10, background: '#f9f9f9', borderRadius: 8, fontSize: 14, marginBottom: 10 }}>
                 📍 <b>{dn(deliveryPoints.find(p => p.id == selectedPointId)?.name) || '未选择'}</b>
-                <span style={{ color: '#3cb043', cursor: 'pointer', marginLeft: 10, fontSize: 13 }} onClick={() => setShowPointPicker(true)}>切换</span>
+                <span style={{ color: 'var(--market-green)', cursor: 'pointer', marginLeft: 10, fontSize: 13 }} onClick={() => setShowPointPicker(true)}>切换</span>
               </div>
             </div>
             )}
@@ -1101,7 +1077,7 @@ export default function App() {
               <label>收货地址</label>
               {addresses.length === 0 ? (
                 <div style={{ padding: 12, background: '#f9f9f9', borderRadius: 8, fontSize: 13, color: '#999' }}>
-                  暂无地址，<span style={{ color: '#3cb043', cursor: 'pointer' }} onClick={() => { setShowCheckout(false); setTab('address'); setEditingAddr(null); setTab('addrEdit') }}>去添加</span>
+                  暂无地址，<span style={{ color: 'var(--market-green)', cursor: 'pointer' }} onClick={() => { setShowCheckout(false); setTab('address'); setEditingAddr(null); setTab('addrEdit') }}>去添加</span>
                 </div>
               ) : (
                 <div style={{ maxHeight: 160, overflowY: 'auto' }}>
@@ -1174,13 +1150,13 @@ export default function App() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
                 <span style={{ color: '#666' }}>运费</span>
-                <span style={{ color: effectiveFee ? '#ff4444' : '#3cb043', fontWeight: 600 }}>
+                <span style={{ color: effectiveFee ? 'var(--market-accent)' : 'var(--market-green)', fontWeight: 600 }}>
                   {effectiveFee ? fmt(effectiveFee) : t('freeFee')}
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0 4px', borderTop: '1px solid #eee', marginTop: 4 }}>
                 <span>共 {cartCount} 件</span>
-                <span style={{ color: '#ff4444', fontWeight: 'bold', fontSize: 18 }}>
+                <span style={{ color: 'var(--market-accent)', fontWeight: 'bold', fontSize: 18 }}>
                   {fmt(cartTotal + effectiveFee)}
                 </span>
               </div>
@@ -1198,7 +1174,7 @@ export default function App() {
       {selectedProduct && (
         <div className="checkout-overlay" onClick={() => { setSelectedProduct(null); setSelectedVariant(null) }}
           style={{ alignItems: 'flex-end' }}>
-          <div onClick={e => e.stopPropagation()}
+          <div className="product-detail-sheet" onClick={e => e.stopPropagation()}
             style={{
               background: '#fff', borderRadius: '16px 16px 0 0', maxWidth: 400, width: '100%',
               maxHeight: '85vh', overflowY: 'auto', paddingBottom: 0
@@ -1208,11 +1184,11 @@ export default function App() {
               {selectedProduct.image ? (
                 <img src={selectedProduct.image} alt={pn(selectedProduct.name)} style={{ width: 80, height: 80, borderRadius: 10, objectFit: 'cover' }} />
               ) : (
-                <div style={{ width: 80, height: 80, background: '#fafafa', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>🛒</div>
+                <div className="detail-no-image"><span className="product-no-image">{pn(selectedProduct.name).replace(/^\[[^\]]+\]/, '').slice(0, 2)}</span></div>
               )}
               <div style={{ flex: 1 }}>
                 <h3 style={{ fontSize: 18, marginBottom: 6 }}>{pn(selectedProduct.name)}</h3>
-                <div style={{ fontSize: 20, color: '#ff4444', fontWeight: 'bold' }}>
+                <div style={{ fontSize: 20, color: 'var(--market-accent)', fontWeight: 'bold' }}>
                   {(() => {
                     let variants = []
                     try { variants = selectedProduct.variants ? JSON.parse(selectedProduct.variants) : [] } catch(e) {}
@@ -1242,14 +1218,14 @@ export default function App() {
                         {variants.map((v, i) => {
                           const isSel = selectedVariant === i
                           return (
-                            <div key={i} onClick={() => setSelectedVariant(i)}
+                            <div className="variant-choice" key={i} onClick={() => setSelectedVariant(i)}
                               style={{
                                 padding: '8px 16px', borderRadius: 20, cursor: 'pointer',
-                                border: isSel ? '2px solid #ff4444' : '1px solid #ddd',
-                                background: isSel ? '#fff5f5' : '#fff',
+                                border: isSel ? '2px solid var(--market-green)' : '1px solid #ddd',
+                                background: isSel ? 'var(--market-green-soft)' : '#fff',
                                 fontSize: 14, fontWeight: isSel ? 600 : 400,
                               }}>
-                              {v.label} <span style={{color:'#ff4444'}}>{fmt(v.price)}</span>
+                              {v.label} <span style={{color:'var(--market-accent)'}}>{fmt(v.price)}</span>
                             </div>
                           )
                         })}
@@ -1267,7 +1243,7 @@ export default function App() {
                   {/* 底部按钮 */}
                   <div style={{ position: 'sticky', bottom: 0, background: '#fff', padding: '12px 16px', borderTop: '1px solid #f0f0f0' }}>
                     {selectedProduct.is_active !== false ? (
-                      <button className="btn-submit" style={{ width: '100%', background: '#ff4444', opacity: (variants.length > 0 && selectedVariant === null) ? 0.5 : 1 }}
+                      <button className="btn-submit" style={{ width: '100%', background: 'var(--market-green)', opacity: (variants.length > 0 && selectedVariant === null) ? 0.5 : 1 }}
                         onClick={() => {
                           if (variants.length > 0 && selectedVariant === null) { showToast('请先选择规格'); return }
                           if (variants.length > 0) {
@@ -1309,7 +1285,7 @@ export default function App() {
                 >
                   <div style={{ fontSize: 15, fontWeight: 600 }}>{dn(p.name)}</div>
                   <div style={{ fontSize: 12, color: '#666', marginTop: 3 }}>{dn(p.address)}</div>
-                  <div style={{ fontSize: 12, color: '#3cb043', marginTop: 3 }}>🚚 {ruleText('feePerOrder', p.threshold || 1000)}</div>
+                  <div style={{ fontSize: 12, color: 'var(--market-green)', marginTop: 3 }}>🚚 {ruleText('feePerOrder', p.threshold || 1000)}</div>
                 </div>
               ))}
             </div>
@@ -1323,7 +1299,7 @@ export default function App() {
           <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 340, textAlign: 'center' }}>
             <h3>{paymentMethod === 'wechat_transfer' ? '微信扫码付款' : paymentMethod === 'alipay_transfer' ? '支付宝扫码付款' : '转数快 FPS 扫码付款'}</h3>
             <div style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>订单号：{paidOrderNo}</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#ff4444', marginBottom: 12 }}>订单应付 ¥{paidOrderAmount.toFixed(2)}{currency === 'HKD' && <small style={{ display: 'block', fontSize: 12, color: '#666' }}>按 1 人民币 = {exchangeRate} 港币换算：{fmt(paidOrderAmount)}</small>}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--market-accent)', marginBottom: 12 }}>订单应付 ¥{paidOrderAmount.toFixed(2)}{currency === 'HKD' && <small style={{ display: 'block', fontSize: 12, color: '#666' }}>按 1 人民币 = {exchangeRate} 港币换算：{fmt(paidOrderAmount)}</small>}</div>
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
               {paymentMethod === 'fps_transfer' ? (
                 <div style={{ width: 220, height: 220, margin: '0 auto', background: '#f9f0ff', border: '2px solid #722ed1', borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -1406,7 +1382,7 @@ export default function App() {
             <p style={{ fontSize: 13, color: '#999', marginBottom: 20 }}>Please select your currency</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <button onClick={() => { setCurrency('HKD'); localStorage.setItem('currency', 'HKD'); setShowOnboard(true) }}
-                style={{ padding: 16, borderRadius: 12, border: '2px solid #ff4444', background: '#fff5f5', color: '#ff4444', fontSize: 18, fontWeight: 700, cursor: 'pointer' }}>
+                style={{ padding: 16, borderRadius: 12, border: '2px solid var(--market-green)', background: 'var(--market-green-soft)', color: 'var(--market-accent)', fontSize: 18, fontWeight: 700, cursor: 'pointer' }}>
                 HK$ 港币
               </button>
               <button onClick={() => { setCurrency('CNY'); localStorage.setItem('currency', 'CNY'); setShowOnboard(true) }}
@@ -1428,7 +1404,7 @@ export default function App() {
             <p style={{ fontSize: 14, color: '#666', lineHeight: 1.6, marginBottom: 24 }}>{ruleText(`step${onboardStep+1}Desc`, effectiveThreshold)}</p>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 20 }}>
               {[0,1,2,3].map(i => (
-                <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i === onboardStep ? '#3cb043' : '#ddd' }} />
+                <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i === onboardStep ? 'var(--market-green)' : '#ddd' }} />
               ))}
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
@@ -1506,7 +1482,7 @@ export default function App() {
         <div className="checkout-overlay" style={{ zIndex: 5000 }} onClick={() => setUstBenefit(false)}>
           <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 380, textAlign: 'center' }}>
             <div style={{ fontSize: 50, marginBottom: 12 }}>🎓</div>
-            <h3 style={{ color: '#3cb043', marginBottom: 8 }}>UST 科大自取规则</h3>
+            <h3 style={{ color: 'var(--market-green)', marginBottom: 8 }}>UST 科大自取规则</h3>
             <div style={{ fontSize: 14, color: '#333', lineHeight: 1.8, marginBottom: 16 }}>
               <div style={{ background: '#e8f5e9', padding: 12, borderRadius: 8, marginBottom: 8 }}>
                 🎓 <b>自取免运费</b><br/>
@@ -1534,20 +1510,20 @@ export default function App() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16, textAlign: 'left' }}>
               <div style={{ border: '1px solid #e8f5e9', background: '#f6fff8', borderRadius: 10, padding: 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#3cb043' }}>🎓 UST科大学生 · 菜神</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--market-green)' }}>🎓 UST科大学生 · 菜神</div>
                 <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>加微信进群 / 咨询订单</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: '#222' }}>ustshucaizhishen</div>
-                  <button onClick={() => copyText('ustshucaizhishen', '微信号')} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #3cb043', color: '#3cb043', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>复制</button>
+                  <button onClick={() => copyText('ustshucaizhishen', '微信号')} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #3cb043', color: 'var(--market-green)', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>复制</button>
                 </div>
               </div>
 
               <div style={{ border: '1px solid #e8f5e9', background: '#f6fff8', borderRadius: 10, padding: 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#3cb043' }}>🏠 小区居民 · 老板</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--market-green)' }}>🏠 小区居民 · 老板</div>
                 <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>加微信咨询订单 / 售后</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: '#222' }}>jennybabi1988</div>
-                  <button onClick={() => copyText('jennybabi1988', '微信号')} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #3cb043', color: '#3cb043', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>复制</button>
+                  <button onClick={() => copyText('jennybabi1988', '微信号')} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #3cb043', color: 'var(--market-green)', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>复制</button>
                 </div>
               </div>
 
@@ -1605,17 +1581,17 @@ export default function App() {
       {/* 底部导航 */}
       <div className="bottom-nav">
         <div className={`nav-item ${tab === 'home' ? 'active' : ''}`} onClick={() => setTab('home')}>
-          <span className="icon">🏠</span>{t('home')}
+          <NavIcon name="home" />{t('home')}
         </div>
         <div className={`nav-item ${tab === 'category' ? 'active' : ''}`} onClick={() => { setTab('category'); window.scrollTo(0, 0) }}>
-          <span className="icon">⬡</span>{t('category')}
+          <NavIcon name="category" />{t('category')}
         </div>
         <div className="nav-item" onClick={() => setShowCart(true)}>
-          <span className="icon">🛒</span>{t('cart')}
+          <NavIcon name="cart" />{t('cart')}
           {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
         </div>
         <div className={`nav-item ${tab === 'my' || tab === 'myOrders' || tab === 'address' || tab === 'orderDetail' ? 'active' : ''}`} onClick={() => setTab('my')}>
-          <span className="icon">👤</span>{t('my')}
+          <NavIcon name="user" />{t('my')}
         </div>
       </div>
     </div>
@@ -1623,6 +1599,16 @@ export default function App() {
 }
 
 /* ========== 登录页 ========== */
+function NavIcon({ name }) {
+  const paths = {
+    home: <><path d="m3 10 9-7 9 7v10H3z" /><path d="M9 20v-6h6v6" /></>,
+    category: <><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></>,
+    cart: <><path d="M3 4h2l2 12h12l2-9H6" /><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" /></>,
+    user: <><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3-7 8-7s8 3 8 7" /></>
+  }
+  return <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
+}
+
 function LoginPage({ onLogin, onRegister, onBack, t }) {
   const [mode, setMode] = useState('login')
   const [username, setUsername] = useState('')
@@ -1662,7 +1648,7 @@ function LoginPage({ onLogin, onRegister, onBack, t }) {
         )}
         <button className="login-btn" onClick={submit}>{mode === 'login' ? t('login') : t('register')}</button>
         <div style={{ textAlign: 'center', marginTop: 16, fontSize: 13, color: '#999' }}>
-          <span style={{ cursor: 'pointer', color: '#ee4d2d' }} onClick={onBack}>{t('back')}</span>
+          <span style={{ cursor: 'pointer', color: 'var(--market-green)' }} onClick={onBack}>{t('back')}</span>
         </div>
       </div>
     </div>
@@ -1681,7 +1667,7 @@ function AddressPage({ addresses, selectedId, onSelect, onEdit, onAdd, onDelete,
           <div className="addr-card" key={a.id} onClick={() => onSelect(a.id)}>
             <div className={`radio ${selectedId === a.id ? 'selected' : ''}`} />
             <div className="addr-info">
-              <div className="name-row">{a.name} <span className="phone">{a.phone}</span> {a.isDefault && <span style={{ background: '#3cb043', color: '#fff', fontSize: 10, padding: '1px 6px', borderRadius: 4, marginLeft: 8 }}>默认</span>}</div>
+              <div className="name-row">{a.name} <span className="phone">{a.phone}</span> {a.isDefault && <span style={{ background: 'var(--market-green)', color: '#fff', fontSize: 10, padding: '1px 6px', borderRadius: 4, marginLeft: 8 }}>默认</span>}</div>
               <div className="detail">{a.detail}</div>
               <div className="addr-actions">
                 <span onClick={e => { e.stopPropagation(); onEdit(a) }}>编辑</span>
