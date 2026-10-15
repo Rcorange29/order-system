@@ -1282,3 +1282,21 @@ body { background: var(--market-paper); color: var(--market-ink); }
   .banner-title { font-size: 19px; }
   .product-card .emoji { aspect-ratio: 1.5 / 1; }
 }
+
+/* Keep the selling unit adjacent to each price without crowding the card. */
+.price-stack { display: flex; flex-direction: column; align-items: flex-end; min-width: 0; }
+.product-unit { display: block; color: #929792; font-size: 11px; line-height: 1.15; font-weight: 400; margin-top: 2px; }
+.cart-item[role="button"] { cursor: pointer; }
+.cart-item[role="button"]:focus-visible { outline: 2px solid var(--market-green); outline-offset: -2px; }
+.coupon-page { padding: 0 16px 100px; }
+.coupon-page h2 { font-size: 21px; margin: 16px 0; }
+.coupon-page h3 { font-size: 16px; margin: 22px 0 10px; }
+.coupon-card { background: #fff; border: 1px solid #e5e9e3; padding: 16px; margin: 10px 0; }
+.coupon-card strong { font-size: 16px; }
+.coupon-card p { color: #5e665e; line-height: 1.6; white-space: pre-wrap; margin: 8px 0 0; }
+.coupon-card small, .coupon-empty { color: #777; font-size: 13px; }
+.coupon-empty { padding: 15px 0; cursor: pointer; }
+.after-sale-contact { display: flex; align-items: center; gap: 8px; padding: 11px 0; border-top: 1px solid #edf0ec; font-size: 13px; }
+.after-sale-contact span { color: #697269; min-width: 74px; }
+.after-sale-contact strong { flex: 1; }
+.after-sale-contact button, .after-sale-contact a { padding: 5px 9px; background: #fff; border: 1px solid #bbcbbd; color: var(--market-green); text-decoration: none; border-radius: 4px; cursor: pointer; }

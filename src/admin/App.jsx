@@ -23,6 +23,7 @@ export default function App() {
   const [users, setUsers] = useState([])
   const [serviceRequests, setServiceRequests] = useState([])
   const [announcements, setAnnouncements] = useState([])
+  const [coupons, setCoupons] = useState([])
   const [toast, setToast] = useState('')
 
   const reload = () => {
@@ -32,6 +33,7 @@ export default function App() {
     authFetch(`${API}/admin/users`).then(r => r.json()).then(setUsers)
     authFetch(`${API}/admin/order-requests`).then(r => r.ok ? r.json() : []).then(setServiceRequests)
     authFetch(`${API}/announcements?all=1`).then(r => r.ok ? r.json() : []).then(setAnnouncements)
+    authFetch(`${API}/admin/coupons`).then(r => r.ok ? r.json() : []).then(setCoupons)
   }
 
   useEffect(() => {
@@ -75,6 +77,7 @@ export default function App() {
     { key: 'requests', label: `↩️ 配送与退款申请${serviceRequests.filter(r => r.status === 'pending').length ? ` (${serviceRequests.filter(r => r.status === 'pending').length})` : ''}` },
     { key: 'announcements', label: '📣 配送公告' },
     { key: 'users', label: '👥 用户管理' },
+    { key: 'coupons', label: '🎟️ 优惠券活动' },
     { key: 'categories', label: '🏷️ 分类管理' },
     { key: 'settings', label: '⚙️ 系统设置' },
   ]
@@ -99,6 +102,7 @@ export default function App() {
         {page === 'requests' && <RequestManage requests={serviceRequests} reload={reload} showToast={showToast} />}
         {page === 'announcements' && <AnnouncementManage announcements={announcements} reload={reload} showToast={showToast} />}
         {page === 'users' && <UserManage users={users} showToast={showToast} />}
+        {page === 'coupons' && <CouponManage coupons={coupons} users={users} reload={reload} showToast={showToast} />}
         {page === 'categories' && <CategoryManage categories={categories} reload={reload} showToast={showToast} />}
         {page === 'settings' && <SettingsPage authFetch={authFetch} showToast={showToast} />}
       </div>
@@ -291,6 +295,43 @@ function AnnouncementManage({ announcements, reload, showToast }) {
       <p className="announcement-content">{item.content}</p>
       <div className="announcement-actions"><button className="btn btn-default btn-sm" onClick={() => edit(item)}>编辑</button><button className="btn btn-danger btn-sm" onClick={() => remove(item.id)}>删除</button></div>
     </div>)}</div>
+  </div>
+}
+
+function CouponManage({ coupons, users, reload, showToast }) {
+  const [editing, setEditing] = useState(null)
+  const [title, setTitle] = useState('')
+  const [details, setDetails] = useState('')
+  const [published, setPublished] = useState(false)
+  const [selectedUser, setSelectedUser] = useState('')
+  const reset = () => { setEditing(null); setTitle(''); setDetails(''); setPublished(false) }
+  const edit = c => { setEditing(c); setTitle(c.title); setDetails(c.details); setPublished(Boolean(c.is_published)) }
+  const save = async () => {
+    const r = await authFetch(`${API}/admin/coupons`, { method: editing ? 'PUT' : 'POST', body: { id: editing?.id, title, details, is_published: published } })
+    const data = await r.json()
+    showToast(r.ok ? '活动已保存' : data.error || '保存失败')
+    if (r.ok) { reset(); reload() }
+  }
+  const grant = async campaignId => {
+    const r = await authFetch(`${API}/admin/coupons`, { method: 'PATCH', body: { campaign_id: campaignId, user_id: Number(selectedUser) } })
+    const data = await r.json()
+    showToast(r.ok ? (data.already_granted ? '该用户已领取' : '已发给用户') : data.error || '发放失败')
+    if (r.ok) reload()
+  }
+  return <div>
+    <div className="page-header"><h2>优惠券活动</h2></div>
+    <div className="card announcement-editor">
+      <p>先填写活动名称和规则。发布后顾客可在“我的优惠券”查看；发券后会显示在指定用户账户。结算抵扣将在活动规则确定后接入。</p>
+      <div className="form-row"><label>活动名称</label><input value={title} onChange={e => setTitle(e.target.value)} maxLength={100} placeholder="例如：新客活动" /></div>
+      <div className="form-row"><label>活动说明</label><textarea value={details} onChange={e => setDetails(e.target.value)} maxLength={2000} rows={4} placeholder="写明优惠金额、门槛、有效期等" /></div>
+      <label className="publish-toggle"><input type="checkbox" checked={published} onChange={e => setPublished(e.target.checked)} /> 在顾客页面公开活动</label>
+      <div className="announcement-actions"><button className="btn btn-primary" onClick={save}>{editing ? '保存修改' : '创建活动'}</button>{editing && <button className="btn btn-default" onClick={reset}>取消编辑</button>}</div>
+    </div>
+    <div className="card"><label>发券给用户 </label><select value={selectedUser} onChange={e => setSelectedUser(e.target.value)}><option value="">请选择用户</option>{users.map(u => <option key={u.id} value={u.id}>{u.username} · {u.phone || '未填写手机'}</option>)}</select></div>
+    {coupons.map(c => <div className="card" key={c.id}>
+      <strong>{c.title}</strong> <span className="tag">{c.is_published ? '已公开' : '未公开'}</span><p>{c.details || '尚未填写活动规则'}</p><p>已发给 {c.grant_count} 位用户</p>
+      <div className="announcement-actions"><button className="btn btn-default btn-sm" onClick={() => edit(c)}>编辑活动</button><button className="btn btn-primary btn-sm" disabled={!selectedUser} onClick={() => grant(c.id)}>发给所选用户</button></div>
+    </div>)}
   </div>
 }
 

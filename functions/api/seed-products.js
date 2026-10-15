@@ -3,6 +3,7 @@
 // 用于首次部署后填充真实商品数据
 
 import { getAdminUser, json, readBody } from './_utils.js'
+import { seedDescriptions } from './_seed-descriptions.js'
 
 export async function onRequestPost(context) {
   const { request, env } = context
@@ -141,8 +142,8 @@ export async function onRequestPost(context) {
       const catId = catMap[catName]
       const image = imgNum ? `/images/products/p${imgNum}.jpg` : ''
       await env.DB.prepare(
-        'INSERT INTO products (name, price, original_price, image, category_id, stock, is_new, is_hot, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-      ).bind(name, price, null, image, catId, 999, 0, 0, unit || '').run()
+        'INSERT INTO products (name, price, original_price, image, category_id, stock, is_new, is_hot, description, unit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      ).bind(name, price, null, image, catId, 999, 0, 0, seedDescriptions[name] || '', unit || '').run()
       count++
     }
 

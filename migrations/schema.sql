@@ -112,9 +112,26 @@ CREATE TABLE IF NOT EXISTS announcements (
   created_at TEXT DEFAULT (datetime('now', '+8 hours')),
   FOREIGN KEY (delivery_point_id) REFERENCES delivery_points(id)
 );
+CREATE TABLE IF NOT EXISTS coupon_campaigns (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  details TEXT NOT NULL DEFAULT '',
+  is_published INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now', '+8 hours'))
+);
+CREATE TABLE IF NOT EXISTS coupon_grants (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  campaign_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  granted_by INTEGER NOT NULL,
+  granted_at TEXT DEFAULT (datetime('now', '+8 hours')),
+  UNIQUE(campaign_id, user_id),
+  FOREIGN KEY (campaign_id) REFERENCES coupon_campaigns(id),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
 INSERT OR IGNORE INTO delivery_points (name, address, fee, threshold, sort_order) VALUES
   ('日出康城站', '港铁日出康城站', 0, 1000, 1),
-  ('科技大学', '香港科技大学', 0, 1000, 2),
+  ('科技大学', '香港科技大学', 0, 500, 2),
   ('坑口地铁站', '港铁坑口站', 0, 1000, 3),
   ('宝琳站', '港铁宝琳站', 0, 1000, 4),
   ('将军澳站', '港铁将军澳站', 0, 1000, 5),

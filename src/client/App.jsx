@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react'
 
 const API = '/api'
+const BOSS_WECHAT = 'jennybabi1988'
+const BOSS_WHATSAPP = '+85295228191'
 const statusText = { pending: '待付款', paid: '已付款', shipped: '已发货', completed: '已完成', cancelled: '已取消' }
 const paymentText = { cash_on_delivery: '货到付款（现金）', wechat_transfer: '微信转账', alipay_transfer: '支付宝转账', fps_transfer: '转数快 FPS' }
 const payStatusText = { pending: '待支付', paid: '已支付', confirmed: '已确认收款', refunded: '已退款' }
 
 // ========== 多语言 ==========
 const langPack = {
-  zh_CN: { home:'首页',category:'分类',cart:'购物车',my:'我的',search:'搜索商品',welcome:'珍珍优质果菜',slogan:'新鲜直达 · 每日优选 · 一件送达',groupBuy:'服务点凑单 满 ¥1000 统一配送',groupBuySlogan:'大家一起拼 越买越划算',hot:'热门推荐',pickPoint:'选择自取点',freeShipping:'满额免运费 · 该点统一配送',freeFee:'免运费',deliveryHome:'配送到家',deliveryHomeFee:'运费¥30',checkout:'确认订单',goodsAmount:'商品金额',shipping:'运费',submit:'提交订单',cancel:'取消',myOrders:'我的订单',viewAll:'查看全部 ›',address:'收货地址',contact:'联系客服',help:'配送规则 / 帮助',favorites:'我的收藏',logout:'退出登录',clickLogin:'点击登录',loginHint:'登录后查看订单和地址',login:'登录',register:'注册',back:'返回上一页',username:'账号',password:'密码',phone:'手机号',addToCart:'加入购物车',checkOut:'去结算',emptyCart:'购物车是空的',favoriteEmpty:'还没有收藏商品',groupRemain:'还差',buyExtra:'顺手买一件',groupProgress:'当前拼单进度',groupFull:'该自取点满 ¥1000，大家都免运费',introTitle:'下单前必读',introBtn:'我已知晓，开始购物',next:'下一步',gotIt:'我知道了',step1Title:'① 选自取点',step1Desc:'点左上角📍选你就近的自提点',step2Title:'② 逛商品加购物车',step2Desc:'点商品看详情，点+号加购',step3Title:'③ 凑单满额',step3Desc:'自取免运费，大家凑够¥1000后统一配送',step4Title:'④ 去结算',step4Desc:'选支付方式，扫码付款等配送',deliveryRule:'配送规则：凑满门槛统一配送，免运费',details:'详情 ›',groupBuyBanner:'服务点凑单',youGet:'已达起送门槛，请留意配送公告',need:'起送',totalConfirmed:'已确认订单总额',ordersConfirmed:'笔订单已确认',all:'全部',emptySearch:'没有找到相关商品',emptyCat:'暂无商品',reached:'✓ 已达门槛，请留意公告',searchResult:'搜索"{kw}"的结果',feeTitle:'运费说明：',feeEach:'· 自取订单始终免运费，待该点凑满起送额后统一配送',feeFree:'· 该自取点已付款订单满 ¥1000 后统一配送',feeNoRefund:'· 未满门槛先等待；已付款订单可申请加费单独配送或退款',feePerOrder:'自取免运费 · 满 ¥1000 统一配送',ustFee:'自取免运费 · 满 ¥1000 统一配送',ustBenefit2:'🎓 科技大学自取点满¥1000统一配送，自取免运费',feeHint:'满额免运费 · 该点统一配送',confirmOrder:'确认订单',needPay:'待付款',paid:'已付款',selectPointFirst:'请先选择自取点',tagHot:'爆款',tagNew:'新品',noPhone:'未绑定手机号',comingSoon:'敬请期待',statusPending:'待付款',statusPaid:'已付款',statusShipped:'已发货',statusCompleted:'已完成',statusCancelled:'已取消',orderAll:'全部订单',orderPending:'待付款',orderGroup:'拼团中',orderShipping:'待收货',orderDone:'已完成',coupons:'优惠券',refundAfterSale:'退款售后',orderPcs:'件',orderTotal:'合计',noOrders:'暂无订单',orderNo:'订单号',orderStatus:'订单状态',clear:'清空' },
-  zh_HK: { home:'首頁',category:'分類',cart:'購物車',my:'我的',search:'搜尋商品',welcome:'珍珍優質果菜',slogan:'新鮮直達 · 每日優選 · 一件送達',groupBuy:'服務點湊單 滿 ¥1000 統一配送',groupBuySlogan:'大家一起拼 越買越划算',hot:'熱門推薦',pickPoint:'選擇自取點',freeShipping:'滿額免運費 · 該點統一配送',freeFee:'免運費',deliveryHome:'配送到家',deliveryHomeFee:'運費¥30',checkout:'確認訂單',goodsAmount:'商品金額',shipping:'運費',submit:'提交訂單',cancel:'取消',myOrders:'我的訂單',viewAll:'查看全部 ›',address:'收貨地址',contact:'聯繫客服',help:'配送規則 / 幫助',favorites:'我的收藏',logout:'退出登錄',clickLogin:'點擊登錄',loginHint:'登錄後查看訂單和地址',login:'登錄',register:'註冊',back:'返回上一頁',username:'賬號',password:'密碼',phone:'手機號',addToCart:'加入購物車',checkOut:'去結算',emptyCart:'購物車是空的',favoriteEmpty:'還沒有收藏商品',groupRemain:'還差',buyExtra:'順手買一件',groupProgress:'當前拼單進度',groupFull:'該自取點滿 ¥1000，大家都免運費',introTitle:'下單前必讀',introBtn:'我已知曉，開始購物',next:'下一步',gotIt:'我知道了',step1Title:'① 選自取點',step1Desc:'點左上角📍選你就近的自提點',step2Title:'② 逛商品加購物車',step2Desc:'點商品看詳情，點+號加購',step3Title:'③ 湊單滿額',step3Desc:'自取免運費，大家湊夠¥1000後統一配送',step4Title:'④ 去結算',step4Desc:'選支付方式，掃碼付款等配送',deliveryRule:'配送規則：湊滿門檻統一配送，免運費',details:'詳情 ›',groupBuyBanner:'服務點湊單',youGet:'已達起送門檻，請留意配送公告',need:'起送',totalConfirmed:'已確認訂單總額',ordersConfirmed:'筆訂單已確認',all:'全部',emptySearch:'沒有找到相關商品',emptyCat:'暫無商品',reached:'✓ 已達門檻，請留意公告',searchResult:'搜索"{kw}"的結果',feeTitle:'運費說明：',feeEach:'· 自取訂單一律免運費，待該點湊滿起送額後統一配送',feeFree:'· 該自取點已付款訂單滿 ¥1000 後統一配送',feeNoRefund:'· 未滿門檻先等待；已付款訂單可申請加費單獨配送或退款',feePerOrder:'自取免運費 · 滿 ¥1000 統一配送',ustFee:'自取免運費 · 滿 ¥1000 統一配送',ustBenefit2:'🎓 科技大學自取點滿¥1000統一配送，自取免運費',feeHint:'滿額免運費 · 該點統一配送',confirmOrder:'確認訂單',needPay:'待付款',paid:'已付款',selectPointFirst:'請先選擇自取點',tagHot:'爆款',tagNew:'新品',noPhone:'未綁定手機號',comingSoon:'敬請期待',statusPending:'待付款',statusPaid:'已付款',statusShipped:'已發貨',statusCompleted:'已完成',statusCancelled:'已取消',orderAll:'全部訂單',orderPending:'待付款',orderGroup:'拼團中',orderShipping:'待收貨',orderDone:'已完成',coupons:'優惠券',refundAfterSale:'退款售後',orderPcs:'件',orderTotal:'合計',noOrders:'暫無訂單',orderNo:'訂單號',orderStatus:'訂單狀態',clear:'清空' },
-  en: { home:'Home',category:'Categories',cart:'Cart',my:'My Account',search:'Search products',welcome:'Zhenzhen Fresh',slogan:'Fresh Daily · Delivered to You',groupBuy:'Group delivery at ¥1000',groupBuySlogan:'Group together to save more',hot:'Popular Picks',pickPoint:'Pickup Point',freeShipping:'Free shipping at ¥1000',freeFee:'Free shipping',deliveryHome:'Home Delivery',deliveryHomeFee:'¥30',checkout:'Confirm Order',goodsAmount:'Subtotal',shipping:'Shipping',submit:'Place Order',cancel:'Cancel',myOrders:'My Orders',viewAll:'View all ›',address:'Address',contact:'Contact Us',help:'Delivery Info / Help',favorites:'Favorites',logout:'Log Out',clickLogin:'Tap to Login',loginHint:'Login to see orders',login:'Login',register:'Register',back:'Back',username:'Username',password:'Password',phone:'Phone',addToCart:'Add to Cart',checkOut:'Checkout',emptyCart:'Your cart is empty',favoriteEmpty:'No favorites yet',groupRemain:'Need',buyExtra:'Add one more',groupProgress:'Group progress',groupFull:'This point hits ¥1000 — free shipping!',introTitle:'Please Read First',introBtn:'Got it, shop now',next:'Next',gotIt:'Got it',step1Title:'1. Pick your point',step1Desc:'Tap 📍 top-left to choose',step2Title:'2. Browse & add',step2Desc:'Tap product to see, tap + to add',step3Title:'3. Group buy',step3Desc:'Pickup is free; group delivery starts at ¥1000',step4Title:'4. Checkout',step4Desc:'Choose payment, scan QR, wait',deliveryRule:'Group ships when threshold reached; free shipping',details:'Details ›',groupBuyBanner:'Group Buy Today',youGet:'Threshold reached; watch announcements',need:'to go',totalConfirmed:'Confirmed total',ordersConfirmed:'orders',all:'All',emptySearch:'No products found',emptyCat:'No products',reached:'✓ Threshold reached; watch notices',searchResult:'Results for "{kw}"',feeTitle:'Shipping info:',feeEach:'· Pickup is always free; orders ship together after the point reaches its threshold',feeFree:'· Deliver together when paid orders at this point reach ¥1000',feeNoRefund:'· If waiting, paid orders may request home delivery or a refund',feePerOrder:'Free pickup · group delivery at ¥1000',ustFee:'Free pickup · group delivery at ¥1000',ustBenefit2:'🎓 UST pickup: free; group delivery at ¥1000',feeHint:'Pickup is free; delivery follows group threshold',confirmOrder:'Confirm Order',needPay:'Pending',paid:'Paid',selectPointFirst:'Please select a pickup point',tagHot:'Hot',tagNew:'New',noPhone:'No phone linked',comingSoon:'Coming soon',statusPending:'To Pay',statusPaid:'Paid',statusShipped:'Shipped',statusCompleted:'Completed',statusCancelled:'Cancelled',orderAll:'All Orders',orderPending:'To Pay',orderGroup:'Group Buy',orderShipping:'To Receive',orderDone:'Completed',coupons:'Coupons',refundAfterSale:'Refund & After-sales',orderPcs:'items',orderTotal:'Total',noOrders:'No orders',orderNo:'Order No.',orderStatus:'Order Status',clear:'Clear' }
+  zh_CN: { home:'首页',category:'分类',cart:'购物车',my:'我的',search:'搜索商品',welcome:'珍珍优质果菜',slogan:'新鲜直达 · 每日优选 · 一件送达',groupBuy:'服务点凑单 满 ¥1000 统一配送',groupBuySlogan:'大家一起拼 越买越划算',hot:'热门推荐',pickPoint:'选择自取点',freeShipping:'满额免运费 · 该点统一配送',freeFee:'免运费',deliveryHome:'配送到家',deliveryHomeFee:'运费¥30',checkout:'确认订单',goodsAmount:'商品金额',shipping:'运费',submit:'提交订单',cancel:'取消',myOrders:'我的订单',viewAll:'查看全部 ›',address:'收货地址',contact:'联系客服',help:'配送规则 / 帮助',favorites:'我的收藏',logout:'退出登录',clickLogin:'点击登录',loginHint:'登录后查看订单和地址',login:'登录',register:'注册',back:'返回上一页',username:'账号',password:'密码',phone:'手机号',addToCart:'加入购物车',checkOut:'去结算',emptyCart:'购物车是空的',favoriteEmpty:'还没有收藏商品',groupRemain:'还差',buyExtra:'顺手买一件',groupProgress:'当前拼单进度',groupFull:'该自取点满 ¥1000，大家都免运费',introTitle:'下单前必读',introBtn:'我已知晓，开始购物',next:'下一步',gotIt:'我知道了',step1Title:'① 选自取点',step1Desc:'点左上角📍选你就近的自提点',step2Title:'② 逛商品加购物车',step2Desc:'点商品看详情，点+号加购',step3Title:'③ 凑单满额',step3Desc:'自取免运费，大家凑够¥1000后统一配送',step4Title:'④ 去结算',step4Desc:'选支付方式，扫码付款等配送',deliveryRule:'配送规则：凑满门槛统一配送，免运费',details:'详情 ›',groupBuyBanner:'服务点凑单',youGet:'已达起送门槛，请留意配送公告',need:'起送',totalConfirmed:'已确认订单总额',ordersConfirmed:'笔订单已确认',all:'全部',emptySearch:'没有找到相关商品',emptyCat:'暂无商品',reached:'✓ 已达门槛，请留意公告',searchResult:'搜索"{kw}"的结果',feeTitle:'运费说明：',feeEach:'· 自取订单始终免运费，待该点凑满起送额后统一配送',feeFree:'· 该自取点已付款订单满 ¥1000 后统一配送',feeNoRefund:'· 未满门槛先等待；已付款订单可申请加费单独配送或退款',feePerOrder:'自取免运费 · 满 ¥1000 统一配送',ustFee:'自取免运费 · 满 ¥500 统一配送',ustBenefit2:'🎓 科技大学自取点满¥500统一配送，自取免运费',feeHint:'满额免运费 · 该点统一配送',confirmOrder:'确认订单',needPay:'待付款',paid:'已付款',selectPointFirst:'请先选择自取点',tagHot:'爆款',tagNew:'新品',noPhone:'未绑定手机号',comingSoon:'敬请期待',statusPending:'待付款',statusPaid:'已付款',statusShipped:'已发货',statusCompleted:'已完成',statusCancelled:'已取消',orderAll:'全部订单',orderPending:'待付款',orderGroup:'拼团中',orderShipping:'待收货',orderDone:'已完成',coupons:'优惠券',refundAfterSale:'退款售后',orderPcs:'件',orderTotal:'合计',noOrders:'暂无订单',orderNo:'订单号',orderStatus:'订单状态',clear:'清空' },
+  zh_HK: { home:'首頁',category:'分類',cart:'購物車',my:'我的',search:'搜尋商品',welcome:'珍珍優質果菜',slogan:'新鮮直達 · 每日優選 · 一件送達',groupBuy:'服務點湊單 滿 ¥1000 統一配送',groupBuySlogan:'大家一起拼 越買越划算',hot:'熱門推薦',pickPoint:'選擇自取點',freeShipping:'滿額免運費 · 該點統一配送',freeFee:'免運費',deliveryHome:'配送到家',deliveryHomeFee:'運費¥30',checkout:'確認訂單',goodsAmount:'商品金額',shipping:'運費',submit:'提交訂單',cancel:'取消',myOrders:'我的訂單',viewAll:'查看全部 ›',address:'收貨地址',contact:'聯繫客服',help:'配送規則 / 幫助',favorites:'我的收藏',logout:'退出登錄',clickLogin:'點擊登錄',loginHint:'登錄後查看訂單和地址',login:'登錄',register:'註冊',back:'返回上一頁',username:'賬號',password:'密碼',phone:'手機號',addToCart:'加入購物車',checkOut:'去結算',emptyCart:'購物車是空的',favoriteEmpty:'還沒有收藏商品',groupRemain:'還差',buyExtra:'順手買一件',groupProgress:'當前拼單進度',groupFull:'該自取點滿 ¥1000，大家都免運費',introTitle:'下單前必讀',introBtn:'我已知曉，開始購物',next:'下一步',gotIt:'我知道了',step1Title:'① 選自取點',step1Desc:'點左上角📍選你就近的自提點',step2Title:'② 逛商品加購物車',step2Desc:'點商品看詳情，點+號加購',step3Title:'③ 湊單滿額',step3Desc:'自取免運費，大家湊夠¥1000後統一配送',step4Title:'④ 去結算',step4Desc:'選支付方式，掃碼付款等配送',deliveryRule:'配送規則：湊滿門檻統一配送，免運費',details:'詳情 ›',groupBuyBanner:'服務點湊單',youGet:'已達起送門檻，請留意配送公告',need:'起送',totalConfirmed:'已確認訂單總額',ordersConfirmed:'筆訂單已確認',all:'全部',emptySearch:'沒有找到相關商品',emptyCat:'暫無商品',reached:'✓ 已達門檻，請留意公告',searchResult:'搜索"{kw}"的結果',feeTitle:'運費說明：',feeEach:'· 自取訂單一律免運費，待該點湊滿起送額後統一配送',feeFree:'· 該自取點已付款訂單滿 ¥1000 後統一配送',feeNoRefund:'· 未滿門檻先等待；已付款訂單可申請加費單獨配送或退款',feePerOrder:'自取免運費 · 滿 ¥1000 統一配送',ustFee:'自取免運費 · 滿 ¥500 統一配送',ustBenefit2:'🎓 科技大學自取點滿¥500統一配送，自取免運費',feeHint:'滿額免運費 · 該點統一配送',confirmOrder:'確認訂單',needPay:'待付款',paid:'已付款',selectPointFirst:'請先選擇自取點',tagHot:'爆款',tagNew:'新品',noPhone:'未綁定手機號',comingSoon:'敬請期待',statusPending:'待付款',statusPaid:'已付款',statusShipped:'已發貨',statusCompleted:'已完成',statusCancelled:'已取消',orderAll:'全部訂單',orderPending:'待付款',orderGroup:'拼團中',orderShipping:'待收貨',orderDone:'已完成',coupons:'優惠券',refundAfterSale:'退款售後',orderPcs:'件',orderTotal:'合計',noOrders:'暫無訂單',orderNo:'訂單號',orderStatus:'訂單狀態',clear:'清空' },
+  en: { home:'Home',category:'Categories',cart:'Cart',my:'My Account',search:'Search products',welcome:'Zhenzhen Fresh',slogan:'Fresh Daily · Delivered to You',groupBuy:'Group delivery at ¥1000',groupBuySlogan:'Group together to save more',hot:'Popular Picks',pickPoint:'Pickup Point',freeShipping:'Free shipping at ¥1000',freeFee:'Free shipping',deliveryHome:'Home Delivery',deliveryHomeFee:'¥30',checkout:'Confirm Order',goodsAmount:'Subtotal',shipping:'Shipping',submit:'Place Order',cancel:'Cancel',myOrders:'My Orders',viewAll:'View all ›',address:'Address',contact:'Contact Us',help:'Delivery Info / Help',favorites:'Favorites',logout:'Log Out',clickLogin:'Tap to Login',loginHint:'Login to see orders',login:'Login',register:'Register',back:'Back',username:'Username',password:'Password',phone:'Phone',addToCart:'Add to Cart',checkOut:'Checkout',emptyCart:'Your cart is empty',favoriteEmpty:'No favorites yet',groupRemain:'Need',buyExtra:'Add one more',groupProgress:'Group progress',groupFull:'This point hits ¥1000 — free shipping!',introTitle:'Please Read First',introBtn:'Got it, shop now',next:'Next',gotIt:'Got it',step1Title:'1. Pick your point',step1Desc:'Tap 📍 top-left to choose',step2Title:'2. Browse & add',step2Desc:'Tap product to see, tap + to add',step3Title:'3. Group buy',step3Desc:'Pickup is free; group delivery starts at ¥1000',step4Title:'4. Checkout',step4Desc:'Choose payment, scan QR, wait',deliveryRule:'Group ships when threshold reached; free shipping',details:'Details ›',groupBuyBanner:'Group Buy Today',youGet:'Threshold reached; watch announcements',need:'to go',totalConfirmed:'Confirmed total',ordersConfirmed:'orders',all:'All',emptySearch:'No products found',emptyCat:'No products',reached:'✓ Threshold reached; watch notices',searchResult:'Results for "{kw}"',feeTitle:'Shipping info:',feeEach:'· Pickup is always free; orders ship together after the point reaches its threshold',feeFree:'· Deliver together when paid orders at this point reach ¥1000',feeNoRefund:'· If waiting, paid orders may request home delivery or a refund',feePerOrder:'Free pickup · group delivery at ¥1000',ustFee:'Free pickup · group delivery at ¥500',ustBenefit2:'🎓 UST pickup: free; group delivery at ¥500',feeHint:'Pickup is free; delivery follows group threshold',confirmOrder:'Confirm Order',needPay:'Pending',paid:'Paid',selectPointFirst:'Please select a pickup point',tagHot:'Hot',tagNew:'New',noPhone:'No phone linked',comingSoon:'Coming soon',statusPending:'To Pay',statusPaid:'Paid',statusShipped:'Shipped',statusCompleted:'Completed',statusCancelled:'Cancelled',orderAll:'All Orders',orderPending:'To Pay',orderGroup:'Group Buy',orderShipping:'To Receive',orderDone:'Completed',coupons:'Coupons',refundAfterSale:'Refund & After-sales',orderPcs:'items',orderTotal:'Total',noOrders:'No orders',orderNo:'Order No.',orderStatus:'Order Status',clear:'Clear' }
 }
 
 // ========== 商品名三语映射 ==========
@@ -201,6 +203,8 @@ export default function App() {
   const [searchHistory, setSearchHistory] = useState(() => JSON.parse(localStorage.getItem('searchHistory') || '[]'))
   const [showHelp, setShowHelp] = useState(false)
   const [showContact, setShowContact] = useState(false)
+  const [showRefund, setShowRefund] = useState(false)
+  const [couponData, setCouponData] = useState({ campaigns: [], grants: [] })
   const [lang, setLang] = useState(() => localStorage.getItem('lang') || 'zh_CN')
   const [currency, setCurrency] = useState(() => localStorage.getItem('currency') || '')
   const [exchangeRate, setExchangeRate] = useState(1.2)
@@ -243,11 +247,12 @@ export default function App() {
     }
     return fmt(p.price)
   }
-  const variants_text = (p) => {
-    let variants = []
-    try { variants = p.variants ? JSON.parse(p.variants) : [] } catch(e) {}
-    if (variants.length > 0) return ''
-    return <small style={{fontSize:11,color:'#999',fontWeight:400}}>/{p.unit || '斤'}</small>
+  const unitText = (p) => {
+    const raw = String(p?.unit || '').trim()
+    if (raw && raw !== '/斤') return raw.startsWith('/') ? raw : `/${raw}`
+    const legacy = String(p?.description || '').trim()
+    if (/^\/[\u4e00-\u9fff\d]+$/.test(legacy)) return legacy
+    return raw
   }
   const hasVariants = (p) => {
     try { return p.variants && JSON.parse(p.variants).length > 0 } catch(e) { return false }
@@ -315,6 +320,10 @@ export default function App() {
     const t = setInterval(() => setBannerIdx(i => (i + 1) % 2), 4000)
     return () => clearInterval(t)
   }, [])
+
+  useEffect(() => {
+    if (tab === 'coupons') authFetch(`${API}/coupons`).then(r => r.json()).then(setCouponData).catch(() => setCouponData({ campaigns: [], grants: [] }))
+  }, [tab, currentUser])
 
   // 加载配送点列表
   useEffect(() => {
@@ -615,7 +624,7 @@ export default function App() {
         <h3 style={{ fontSize: 18, padding: '0 16px 12px' }}>❤️ 我的收藏</h3>
         <div className="product-grid" style={{ padding: '0 12px 80px' }}>
           {favProducts.map(p => (
-            <div className="product-card" key={p.id} onClick={() => { setSelectedProduct(p); setSelectedVariant(null) }}>
+            <div className="product-card" key={p.id} onClick={() => { setTab('home'); setSelectedProduct(p); setSelectedVariant(null) }}>
               <div className="emoji">
                 {p.image ? <img src={p.image} alt={p.name} /> : <span className="product-no-image">{pn(p.name).replace(/^\[[^\]]+\]/, '').slice(0, 2)}</span>}
                 <span onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id) }} style={{
@@ -627,8 +636,8 @@ export default function App() {
               <div className="info">
                 <div className="name">{pn(p.name)}</div>
                 <div className="bottom-row">
-                  <div className="price">{priceText(p)}</div>
-                  <button className="add-btn" onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>+</button>
+                  <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}</small></div>
+                  <button className="add-btn" onClick={(e) => { e.stopPropagation(); setTab('home'); quickAdd(p) }}>+</button>
                 </div>
               </div>
             </div>
@@ -714,18 +723,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* 分类宫格 */}
-          {categories.length > 0 && (
-            <div className="category-grid">
-              {categories.slice(0, 8).map(c => (
-                <div key={c.id} className="cat-item" onClick={() => { setSelectedCategory(c.id); setTab('category'); window.scrollTo(0,0) }}>
-                  <div className="cat-icon">{c.icon || '🛍️'}</div>
-                  <div className="cat-name">{cn(c.name)}</div>
-                </div>
-              ))}
-            </div>
-          )}
-
           {/* 配送规则小横幅 */}
           <div className="delivery-rule-strip"
             onClick={() => setShowHelp(true)}>
@@ -779,7 +776,7 @@ export default function App() {
                     <div className="emoji">{p.image ? <img src={p.image} alt={p.name} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:8}} /> : '🛒'}</div>
                     <span className="tag">新人价</span>
                     <div className="name">{pn(p.name)}</div>
-                    <div className="price">{priceText(p)}</div>
+                    <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}</small></div>
                     
                   </div>
                 ))}
@@ -806,7 +803,7 @@ export default function App() {
                       <div className="sales">{p.is_hot ? '🔥 ' + t('tagHot') : ''}</div>
                     </div>
                     <div className="bottom-row">
-                      <div className="price">{priceText(p)}</div>
+                      <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}</small></div>
                       {p.is_active !== false && <button className="add-btn" onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>+</button>}
                     </div>
                   </div>
@@ -818,6 +815,16 @@ export default function App() {
         </>
       )}
 
+      {tab === 'coupons' && (
+        <div className="coupon-page">
+          <div className="back-btn" onClick={() => setTab('my')}>‹ 返回</div>
+          <h2>优惠券活动</h2>
+          {couponData.campaigns.length ? couponData.campaigns.map(c => <div className="coupon-card" key={c.id}><strong>{c.title}</strong><p>{c.details || '活动规则即将公布，请留意此页。'}</p></div>) : <div className="coupon-card"><strong>活动即将公布</strong><p>活动方案确认后会在这里发布，请留意更新。</p></div>}
+          <h3>我的优惠券</h3>
+          {!currentUser ? <p className="coupon-empty" onClick={() => setTab('login')}>登录后查看已发给你的优惠券 ›</p> : couponData.grants.length ? couponData.grants.map(g => <div className="coupon-card" key={g.id}><strong>{g.title}</strong><p>{g.details || '活动规则待公布'}</p><small>领取时间：{g.granted_at}</small></div>) : <p className="coupon-empty">暂时没有收到优惠券</p>}
+        </div>
+      )}
+
       {tab === 'category' && (
         <div className="cat-layout">
           <div className="cat-sidebar">
@@ -826,7 +833,7 @@ export default function App() {
             </div>
             {categories.map(c => (
               <div className={`cat-side-item ${activeCategory === c.id ? 'active' : ''}`} key={c.id} onClick={() => { setActiveCategory(c.id); window.scrollTo(0, 0) }}>
-                {c.icon || '📦'} {cn(c.name)}
+                {cn(c.name)}
               </div>
             ))}
           </div>
@@ -848,7 +855,7 @@ export default function App() {
                       <div className="sales">{p.is_hot ? '🔥 ' + t('tagHot') : ''}</div>
                     </div>
                     <div className="bottom-row">
-                      <div className="price">{priceText(p)}</div>
+                      <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}</small></div>
                       {p.is_active !== false && <button className="add-btn" onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>+</button>}
                     </div>
                   </div>
@@ -929,7 +936,7 @@ export default function App() {
 
                 {/* 功能入口 */}
                 <div className="my-card">
-                  <div className="my-menu-item" onClick={() => showToast(t('comingSoon'))}>
+                  <div className="my-menu-item" onClick={() => setTab('coupons')}>
                     <span className="icon">🎟️</span>
                     <span className="text">{t('coupons')}</span>
                     <span className="arrow">›</span>
@@ -939,7 +946,7 @@ export default function App() {
                     <span className="text">{t('favorites')} ({favorites.length})</span>
                     <span className="arrow">›</span>
                   </div>
-                  <div className="my-menu-item" onClick={() => showToast(t('comingSoon'))}>
+                  <div className="my-menu-item" onClick={() => setShowRefund(true)}>
                     <span className="icon">↩️</span>
                     <span className="text">{t('refundAfterSale')}</span>
                     <span className="arrow">›</span>
@@ -991,16 +998,16 @@ export default function App() {
               {cartItems.map(item => {
                 const itemKey = item.variantLabel ? `${item.product.id}::${item.variantLabel}` : String(item.product.id)
                 return (
-                <div className="cart-item" key={itemKey}>
+                <div className="cart-item" key={itemKey} onClick={() => { setShowCart(false); setSelectedProduct(item.product); setSelectedVariant(null) }} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') { setShowCart(false); setSelectedProduct(item.product); setSelectedVariant(null) } }}>
                   <div className="emoji">{item.product.image ? <img src={item.product.image} alt="" /> : <span className="product-no-image">{pn(item.product.name).replace(/^\[[^\]]+\]/, '').slice(0, 2)}</span>}</div>
                   <div className="detail">
                     <div className="name">{pn(item.product.name)}{item.variantLabel && <small style={{color:'var(--market-accent)',marginLeft:6,fontSize:12}}>({item.variantLabel})</small>}</div>
-                    <div className="price">{fmt(item.variantPrice)}<small style={{fontSize:11,color:'#999'}}>{item.product.unit || '/斤'}</small></div>
+                    <div className="price">{fmt(item.variantPrice)}<small style={{fontSize:11,color:'#999'}}>{unitText(item.product)}</small></div>
                   </div>
                   <div className="qty-control">
-                    <button className="qty-btn" onClick={() => updateQty(itemKey, -1)}>−</button>
+                    <button className="qty-btn" onClick={(e) => { e.stopPropagation(); updateQty(itemKey, -1) }}>−</button>
                     <span className="qty-num">{item.qty}</span>
-                    <button className="qty-btn plus" onClick={() => updateQty(itemKey, 1)}>+</button>
+                    <button className="qty-btn plus" onClick={(e) => { e.stopPropagation(); updateQty(itemKey, 1) }}>+</button>
                   </div>
                 </div>
                 )
@@ -1198,7 +1205,7 @@ export default function App() {
                       return sym + Math.min(...prices).toFixed(2) + '~' + Math.max(...prices).toFixed(2)
                     }
                     return fmt(selectedProduct.price)
-                  })()}<small style={{fontSize:13,color:'#999',fontWeight:400}}>/{selectedProduct.unit || '斤'}</small>
+                  })()}<small style={{fontSize:13,color:'#999',fontWeight:400}}>{unitText(selectedProduct)}</small>
                 </div>
               </div>
               <span onClick={() => { setSelectedProduct(null); setSelectedVariant(null) }}
@@ -1234,7 +1241,7 @@ export default function App() {
                   )}
 
                   {/* 描述 */}
-                  {selectedProduct.description && (
+                  {selectedProduct.description && !/^\/[\u4e00-\u9fff\d]+$/.test(selectedProduct.description.trim()) && (
                     <div style={{ padding: '0 16px', borderTop: '8px solid #f7f7f7' }}>
                       <p style={{ fontSize: 14, color: '#666', lineHeight: 1.6, padding: '12px 0' }}>{selectedProduct.description}</p>
                     </div>
@@ -1482,15 +1489,15 @@ export default function App() {
         <div className="checkout-overlay" style={{ zIndex: 5000 }} onClick={() => setUstBenefit(false)}>
           <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 380, textAlign: 'center' }}>
             <div style={{ fontSize: 50, marginBottom: 12 }}>🎓</div>
-            <h3 style={{ color: 'var(--market-green)', marginBottom: 8 }}>UST 科大自取规则</h3>
+            <h3 style={{ color: 'var(--market-green)', marginBottom: 8 }}>恭喜你，科大学生福利</h3>
             <div style={{ fontSize: 14, color: '#333', lineHeight: 1.8, marginBottom: 16 }}>
               <div style={{ background: '#e8f5e9', padding: 12, borderRadius: 8, marginBottom: 8 }}>
                 🎓 <b>自取免运费</b><br/>
-                自取免运费，满 {fmt(1000)} 统一配送
+                科大服务点自取免运费，满 {fmt(500)} 统一配送
               </div>
               <div style={{ background: '#e3f2fd', padding: 12, borderRadius: 8 }}>
-                🎯 <b>起送门槛 {fmt(1000)}</b><br/>
-                该点已付款待配送订单满 {fmt(1000)} 后统一配送<br/>
+                🎯 <b>科大专属起送门槛 {fmt(500)}</b><br/>
+                该点已付款待配送订单满 {fmt(500)} 后统一配送<br/>
                 取货时间请留意网站公告和群通知
               </div>
             </div>
@@ -1522,8 +1529,8 @@ export default function App() {
                 <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--market-green)' }}>🏠 小区居民 · 老板</div>
                 <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>加微信咨询订单 / 售后</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#222' }}>jennybabi1988</div>
-                  <button onClick={() => copyText('jennybabi1988', '微信号')} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #3cb043', color: 'var(--market-green)', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>复制</button>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#222' }}>{BOSS_WECHAT}</div>
+                  <button onClick={() => copyText(BOSS_WECHAT, '微信号')} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #3cb043', color: 'var(--market-green)', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>复制</button>
                 </div>
               </div>
 
@@ -1531,9 +1538,9 @@ export default function App() {
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#128c7e' }}>💬 WhatsApp 客服</div>
                 <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>海外 / 非微信用户首选</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#222' }}>+852 95228191</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#222' }}>{BOSS_WHATSAPP}</div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={() => copyText('+85295228191', 'WhatsApp号')} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #128c7e', color: '#128c7e', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>复制</button>
+                    <button onClick={() => copyText(BOSS_WHATSAPP, 'WhatsApp号')} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #128c7e', color: '#128c7e', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>复制</button>
                     <a href="https://wa.me/85295228191" target="_blank" rel="noreferrer" style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #128c7e', color: '#fff', background: '#128c7e', borderRadius: 14, cursor: 'pointer', textDecoration: 'none' }}>打开</a>
                   </div>
                 </div>
@@ -1541,6 +1548,18 @@ export default function App() {
             </div>
 
             <button className="btn-submit" style={{ width: '100%' }} onClick={() => setShowContact(false)}>我知道了</button>
+          </div>
+        </div>
+      )}
+
+      {showRefund && (
+        <div className="checkout-overlay" onClick={() => setShowRefund(false)}>
+          <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
+            <h3>退款售后</h3>
+            <p style={{ lineHeight: 1.7, color: '#555', margin: '12px 0' }}>如需退款或售后帮助，请联系老板。已付款待配送的自取订单，也可在订单详情提交退款申请。</p>
+            <div className="after-sale-contact"><span>老板微信</span><strong>{BOSS_WECHAT}</strong><button onClick={() => copyText(BOSS_WECHAT, '微信号')}>复制</button></div>
+            <div className="after-sale-contact"><span>WhatsApp</span><strong>{BOSS_WHATSAPP}</strong><a href="https://wa.me/85295228191" target="_blank" rel="noreferrer">联系</a></div>
+            <button className="btn-submit" style={{ width: '100%', marginTop: 16 }} onClick={() => setShowRefund(false)}>我知道了</button>
           </div>
         </div>
       )}
@@ -1559,12 +1578,12 @@ export default function App() {
               <div style={{ background: '#e8f5e9', padding: 12, borderRadius: 8, marginBottom: 10 }}>
                 <b>🚚 运费规则</b><br />
                 · 自取订单始终免运费；未满额则等待凑单<br />
-                · 该自取点已付款待配送订单满 {fmt1000} 即起送统一配送<br />
+                · 该自取点已付款待配送订单满 {fmt(effectiveThreshold)} 即起送统一配送<br />
                 · 单独送到家：{fmt(30)}
               </div>
               <div style={{ background: '#fff8e1', padding: 12, borderRadius: 8, marginBottom: 10 }}>
                 <b>📍 自取点</b><br />
-                · 日出康城站 / 科技大学 / 坑口站 / 宝琳站 / 将军澳站 / 调景岭站
+                · 科技大学满 {fmt(500)} 起送；其他服务点满 {fmt(1000)} 起送
               </div>
               <div style={{ background: '#fce4ec', padding: 12, borderRadius: 8 }}>
                 <b>📞 有问题？</b><br />

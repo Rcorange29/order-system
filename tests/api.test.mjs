@@ -25,7 +25,7 @@ function database(overrides = {}) {
               if (sql.includes('FROM users WHERE token')) return { id: 7, username: 'buyer', is_admin: 1 }
               if (sql.includes('SELECT username, phone FROM users')) return { username: 'buyer', phone: '12345678' }
               if (sql.includes('FROM products WHERE id')) return overrides.product === null ? null : product
-              if (sql.includes('FROM delivery_points WHERE id')) return overrides.point === null ? null : { id: 2, fee: 10, threshold: 1000, is_active: 1 }
+              if (sql.includes('FROM delivery_points WHERE id')) return overrides.point === null ? null : { id: 2, fee: 10, threshold: overrides.threshold ?? 1000, is_active: 1 }
               if (sql.includes('COALESCE(SUM(total)')) return { t: overrides.confirmedTotal ?? 100, confirmed_total: overrides.confirmedTotal ?? 100, confirmed_count: 1 }
               if (sql.includes('FROM orders WHERE id = ? AND user_id = ?')) return overrides.proofOrder || { id: 5, payment_method: 'wechat_transfer', payment_status: 'pending' }
               if (sql.includes('SELECT value FROM settings')) return { value: '1.2' }
@@ -100,6 +100,15 @@ test('uses RMB 30 home-delivery fee and RMB 1000 pickup threshold', async () => 
   const data = await progress.json()
   assert.equal(data.threshold, 1000)
   assert.equal(data.reached, false)
+})
+
+test('uses the university point RMB 500 threshold from delivery-point settings', async () => {
+  const db = database({ confirmedTotal: 500, threshold: 500 })
+  const progress = await call(stats, db, '/api/stats?point=2', 'GET')
+  const data = await progress.json()
+  assert.equal(data.threshold, 500)
+  assert.equal(data.remaining, 0)
+  assert.equal(data.reached, true)
 })
 
 test('hides downlisted products from customers while keeping them in admin management', async () => {
