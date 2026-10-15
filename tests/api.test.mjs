@@ -105,9 +105,9 @@ test('uses RMB 30 home-delivery fee and RMB 1000 pickup threshold', async () => 
 test('hides downlisted products from customers while keeping them in admin management', async () => {
   const db = database()
   await products({ request: new Request('https://example.com/api/products'), env: { DB: db } })
-  assert.ok(db.state.queries.some(query => query.sql.includes('p.is_active = 1')))
+  assert.ok(db.state.queries.some(query => query.sql.includes('COALESCE(p.is_active, 1) = 1')))
   await call(products, db, '/api/products?all=1', 'GET')
-  assert.ok(db.state.queries.some(query => query.sql.includes('ORDER BY p.is_active DESC') && !query.sql.includes('p.is_active = 1')))
+  assert.ok(db.state.queries.some(query => query.sql.includes('ORDER BY p.is_active DESC') && !query.sql.includes('COALESCE(p.is_active, 1) = 1')))
 })
 
 test('limits proof type and locks confirmed orders', async () => {

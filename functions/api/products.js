@@ -11,7 +11,7 @@ export async function onRequest(context) {
     const includeInactive = url.searchParams.get('all') === '1' && Boolean(await getAdminUser(request, env))
     let sql = `SELECT p.*, c.name as category_name, c.icon as category_icon FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE 1=1`
     const params = []
-    if (!includeInactive) sql += ' AND p.is_active = 1'
+    if (!includeInactive) sql += ' AND COALESCE(p.is_active, 1) = 1'
     if (categoryId) { sql += ' AND p.category_id = ?'; params.push(categoryId) }
     if (keyword) { sql += ' AND p.name LIKE ?'; params.push('%' + keyword + '%') }
     sql += ' ORDER BY p.is_active DESC, p.sort_order ASC, p.id DESC'
