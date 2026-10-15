@@ -36,6 +36,8 @@ const columns = {
     delivery_fee: 'REAL DEFAULT 0',
     delivery_point_id: 'INTEGER',
     payment_screenshot: 'TEXT',
+    payment_currency: "TEXT NOT NULL DEFAULT 'CNY'",
+    payment_amount: 'REAL',
     coupon_discount: 'REAL DEFAULT 0',
     coupon_grant_id: 'INTEGER'
   },
@@ -46,6 +48,8 @@ const columns = {
 
 const statements = [
   'CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)',
+  'CREATE TABLE IF NOT EXISTS order_numbers (number INTEGER PRIMARY KEY AUTOINCREMENT, order_id INTEGER NOT NULL UNIQUE)',
+  'INSERT OR IGNORE INTO order_numbers (order_id) SELECT id FROM orders ORDER BY id',
   `CREATE TABLE IF NOT EXISTS order_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id INTEGER NOT NULL, user_id TEXT NOT NULL, type TEXT NOT NULL CHECK (type IN ('delivery_upgrade', 'refund')), address TEXT DEFAULT '', status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')), admin_note TEXT DEFAULT '', handled_by INTEGER, created_at TEXT DEFAULT (datetime('now', '+8 hours')), handled_at TEXT, FOREIGN KEY (order_id) REFERENCES orders(id))`,
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_order_requests_pending ON order_requests(order_id) WHERE status = 'pending'`,
   `CREATE TABLE IF NOT EXISTS announcements (id INTEGER PRIMARY KEY AUTOINCREMENT, delivery_point_id INTEGER, title TEXT NOT NULL, content TEXT NOT NULL, is_published INTEGER NOT NULL DEFAULT 1, created_at TEXT DEFAULT (datetime('now', '+8 hours')), FOREIGN KEY (delivery_point_id) REFERENCES delivery_points(id))`,

@@ -55,9 +55,17 @@ CREATE TABLE IF NOT EXISTS orders (
   remark TEXT DEFAULT '',
   payment_method TEXT DEFAULT 'cash_on_delivery',
   payment_status TEXT DEFAULT 'pending',
+  payment_currency TEXT NOT NULL DEFAULT 'CNY',
+  payment_amount REAL,
   payment_screenshot TEXT,
   created_at TEXT DEFAULT (datetime('now', '+8 hours')),
   updated_at TEXT DEFAULT (datetime('now', '+8 hours'))
+);
+
+-- Customer-facing serial numbers; keeps numbering stable when an order is deleted.
+CREATE TABLE IF NOT EXISTS order_numbers (
+  number INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id INTEGER NOT NULL UNIQUE
 );
 
 -- 订单项表

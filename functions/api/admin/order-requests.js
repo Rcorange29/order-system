@@ -7,9 +7,9 @@ export async function onRequest({ request, env }) {
 
   if (request.method === 'GET') {
     const { results } = await env.DB.prepare(
-      `SELECT r.*, o.order_no, o.customer, o.phone, o.total, o.delivery_fee, o.status AS order_status,
+      `SELECT r.*, o.order_no, n.number as public_no, o.customer, o.phone, o.total, o.delivery_fee, o.payment_currency, o.payment_amount, o.status AS order_status,
               p.name AS delivery_point_name FROM order_requests r
-       JOIN orders o ON o.id = r.order_id LEFT JOIN delivery_points p ON p.id = o.delivery_point_id
+       JOIN orders o ON o.id = r.order_id LEFT JOIN order_numbers n ON n.order_id = o.id LEFT JOIN delivery_points p ON p.id = o.delivery_point_id
        ORDER BY CASE WHEN r.status = 'pending' THEN 0 ELSE 1 END, r.id DESC LIMIT 200`
     ).all()
     return json(results)
@@ -33,7 +33,7 @@ export async function onRequest({ request, env }) {
 
   if (decision === 'approve') {
     const updateOrder = entry.type === 'delivery_upgrade'
-      ? env.DB.prepare("UPDATE orders SET delivery_point_id = NULL, address = ?, delivery_fee = 30, updated_at = datetime('now', '+8 hours') WHERE id = ? AND status = 'paid' AND payment_status = 'confirmed' AND delivery_point_id IS NOT NULL")
+      ? env.DB.prepare("UPDATE orders SET delivery_point_id = NULL, address = ?, payment_amount = ROUND(COALESCE(payment_amount, total) + 30 * CASE WHEN payment_currency = 'HKD' AND total > 0 THEN COALESCE(payment_amount, total) / total ELSE 1 END, 2), delivery_fee = 30, updated_at = datetime('now', '+8 hours') WHERE id = ? AND status = 'paid' AND payment_status = 'confirmed' AND delivery_point_id IS NOT NULL")
         .bind(entry.address, entry.order_id)
       : env.DB.prepare("UPDATE orders SET status = 'cancelled', payment_status = 'refunded', updated_at = datetime('now', '+8 hours') WHERE id = ? AND status = 'paid' AND payment_status = 'confirmed' AND delivery_point_id IS NOT NULL")
         .bind(entry.order_id)

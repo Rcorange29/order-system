@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 
 const API = '/api'
+const displayOrderNo = order => String(order?.public_no ?? order?.id ?? '').padStart(2, '0')
+const orderPaymentText = order => `${order.payment_currency === 'HKD' ? 'HK$' : '¥'}${Number(order.payment_amount ?? (Number(order.total) + Number(order.delivery_fee || 0))).toFixed(2)} ${order.payment_currency || 'CNY'}`
+const upgradeFeeText = order => order.payment_currency === 'HKD' && Number(order.total) > 0
+  ? `HK$${(Math.round(30 * Number(order.payment_amount) / Number(order.total) * 100) / 100).toFixed(2)}` : '¥30.00'
 
 function authFetch(url, options = {}) {
   const token = localStorage.getItem('admin_token')
@@ -202,7 +206,7 @@ function Dashboard({ products, orders, categories }) {
           <tbody>
             {orders.slice(0, 5).map(o => (
               <tr key={o.id}>
-                <td>{o.order_no}</td>
+                <td>{displayOrderNo(o)}</td>
                 <td>{o.customer}</td>
                 <td>¥{o.total?.toFixed(2)}</td>
                 <td><span className={`tag tag-${o.status}`}>{statusText[o.status] || o.status}</span></td>
@@ -217,7 +221,7 @@ function Dashboard({ products, orders, categories }) {
   )
 }
 
-const statusText = { pending: '待付款', paid: '已付款', shipped: '已发货', completed: '已完成', cancelled: '已取消' }
+const statusText = { pending: '待付款', awaiting_confirmation: '待确认', paid: '拼团中', shipped: '已发货', completed: '已完成', cancelled: '已取消' }
 const paymentText = { cash_on_delivery: '货到付款', wechat_transfer: '微信转账', alipay_transfer: '支付宝转账', fps_transfer: '转数快 FPS' }
 const payStatusText = { pending: '待支付', paid: '已支付', confirmed: '已确认收款', refunded: '已退款' }
 
@@ -244,13 +248,14 @@ function RequestManage({ requests, reload, showToast }) {
     <div className="request-list">
       {requests.map(entry => <div className="card request-card" key={entry.id}>
         <div className="request-title"><strong>{entry.type === 'refund' ? '取消订单并退款' : '加 ¥30 单独配送'}</strong><span className={`tag ${entry.status === 'pending' ? 'tag-pending' : 'tag-completed'}`}>{entry.status === 'pending' ? '待处理' : entry.status === 'approved' ? '已完成' : '已拒绝'}</span></div>
-        <p>订单 {entry.order_no} · {entry.customer} · {entry.phone} · {entry.delivery_point_name || '自取点'}</p>
-        <p>{entry.type === 'refund' ? '应退金额' : '商品金额'} ¥{(Number(entry.total) + Number(entry.delivery_fee || 0)).toFixed(2)} · 申请时间 {entry.created_at}</p>
+        <p>订单 {displayOrderNo({ public_no: entry.public_no, id: entry.order_id })} · {entry.customer} · {entry.phone} · {entry.delivery_point_name || '自取点'}</p>
+        <p>{entry.type === 'refund' ? '应退金额' : '原订单已收'} {orderPaymentText(entry)} · 申请时间 {entry.created_at}</p>
+        {entry.type === 'delivery_upgrade' && <p>单独配送加收：{upgradeFeeText(entry)}（运费基准 ¥30）</p>}
         {entry.address && <p>送货地址：{entry.address}</p>}
         {entry.admin_note && <p>处理备注：{entry.admin_note}</p>}
         {entry.status === 'pending' && <div className="request-controls">
           <input value={notes[entry.id] || ''} onChange={e => setNotes(prev => ({ ...prev, [entry.id]: e.target.value }))} placeholder="处理备注（可选）" maxLength={500} />
-          <button disabled={busy} className="btn btn-primary" onClick={() => resolve(entry, 'approve')}>{entry.type === 'refund' ? '已线下退款，完成申请' : '已收 ¥30，改为送货到家'}</button>
+          <button disabled={busy} className="btn btn-primary" onClick={() => resolve(entry, 'approve')}>{entry.type === 'refund' ? '已线下退款，完成申请' : `已收 ${upgradeFeeText(entry)}，改为送货到家`}</button>
           <button disabled={busy} className="btn btn-default" onClick={() => resolve(entry, 'reject')}>拒绝申请</button>
         </div>}
       </div>)}
@@ -645,7 +650,7 @@ function OrderManage({ orders, reload, showToast }) {
     if (response.ok) reload()
   }
 
-  const filtered = orders.filter(o => (!statusFilter || o.status === statusFilter) && (!search || `${o.order_no} ${o.customer} ${o.phone}`.toLowerCase().includes(search.toLowerCase())))
+  const filtered = orders.filter(o => (!statusFilter || o.status === statusFilter) && (!search || `${displayOrderNo(o)} ${o.order_no} ${o.customer} ${o.phone}`.toLowerCase().includes(search.toLowerCase())))
 
   return (
     <div>
@@ -663,11 +668,11 @@ function OrderManage({ orders, reload, showToast }) {
           <tbody>
             {filtered.map(o => (
               <tr key={o.id}>
-                <td>{o.order_no}</td>
+                <td>{displayOrderNo(o)}</td>
                 <td>{o.customer}</td>
                 <td>{o.phone}</td>
                 <td style={{ maxWidth: 200 }}>{o.items?.map(i => `${i.product?.name}${i.variant ? `（${i.variant}）` : ''} x${i.quantity}`).join('，')}</td>
-                <td style={{ color: '#ff4444', fontWeight: 600 }}>¥{(Number(o.total) + Number(o.delivery_fee || 0)).toFixed(2)}</td>
+                <td style={{ color: '#ff4444', fontWeight: 600 }}>{orderPaymentText(o)}</td>
                 <td>{paymentText[o.payment_method] || o.payment_method}</td>
                 <td>
                   <span style={{ color: o.payment_status === 'confirmed' ? '#52c41a' : o.payment_status === 'paid' ? '#1890ff' : '#fa8c16', fontWeight: 500 }}>
@@ -701,7 +706,7 @@ function OrderManage({ orders, reload, showToast }) {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header"><h3>订单详情</h3><button className="modal-close" onClick={() => setDetail(null)}>×</button></div>
             <div className="modal-body">
-              <div className="form-row"><label>订单号</label><div>{detail.order_no}</div></div>
+              <div className="form-row"><label>订单号</label><div>{displayOrderNo(detail)}</div></div>
               <div className="form-inline">
                 <div className="form-row"><label>收货人</label><div>{detail.customer}</div></div>
                 <div className="form-row"><label>电话</label><div>{detail.phone}</div></div>
@@ -716,8 +721,9 @@ function OrderManage({ orders, reload, showToast }) {
                     </div>
                   ))}
                   <div className="order-detail-item" style={{ borderTop: '1px solid #e8e8e8', marginTop: 8, paddingTop: 10, fontWeight: 600 }}>
-                    <span>合计（含运费）</span><span style={{ color: '#ff4444' }}>¥{(Number(detail.total) + Number(detail.delivery_fee || 0)).toFixed(2)}</span>
+                    <span>应收（含运费）</span><span style={{ color: '#ff4444' }}>{orderPaymentText(detail)}</span>
                   </div>
+                  {detail.payment_currency === 'HKD' && <div className="order-detail-item"><span>人民币基准</span><span>¥{(Number(detail.total) + Number(detail.delivery_fee || 0)).toFixed(2)}</span></div>}
                 </div>
               </div>
               <div className="form-row"><label>备注</label><div>{detail.remark || '无'}</div></div>
@@ -868,7 +874,7 @@ function UserManage({ users, showToast }) {
               {userOrders.length === 0 ? <div style={{ color: '#999', textAlign: 'center' }}>暂无订单</div> :
                 userOrders.map(o => (
                   <div key={o.id} style={{ padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
-                    <div style={{ fontWeight: 600 }}>{o.order_no} · ¥{Number(o.total || 0).toFixed(2)}</div>
+                    <div style={{ fontWeight: 600 }}>{displayOrderNo(o)} · ¥{Number(o.total || 0).toFixed(2)}</div>
                     <div style={{ fontSize: 13, color: '#999' }}>{(o.items || []).map(i => `${i.product?.name || '商品'}${i.variant ? `（${i.variant}）` : ''} ×${i.quantity}`).join('，').slice(0, 60)} · {(o.created_at || '').substring(0, 16)}</div>
                   </div>
                 ))}

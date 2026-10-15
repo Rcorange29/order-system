@@ -1319,3 +1319,73 @@ body { background: var(--market-paper); color: var(--market-ink); }
 .checkout-activity-link { display:block; width:100%; border:0; background:none; padding:9px 0 0; text-align:left; color:var(--market-green); font-size:13px; font-weight:600; cursor:pointer; }
 .coupon-action { cursor:pointer; }
 .coupon-action small { display:block; margin-top:9px; color:var(--market-green); }
+
+/* Phone-first hierarchy: store, offers, delivery progress, then eight products. */
+.top-bar { padding: 13px 16px 12px; }
+.top-bar-compact { padding: 0; border-bottom: 0; }
+.top-bar-compact .search-box { margin: 0; padding: 13px 16px; }
+.shop-wordmark { font-size: 22px; letter-spacing: -.035em; }
+.header-location { font-size: 13px; }
+.header-location b { font-size: 14px; }
+.header-options { gap: 14px; margin-top: 5px; }
+.header-option { font-size: 15px; padding: 5px 2px; }
+.display-currency-label { margin-left: auto; font-size: 12px; color: var(--market-muted); white-space: nowrap; }
+.currency-switch { border-radius: 5px; overflow: hidden; margin-left: 0; }
+.currency-switch span { font-size: 14px; padding: 7px 10px; }
+.banner { height: 145px; }
+.banner-poster { padding: 22px 18px; }
+.banner-title { font-size: 25px; }
+.banner-sub { font-size: 13px; line-height: 1.45; }
+.delivery-rule-strip { padding: 12px 16px; font-size: 14px; font-weight: 650; }
+.activity-strip { margin: 0; padding: 16px; font-size: 15px; line-height: 1.35; background: #f4eedc; color: #254a37; align-items: center; }
+.activity-strip span:first-child { max-width: 70%; }
+.activity-strip span:last-child { font-size: 14px; font-weight: 700; }
+.group-buy-banner { padding: 17px 16px 15px; }
+.group-buy-row { margin-bottom: 10px; }
+.group-buy-label { font-size: 17px; }
+.group-buy-remain, .group-buy-reached { font-size: 15px; }
+.group-buy-remain b { font-size: 17px; }
+.group-buy-progress { height: 9px; border-radius: 6px; margin-bottom: 9px; }
+.group-buy-progress-bar { border-radius: 6px; }
+.group-buy-footer { font-size: 13px; gap: 8px; }
+.group-buy-explain { color: var(--market-muted); font-size: 13px; line-height: 1.5; margin: 9px 0 0; }
+.notice-board-home { padding: 15px 16px; cursor: pointer; background: #f7f8f5; }
+.notice-board-heading { margin-bottom: 7px; }
+.notice-board-heading span { font-size: 16px; }
+.notice-board-heading small { font-size: 13px; }
+.notice-board-home > strong { font-size: 14px; }
+.notice-board-home > p { font-size: 13px; line-height: 1.5; margin: 5px 0 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.notice-dot, .nav-notice-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #dc4e3f; vertical-align: middle; margin-left: 4px; }
+.nav-item { position: relative; }
+.nav-notice-dot { position: absolute; top: 1px; right: 24%; width: 7px; height: 7px; }
+.browse-all-button { display: block; width: 100%; padding: 13px; margin: 18px 0 0; border: 1px solid var(--market-green); color: var(--market-green); background: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+.cart-recommend-progress { font-size: 13px; line-height: 1.5; }
+.checkout-alt-currency { font-size: 13px; color: #64746a; margin-top: 5px; text-align: right; }
+.payment-currency-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin: 8px 0; }
+.payment-currency-choices button { min-width: 0; padding: 12px 9px; border: 1px solid var(--market-line); background: #fff; color: var(--market-ink); text-align: left; cursor: pointer; }
+.payment-currency-choices button.selected { border: 2px solid var(--market-green); background: var(--market-green-soft); }
+.payment-currency-choices span { display: block; font-size: 13px; }
+.payment-currency-choices strong { display: block; margin-top: 4px; font-size: 19px; white-space: nowrap; }
+.payment-currency-hint { display: block; font-size: 12px; color: var(--market-muted); line-height: 1.45; }
+.payment-due { font-size: 22px; font-weight: 750; color: var(--market-accent); margin-bottom: 12px; }
+.payment-due small { display: block; font-size: 14px; color: #66736b; font-weight: 500; margin-top: 4px; }
+.proof-selected { font-size: 13px; overflow-wrap: anywhere; color: var(--market-green); }
+.proof-confirm { width: 100%; padding: 13px; margin: 0 0 10px; font-size: 15px; }
+.proof-confirm:disabled { opacity: .48; cursor: not-allowed; }
+.proof-detail-upload input, .proof-detail-upload small { display: block; margin: 8px 0; }
+.payment-info-open { display: block; width: 100%; padding: 9px 0; text-align: left; background: transparent; border: 0; color: var(--market-green); font-size: 14px; font-weight: 700; cursor: pointer; }
+.payment-detail-panel { max-width: 340px; text-align: center; }
+.payment-detail-panel p { font-size: 13px; line-height: 1.55; }
+.payment-detail-qr { display: block; width: 210px; max-width: 100%; margin: 12px auto; }
+.fps-pay-number { padding: 18px; background: #f4f5f2; font-size: 13px; }
+.fps-pay-number strong { font-size: 26px; }
+.saved-proof img { display: block; max-width: 100%; max-height: 260px; object-fit: contain; margin: 8px 0; border: 1px solid var(--market-line); }
+.messages-page { padding: 0 16px 90px; }
+.messages-page h2 { font-size: 22px; margin: 10px 0 5px; }
+.order-quick { grid-template-columns: repeat(3, 1fr); gap: 16px 0; }
+.messages-intro, .messages-empty { font-size: 14px; color: var(--market-muted); line-height: 1.55; }
+.message-card { padding: 16px; border: 1px solid var(--market-line); margin: 13px 0; background: #fff; }
+.message-card time { color: var(--market-muted); font-size: 12px; }
+.message-card h3 { font-size: 17px; margin: 8px 0; }
+.message-card p { font-size: 14px; line-height: 1.65; white-space: pre-wrap; }
+@media (max-width: 360px) { .shop-wordmark { font-size: 20px; } .banner-title { font-size: 23px; } }

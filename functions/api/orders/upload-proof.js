@@ -30,10 +30,11 @@ export async function onRequest({ request, env }) {
   const order = await env.DB.prepare('SELECT id, payment_method, payment_status, status FROM orders WHERE id = ? AND user_id = ?')
     .bind(body.order_id, String(user.id)).first()
   if (!order) return json({ error: '订单不存在' }, 404)
-  if (order.payment_method === 'cash_on_delivery' || order.payment_status === 'confirmed' || order.payment_status === 'refunded' || order.status === 'cancelled') {
+  if (order.payment_method === 'cash_on_delivery' || !['pending', 'paid'].includes(order.payment_status) || !['pending', 'awaiting_confirmation'].includes(order.status)) {
     return json({ error: '该订单不能上传付款凭证' }, 409)
   }
-  await env.DB.prepare('UPDATE orders SET payment_screenshot = ? WHERE id = ?')
+  const updated = await env.DB.prepare("UPDATE orders SET payment_screenshot = ?, payment_status = 'paid', status = 'awaiting_confirmation', updated_at = datetime('now', '+8 hours') WHERE id = ? AND payment_status IN ('pending', 'paid') AND status IN ('pending', 'awaiting_confirmation')")
     .bind(body.screenshot, order.id).run()
+  if (updated.meta.changes !== 1) return json({ error: '订单状态已变化，请刷新后重试' }, 409)
   return json({ ok: true })
 }

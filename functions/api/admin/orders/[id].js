@@ -8,7 +8,7 @@ export async function onRequest(context) {
   if (request.method === 'GET') {
     const admin = await getAdminUser(request, env)
     if (!admin) return json({ error: '需要管理员权限' }, 403)
-    const order = await env.DB.prepare('SELECT * FROM orders WHERE id = ?').bind(id).first()
+    const order = await env.DB.prepare('SELECT o.*, n.number as public_no FROM orders o LEFT JOIN order_numbers n ON n.order_id = o.id WHERE o.id = ?').bind(id).first()
     if (!order) return json({ error: 'not found' }, 404)
     const { results: items } = await env.DB.prepare(
       'SELECT oi.*, p.name as product_name, p.image as product_image FROM order_items oi LEFT JOIN products p ON oi.product_id = p.id WHERE oi.order_id = ?'
@@ -22,7 +22,7 @@ export async function onRequest(context) {
     const body = await readBody(request)
     const order = await env.DB.prepare('SELECT * FROM orders WHERE id = ?').bind(id).first()
     if (!order) return json({ error: 'not found' }, 404)
-    const validStatuses = new Set(['pending', 'paid', 'shipped', 'completed', 'cancelled'])
+    const validStatuses = new Set(['pending', 'awaiting_confirmation', 'paid', 'shipped', 'completed', 'cancelled'])
     const validPayments = new Set(['pending', 'paid', 'confirmed', 'refunded'])
     const nextStatus = body.status ?? order.status
     const nextPayment = body.payment_status ?? order.payment_status

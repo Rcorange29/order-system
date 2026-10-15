@@ -1,0 +1,4 @@
+ALTER TABLE orders ADD COLUMN payment_currency TEXT NOT NULL DEFAULT 'CNY';
+ALTER TABLE orders ADD COLUMN payment_amount REAL;
+CREATE TABLE IF NOT EXISTS order_numbers (number INTEGER PRIMARY KEY AUTOINCREMENT, order_id INTEGER NOT NULL UNIQUE);
+INSERT INTO order_numbers (order_id) SELECT id FROM orders ORDER BY id;

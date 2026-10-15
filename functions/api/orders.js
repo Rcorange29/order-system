@@ -21,7 +21,7 @@ export async function onRequest(context) {
 
   if (request.method === 'GET') {
     const { results } = await env.DB.prepare(
-      'SELECT o.id, o.order_no, o.user_id, o.customer, o.phone, o.address, o.status, o.total, o.delivery_fee, o.remark, o.payment_method, o.payment_status, o.delivery_point_id, o.created_at, o.updated_at, p.name as delivery_point_name FROM orders o LEFT JOIN delivery_points p ON o.delivery_point_id = p.id WHERE o.user_id = ? ORDER BY o.id DESC'
+      'SELECT o.id, o.order_no, n.number as public_no, o.user_id, o.customer, o.phone, o.address, o.status, o.total, o.delivery_fee, o.remark, o.payment_method, o.payment_status, o.payment_currency, o.payment_amount, o.payment_screenshot, o.delivery_point_id, o.created_at, o.updated_at, p.name as delivery_point_name FROM orders o LEFT JOIN order_numbers n ON n.order_id = o.id LEFT JOIN delivery_points p ON o.delivery_point_id = p.id WHERE o.user_id = ? ORDER BY o.id DESC'
     ).bind(String(user.id)).all()
     const orders = []
     for (const order of results) {
@@ -40,6 +40,10 @@ export async function onRequest(context) {
     return json({ error: '请选择商品（最多100项）' }, 400)
   }
   if (!PAYMENT_METHODS.has(body.payment_method || 'cash_on_delivery')) return json({ error: '支付方式无效' }, 400)
+  const paymentCurrency = body.payment_currency || 'CNY'
+  if (!['CNY', 'HKD'].includes(paymentCurrency)) return json({ error: '付款币种无效' }, 400)
+  if (paymentCurrency === 'HKD' && ['wechat_transfer', 'alipay_transfer'].includes(body.payment_method)) return json({ error: '微信和支付宝仅支持人民币付款，请改选转数快' }, 400)
+  if (paymentCurrency === 'CNY' && body.payment_method === 'fps_transfer') return json({ error: '转数快仅支持港币付款，请改选微信或支付宝' }, 400)
   if (!['pickup', 'delivery'].includes(body.delivery_type)) return json({ error: '配送方式无效' }, 400)
 
   let point = null
@@ -91,21 +95,29 @@ export async function onRequest(context) {
   }
 
   const dbUser = await env.DB.prepare('SELECT username, phone FROM users WHERE id = ?').bind(user.id).first()
+  const rateRow = paymentCurrency === 'HKD' ? await env.DB.prepare("SELECT value FROM settings WHERE key = 'exchange_rate'").first() : null
+  const exchangeRate = Number(rateRow?.value || 1.2)
+  if (!Number.isFinite(exchangeRate) || exchangeRate <= 0 || exchangeRate > 100) return json({ error: '汇率设置无效' }, 500)
+  const amountCents = subtotalCents - discountCents + cents(deliveryFee)
+  const paymentAmount = Math.round(amountCents * (paymentCurrency === 'HKD' ? exchangeRate : 1)) / 100
+  if (body.expected_cny_total !== undefined && cents(Number(body.expected_cny_total)) !== amountCents) return json({ error: '商品价格已更新，请刷新页面后重新确认金额' }, 409)
+  if (body.expected_payment_amount !== undefined && cents(Number(body.expected_payment_amount)) !== cents(paymentAmount)) return json({ error: '汇率或金额已更新，请刷新页面后重新确认金额' }, 409)
   const orderNo = 'ZZ' + crypto.randomUUID().replace(/-/g, '').slice(0, 16).toUpperCase()
   const statements = [env.DB.prepare(
-    `INSERT INTO orders (order_no, user_id, customer, phone, address, status, total, delivery_fee, remark, payment_method, payment_status, delivery_point_id, coupon_discount, coupon_grant_id, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+8 hours'))`
+    `INSERT INTO orders (order_no, user_id, customer, phone, address, status, total, delivery_fee, remark, payment_method, payment_status, delivery_point_id, coupon_discount, coupon_grant_id, payment_currency, payment_amount, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+8 hours'))`
   ).bind(
     orderNo, String(user.id), String(body.customer || dbUser?.username || '').trim(),
     String(body.phone || dbUser?.phone || '').trim(), String(body.address || '').trim(),
     'pending', (subtotalCents - discountCents) / 100, deliveryFee, String(body.remark || ''),
-    body.payment_method || 'cash_on_delivery', 'pending', point?.id || null, discountCents / 100, coupon?.id || null
+    body.payment_method || 'cash_on_delivery', 'pending', point?.id || null, discountCents / 100, coupon?.id || null, paymentCurrency, paymentAmount
   )]
   for (const item of items) {
     statements.push(env.DB.prepare(
       'INSERT INTO order_items (order_id, product_id, quantity, price, variant) VALUES ((SELECT id FROM orders WHERE order_no = ?), ?, ?, ?, ?)'
     ).bind(orderNo, item.product_id, item.quantity, item.price, item.variant))
   }
+  statements.push(env.DB.prepare('INSERT INTO order_numbers (order_id) VALUES ((SELECT id FROM orders WHERE order_no = ?))').bind(orderNo))
   if (coupon) {
     const reserved = await env.DB.prepare("UPDATE coupon_grants SET used_order_no = ?, used_at = datetime('now', '+8 hours') WHERE id = ? AND user_id = ? AND used_order_no IS NULL").bind(orderNo, coupon.id, user.id).run()
     if (reserved.meta.changes !== 1) return json({ error: '优惠券已被使用，请刷新后重试' }, 409)
@@ -117,7 +129,7 @@ export async function onRequest(context) {
     throw error
   }
   const order = await env.DB.prepare(
-    'SELECT o.*, p.name as delivery_point_name FROM orders o LEFT JOIN delivery_points p ON o.delivery_point_id = p.id WHERE o.order_no = ?'
+    'SELECT o.*, n.number as public_no, p.name as delivery_point_name FROM orders o LEFT JOIN order_numbers n ON n.order_id = o.id LEFT JOIN delivery_points p ON o.delivery_point_id = p.id WHERE o.order_no = ?'
   ).bind(orderNo).first()
   return json({ ...order, items }, 201)
 }

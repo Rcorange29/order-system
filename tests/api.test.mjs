@@ -27,13 +27,13 @@ function database(overrides = {}) {
               if (sql.includes('FROM products WHERE id')) return overrides.product === null ? null : product
               if (sql.includes('FROM delivery_points WHERE id')) return overrides.point === null ? null : { id: 2, fee: 10, threshold: overrides.threshold ?? 1000, is_active: 1 }
               if (sql.includes('COALESCE(SUM(total)')) return { t: overrides.confirmedTotal ?? 100, confirmed_total: overrides.confirmedTotal ?? 100, confirmed_count: 1 }
-              if (sql.includes('FROM orders WHERE id = ? AND user_id = ?')) return overrides.proofOrder || { id: 5, payment_method: 'wechat_transfer', payment_status: 'pending' }
+              if (sql.includes('FROM orders WHERE id = ? AND user_id = ?')) return overrides.proofOrder || { id: 5, payment_method: 'wechat_transfer', payment_status: 'pending', status: 'pending' }
               if (sql.includes('SELECT value FROM settings')) return { value: '1.2' }
               if (sql.includes('WHERE o.order_no =')) return { id: 5, order_no: values[0], total: 30, delivery_fee: 10 }
               return null
             },
             async all() { return { results: [] } },
-            async run() { return { success: true } }
+            async run() { return { success: true, meta: { changes: 1 } } }
           }
         },
         async first() { return { value: '1.2' } },
@@ -74,6 +74,22 @@ test('uses the selected server-side variant price and stores the variant', async
   assert.equal(insertOrder.values[7], 0)
   assert.equal(insertItem.values[3], 15)
   assert.equal(insertItem.values[4], '大盒')
+  assert.equal(db.state.batches[0][2].sql.includes('INSERT INTO order_numbers'), true)
+  assert.equal(db.state.batches[0][2].values[0], insertOrder.values[0])
+})
+
+test('records the chosen payment currency and server-calculated amount', async () => {
+  const db = database()
+  const hkd = await call(orders, db, '/api/orders', 'POST', { ...orderBody(), payment_currency: 'HKD', payment_method: 'fps_transfer' })
+  assert.equal(hkd.status, 201)
+  const insert = db.state.batches[0][0]
+  assert.equal(insert.values[14], 'HKD')
+  assert.equal(insert.values[15], 36)
+  const invalid = await call(orders, database(), '/api/orders', 'POST', { ...orderBody(), payment_currency: 'USD' })
+  assert.equal(invalid.status, 400)
+  assert.equal((await call(orders, database(), '/api/orders', 'POST', { ...orderBody(), payment_currency: 'HKD' })).status, 400)
+  assert.equal((await call(orders, database(), '/api/orders', 'POST', { ...orderBody(), payment_method: 'fps_transfer', payment_currency: 'CNY' })).status, 400)
+  assert.equal((await call(orders, database(), '/api/orders', 'POST', { ...orderBody(), payment_method: 'fps_transfer', payment_currency: 'HKD', expected_payment_amount: 35 })).status, 409)
 })
 
 test('allows the base price alongside additional product variants', async () => {
@@ -140,7 +156,9 @@ test('accepts a valid proof for an unpaid transfer order', async () => {
     order_id: 5, screenshot: PNG_PROOF
   })
   assert.equal(response.status, 200)
-  assert.ok(db.state.queries.some(query => query.sql.includes('UPDATE orders SET payment_screenshot')))
+  assert.ok(db.state.queries.some(query => query.sql.includes("payment_status = 'paid', status = 'awaiting_confirmation'")))
+  const shipped = await call(uploadProof, database({ proofOrder: { id: 5, payment_method: 'wechat_transfer', payment_status: 'paid', status: 'shipped' } }), '/api/orders/upload-proof', 'POST', { order_id: 5, screenshot: PNG_PROOF })
+  assert.equal(shipped.status, 409)
 })
 
 test('filters admin order history by user and validates exchange rate', async () => {
