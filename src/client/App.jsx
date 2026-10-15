@@ -992,7 +992,7 @@ export default function App() {
                 const itemKey = item.variantLabel ? `${item.product.id}::${item.variantLabel}` : String(item.product.id)
                 return (
                 <div className="cart-item" key={itemKey}>
-                  <div className="emoji">{item.product.image ? <img src={item.product.image} alt="" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:6}} /> : '🛒'}</div>
+                  <div className="emoji">{item.product.image ? <img src={item.product.image} alt="" /> : <span className="product-no-image">{pn(item.product.name).replace(/^\[[^\]]+\]/, '').slice(0, 2)}</span>}</div>
                   <div className="detail">
                     <div className="name">{pn(item.product.name)}{item.variantLabel && <small style={{color:'var(--market-accent)',marginLeft:6,fontSize:12}}>({item.variantLabel})</small>}</div>
                     <div className="price">{fmt(item.variantPrice)}<small style={{fontSize:11,color:'#999'}}>{item.product.unit || '/斤'}</small></div>
@@ -1008,20 +1008,20 @@ export default function App() {
             </div>
             {/* 凑单推荐 */}
             {deliveryType === 'pickup' && stats && !effectiveReached && (
-              <div style={{ padding: '10px 16px', background: '#fff8e1', borderTop: '1px solid #ffe0b2' }}>
-                <div style={{ fontSize: 14, color: '#f57c00', fontWeight: 600, marginBottom: 2 }}>
-                  💡 {t('buyExtra')}
+              <div className="cart-recommend">
+                <div className="cart-recommend-title">
+                  {t('buyExtra')}
                 </div>
-                <div style={{ fontSize: 12, color: '#8a6d3b', marginBottom: 8 }}>
+                <div className="cart-recommend-progress">
                   {t('groupProgress')}：<b>{fmt(stats.confirmed_total || 0)}</b> / <b>{fmt(effectiveThreshold)}</b> · {t('groupRemain')} <b>{fmt(effectiveThreshold - (stats.confirmed_total || 0))}</b>
                 </div>
-                <div style={{ display: 'flex', gap: 8, overflowX: 'auto' }}>
+                <div className="cart-recommend-list">
                   {products.filter(p => p.price <= 20 && !cart[p.id]).slice(0, 5).map(p => (
-                    <div key={p.id} style={{ minWidth: 80, background: '#fff', borderRadius: 8, padding: 6, textAlign: 'center', cursor: 'pointer' }}
+                    <div className="cart-recommend-item" key={p.id}
                       onClick={() => quickAdd(p)}>
-                      <div style={{ fontSize: 24 }}>{p.image ? '' : '🛒'}</div>
-                      <div style={{ fontSize: 11, color: '#333', margin: '4px 0' }}>{pn(p.name).slice(0, 4)}</div>
-                      <div style={{ fontSize: 12, color: 'var(--market-accent)', fontWeight: 600 }}>{fmt(p.price)}</div>
+                      <div className="cart-recommend-image">{p.image ? <img src={p.image} alt="" /> : <span className="product-no-image">{pn(p.name).slice(0, 2)}</span>}</div>
+                      <div className="cart-recommend-name">{pn(p.name)}</div>
+                      <div className="cart-recommend-price">{fmt(p.price)}</div>
                     </div>
                   ))}
                 </div>
@@ -1045,8 +1045,8 @@ export default function App() {
               <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                 <div onClick={() => setDeliveryType('pickup')} style={{
                   flex: 1, padding: 10, textAlign: 'center', borderRadius: 8, cursor: 'pointer',
-                  border: deliveryType === 'pickup' ? '2px solid #3cb043' : '1px solid #eee',
-                  background: deliveryType === 'pickup' ? '#f0fff0' : '#fff', fontSize: 14
+                  border: deliveryType === 'pickup' ? '2px solid var(--market-green)' : '1px solid #eee',
+                  background: deliveryType === 'pickup' ? 'var(--market-green-soft)' : '#fff', fontSize: 14
                 }}>
                   🛍️ 到自取点
                   <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
@@ -1055,8 +1055,8 @@ export default function App() {
                 </div>
                 <div onClick={() => setDeliveryType('delivery')} style={{
                   flex: 1, padding: 10, textAlign: 'center', borderRadius: 8, cursor: 'pointer',
-                  border: deliveryType === 'delivery' ? '2px solid #3cb043' : '1px solid #eee',
-                  background: deliveryType === 'delivery' ? '#f0fff0' : '#fff', fontSize: 14
+                  border: deliveryType === 'delivery' ? '2px solid var(--market-green)' : '1px solid #eee',
+                  background: deliveryType === 'delivery' ? 'var(--market-green-soft)' : '#fff', fontSize: 14
                 }}>
                   🏠 配送到家
                   <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>运费 {fmt(30)}</div>
@@ -1087,11 +1087,11 @@ export default function App() {
                       onClick={() => setCheckoutAddrId(a.id)}
                       style={{
                         padding: 10,
-                        border: checkoutAddrId === a.id ? '2px solid #3cb043' : '1px solid #eee',
+                        border: checkoutAddrId === a.id ? '2px solid var(--market-green)' : '1px solid #eee',
                         borderRadius: 8,
                         marginBottom: 8,
                         cursor: 'pointer',
-                        background: checkoutAddrId === a.id ? '#f0fff0' : '#fff'
+                        background: checkoutAddrId === a.id ? 'var(--market-green-soft)' : '#fff'
                       }}
                     >
                       <div style={{ fontSize: 14, fontWeight: 600 }}>{a.name} <span style={{ color: '#666', fontWeight: 'normal', marginLeft: 8 }}>{a.phone}</span></div>
@@ -1111,32 +1111,32 @@ export default function App() {
               <div style={{ display: 'flex', gap: 6 }}>
                 <div onClick={() => setPaymentMethod('cash_on_delivery')} style={{
                   flex: 1, padding: '8px 4px', textAlign: 'center', borderRadius: 8, cursor: 'pointer',
-                  border: paymentMethod === 'cash_on_delivery' ? '2px solid #3cb043' : '1px solid #eee',
-                  background: paymentMethod === 'cash_on_delivery' ? '#f0fff0' : '#fff'
+                  border: paymentMethod === 'cash_on_delivery' ? '2px solid var(--market-green)' : '1px solid #eee',
+                  background: paymentMethod === 'cash_on_delivery' ? 'var(--market-green-soft)' : '#fff'
                 }}>
                   <div style={{ fontSize: 18 }}>💵</div>
                   <div style={{ fontSize: 11, marginTop: 2 }}>货到付款</div>
                 </div>
                 <div onClick={() => setPaymentMethod('wechat_transfer')} style={{
                   flex: 1, padding: '8px 4px', textAlign: 'center', borderRadius: 8, cursor: 'pointer',
-                  border: paymentMethod === 'wechat_transfer' ? '2px solid #3cb043' : '1px solid #eee',
-                  background: paymentMethod === 'wechat_transfer' ? '#f0fff0' : '#fff'
+                  border: paymentMethod === 'wechat_transfer' ? '2px solid var(--market-green)' : '1px solid #eee',
+                  background: paymentMethod === 'wechat_transfer' ? 'var(--market-green-soft)' : '#fff'
                 }}>
                   <div style={{ fontSize: 18 }}>💚</div>
                   <div style={{ fontSize: 11, marginTop: 2 }}>微信</div>
                 </div>
                 <div onClick={() => setPaymentMethod('alipay_transfer')} style={{
                   flex: 1, padding: '8px 4px', textAlign: 'center', borderRadius: 8, cursor: 'pointer',
-                  border: paymentMethod === 'alipay_transfer' ? '2px solid #3cb043' : '1px solid #eee',
-                  background: paymentMethod === 'alipay_transfer' ? '#f0fff0' : '#fff'
+                  border: paymentMethod === 'alipay_transfer' ? '2px solid var(--market-green)' : '1px solid #eee',
+                  background: paymentMethod === 'alipay_transfer' ? 'var(--market-green-soft)' : '#fff'
                 }}>
                   <div style={{ fontSize: 18 }}>💙</div>
                   <div style={{ fontSize: 11, marginTop: 2 }}>支付宝</div>
                 </div>
                 <div onClick={() => setPaymentMethod('fps_transfer')} style={{
                   flex: 1, padding: '8px 4px', textAlign: 'center', borderRadius: 8, cursor: 'pointer',
-                  border: paymentMethod === 'fps_transfer' ? '2px solid #3cb043' : '1px solid #eee',
-                  background: paymentMethod === 'fps_transfer' ? '#f0fff0' : '#fff'
+                  border: paymentMethod === 'fps_transfer' ? '2px solid var(--market-green)' : '1px solid #eee',
+                  background: paymentMethod === 'fps_transfer' ? 'var(--market-green-soft)' : '#fff'
                 }}>
                   <div style={{ fontSize: 18 }}>💱</div>
                   <div style={{ fontSize: 11, marginTop: 2 }}>转数快</div>
@@ -1278,9 +1278,9 @@ export default function App() {
                   key={p.id}
                   onClick={() => selectPoint(p.id)}
                   style={{
-                    padding: 12, border: selectedPointId == p.id ? '2px solid #3cb043' : '1px solid #eee',
+                    padding: 12, border: selectedPointId == p.id ? '2px solid var(--market-green)' : '1px solid #eee',
                     borderRadius: 8, marginBottom: 8, cursor: 'pointer',
-                    background: selectedPointId == p.id ? '#f0fff0' : '#fff'
+                    background: selectedPointId == p.id ? 'var(--market-green-soft)' : '#fff'
                   }}
                 >
                   <div style={{ fontSize: 15, fontWeight: 600 }}>{dn(p.name)}</div>

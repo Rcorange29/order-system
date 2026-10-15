@@ -1261,6 +1261,21 @@ body { background: var(--market-paper); color: var(--market-ink); }
 .product-detail-sheet .btn-submit { min-height: 44px; }
 .login-logo .icon { display: none; }
 .login-logo h2 { font-size: 26px; letter-spacing: -.04em; color: var(--market-ink); }
+.login-box { border: 1px solid var(--market-line); border-radius: 0; box-shadow: none; }
+.cart-item .emoji { width: 52px; height: 52px; flex: 0 0 52px; background: #f3f5f1; font-size: 0; }
+.cart-item .emoji img { width: 100%; height: 100%; object-fit: contain; }
+.cart-item .emoji .product-no-image { font-size: 14px; }
+.cart-recommend { padding: 10px 16px; background: #f5f7f3; border-top: 1px solid var(--market-line); }
+.cart-recommend-title { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+.cart-recommend-progress { font-size: 11px; color: var(--market-muted); margin-bottom: 8px; }
+.cart-recommend-list { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.cart-recommend-item { flex: 0 0 80px; min-width: 0; background: #fff; padding: 5px; cursor: pointer; }
+.cart-recommend-image { height: 42px; background: #f3f5f1; }
+.cart-recommend-image img { width: 100%; height: 100%; object-fit: contain; }
+.cart-recommend-image .product-no-image { font-size: 12px; }
+.cart-recommend-name { margin: 4px 0 2px; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cart-recommend-price { font-size: 12px; font-weight: 700; }
+.cart-total span, .cart-item .price { color: var(--market-ink); }
 @media (max-width: 360px) {
   .shop-wordmark { font-size: 15px; }
   .header-location span:first-child { display: none; }
