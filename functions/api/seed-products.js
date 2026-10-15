@@ -3,6 +3,7 @@
 // 用于首次部署后填充真实商品数据
 
 import { getAdminUser, json, readBody } from './_utils.js'
+import { seedDescriptions } from './_seed-descriptions.js'
 
 export async function onRequestPost(context) {
   const { request, env } = context
@@ -10,9 +11,11 @@ export async function onRequestPost(context) {
     const body = await readBody(request)
     const admin = await getAdminUser(request, env)
     if (!admin) return json({ error: '未授权' }, 401)
+    if (body.confirm !== 'REPLACE_CATALOG') return json({ error: '请明确确认替换商品目录' }, 400)
+    const existingOrders = await env.DB.prepare('SELECT COUNT(*) AS count FROM orders').first()
+    if (Number(existingOrders?.count || 0) > 0) return json({ error: '已有订单，不能重置商品目录' }, 409)
 
     // 清空旧商品和分类
-    await env.DB.prepare('DELETE FROM order_items').run()
     await env.DB.prepare('DELETE FROM products').run()
     await env.DB.prepare('DELETE FROM categories').run()
 
@@ -139,8 +142,8 @@ export async function onRequestPost(context) {
       const catId = catMap[catName]
       const image = imgNum ? `/images/products/p${imgNum}.jpg` : ''
       await env.DB.prepare(
-        'INSERT INTO products (name, price, original_price, image, category_id, stock, is_new, is_hot, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-      ).bind(name, price, null, image, catId, 999, 0, 0, unit || '').run()
+        'INSERT INTO products (name, price, original_price, image, category_id, stock, is_new, is_hot, description, unit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      ).bind(name, price, null, image, catId, 999, 0, 0, seedDescriptions[name] || '', unit || '').run()
       count++
     }
 

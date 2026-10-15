@@ -223,3 +223,32 @@ tr:hover { background: #fafafa; }
   padding: 6px 0;
   font-size: 14px;
 }
+
+:root { --admin-green: #176b46; --admin-line: #dfe8df; }
+.sidebar { background: #17372b; }
+.sidebar .menu-item.active, .btn-primary { background: var(--admin-green); }
+.btn-primary:hover { background: #105536; }
+.main-content { background: #f4f7f2; }
+.card, .stat-card { border: 1px solid var(--admin-line); box-shadow: none; }
+.request-list, .announcement-list { display: grid; gap: 12px; }
+.request-card p, .announcement-list p, .announcement-editor p { margin-top: 7px; color: #53645a; font-size: 13px; line-height: 1.5; }
+.request-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.request-controls, .announcement-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.request-controls input { flex: 1 1 180px; padding: 8px 10px; border: 1px solid var(--admin-line); border-radius: 6px; }
+.announcement-editor { max-width: 680px; margin-bottom: 14px; }
+.announcement-editor .form-row { margin-top: 14px; }
+.publish-toggle { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.announcement-content { white-space: pre-wrap; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--admin-green); outline-offset: 2px; }
+@media (max-width: 780px) {
+  .app-layout { display: block; }
+  .sidebar { width: 100%; display: flex; overflow-x: auto; white-space: nowrap; }
+  .sidebar .logo { display: none; }
+  .sidebar .menu-item { padding: 13px 12px; }
+  .main-content { padding: 14px; }
+  .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .stat-card { padding: 12px; }
+  .stat-card .value { font-size: 22px; }
+  .toolbar { flex-wrap: wrap; }
+  .toolbar input, .toolbar select { width: 100%; }
+}

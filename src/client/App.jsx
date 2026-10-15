@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react'
 
 const API = '/api'
+const BOSS_WECHAT = 'jennybabi1988'
+const BOSS_WHATSAPP = '+85295228191'
+const GROUP_BUY_URL = 'https://order-system-bp4.pages.dev/'
 const statusText = { pending: '待付款', paid: '已付款', shipped: '已发货', completed: '已完成', cancelled: '已取消' }
 const paymentText = { cash_on_delivery: '货到付款（现金）', wechat_transfer: '微信转账', alipay_transfer: '支付宝转账', fps_transfer: '转数快 FPS' }
-const payStatusText = { pending: '待支付', paid: '已支付', confirmed: '已确认收款' }
+const payStatusText = { pending: '待支付', paid: '已支付', confirmed: '已确认收款', refunded: '已退款' }
 
 // ========== 多语言 ==========
 const langPack = {
-  zh_CN: { home:'首页',category:'分类',cart:'购物车',my:'我的',search:'搜索商品',welcome:'珍珍优质果菜',slogan:'新鲜直达 · 每日优选 · 一件送达',groupBuy:'今日凑单 满 ¥1000 免运',groupBuySlogan:'大家一起拼 越买越划算',hot:'热门推荐',pickPoint:'选择自取点',freeShipping:'满额免运费 · 该点统一配送',freeFee:'免运费',deliveryHome:'配送到家',deliveryHomeFee:'运费¥30',checkout:'确认订单',goodsAmount:'商品金额',shipping:'运费',submit:'提交订单',cancel:'取消',myOrders:'我的订单',viewAll:'查看全部 ›',address:'收货地址',contact:'联系客服',help:'配送规则 / 帮助',favorites:'我的收藏',logout:'退出登录',clickLogin:'点击登录',loginHint:'登录后查看订单和地址',login:'登录',register:'注册',back:'返回上一页',username:'账号',password:'密码',phone:'手机号',addToCart:'加入购物车',checkOut:'去结算',emptyCart:'购物车是空的',favoriteEmpty:'还没有收藏商品',groupRemain:'还差',buyExtra:'顺手买一件',groupProgress:'当前拼单进度',groupFull:'该自取点满 ¥1000，大家都免运费',introTitle:'下单前必读',introBtn:'我已知晓，开始购物',next:'下一步',gotIt:'我知道了',step1Title:'① 选自取点',step1Desc:'点左上角📍选你就近的自提点',step2Title:'② 逛商品加购物车',step2Desc:'点商品看详情，点+号加购',step3Title:'③ 凑单满额',step3Desc:'大家一起凑够¥1000就免运费',step4Title:'④ 去结算',step4Desc:'选支付方式，扫码付款等配送',deliveryRule:'配送规则：凑满门槛统一配送，免运费',details:'详情 ›',groupBuyBanner:'今日凑单',youGet:'已达起送门槛，今日可配送！',need:'起送',totalConfirmed:'已确认订单总额',ordersConfirmed:'笔订单已确认',all:'全部',emptySearch:'没有找到相关商品',emptyCat:'暂无商品',reached:'✓ 已达起送门槛，今日可配送！',searchResult:'搜索"{kw}"的结果',feeTitle:'运费说明：',feeEach:'· 未满门槛按订单收运费',feeFree:'· 当天该自取点总订单额满 ¥1000 即起送统一配送',feeNoRefund:'· 未满门槛则暂不配送，可加购凑单',feePerOrder:'满 ¥1000 起送并免运费',ustFee:'满 ¥500 起送并免运费',ustBenefit2:'🎓 学生优惠：满¥500起送并免运费',feeHint:'满额免运费 · 该点统一配送',confirmOrder:'确认订单',needPay:'待付款',paid:'已付款',selectPointFirst:'请先选择自取点',tagHot:'爆款',tagNew:'新品',noPhone:'未绑定手机号',comingSoon:'敬请期待',statusPending:'待付款',statusPaid:'已付款',statusShipped:'已发货',statusCompleted:'已完成',statusCancelled:'已取消',orderAll:'全部订单',orderPending:'待付款',orderGroup:'拼团中',orderShipping:'待收货',orderDone:'已完成',coupons:'优惠券',refundAfterSale:'退款售后',orderPcs:'件',orderTotal:'合计',noOrders:'暂无订单',orderNo:'订单号',orderStatus:'订单状态',clear:'清空' },
-  zh_HK: { home:'首頁',category:'分類',cart:'購物車',my:'我的',search:'搜尋商品',welcome:'珍珍優質果菜',slogan:'新鮮直達 · 每日優選 · 一件送達',groupBuy:'今日湊單 滿 ¥1000 免運',groupBuySlogan:'大家一起拼 越買越划算',hot:'熱門推薦',pickPoint:'選擇自取點',freeShipping:'滿額免運費 · 該點統一配送',freeFee:'免運費',deliveryHome:'配送到家',deliveryHomeFee:'運費¥30',checkout:'確認訂單',goodsAmount:'商品金額',shipping:'運費',submit:'提交訂單',cancel:'取消',myOrders:'我的訂單',viewAll:'查看全部 ›',address:'收貨地址',contact:'聯繫客服',help:'配送規則 / 幫助',favorites:'我的收藏',logout:'退出登錄',clickLogin:'點擊登錄',loginHint:'登錄後查看訂單和地址',login:'登錄',register:'註冊',back:'返回上一頁',username:'賬號',password:'密碼',phone:'手機號',addToCart:'加入購物車',checkOut:'去結算',emptyCart:'購物車是空的',favoriteEmpty:'還沒有收藏商品',groupRemain:'還差',buyExtra:'順手買一件',groupProgress:'當前拼單進度',groupFull:'該自取點滿 ¥1000，大家都免運費',introTitle:'下單前必讀',introBtn:'我已知曉，開始購物',next:'下一步',gotIt:'我知道了',step1Title:'① 選自取點',step1Desc:'點左上角📍選你就近的自提點',step2Title:'② 逛商品加購物車',step2Desc:'點商品看詳情，點+號加購',step3Title:'③ 湊單滿額',step3Desc:'大家一起湊夠¥1000就免運費',step4Title:'④ 去結算',step4Desc:'選支付方式，掃碼付款等配送',deliveryRule:'配送規則：湊滿門檻統一配送，免運費',details:'詳情 ›',groupBuyBanner:'今日湊單',youGet:'已達起送門檻，今日可配送！',need:'起送',totalConfirmed:'已確認訂單總額',ordersConfirmed:'筆訂單已確認',all:'全部',emptySearch:'沒有找到相關商品',emptyCat:'暫無商品',reached:'✓ 已達起送門檻，今日可配送！',searchResult:'搜索"{kw}"的結果',feeTitle:'運費說明：',feeEach:'· 未滿門檻按訂單收運費',feeFree:'· 當天該自取點總訂單額滿 ¥1000 即起送統一配送',feeNoRefund:'· 未滿門檻則暫不配送，可加購湊單',feePerOrder:'滿 ¥1000 起送並免運費',ustFee:'滿 ¥500 起送並免運費',ustBenefit2:'🎓 學生優惠：滿¥500起送並免運費',feeHint:'滿額免運費 · 該點統一配送',confirmOrder:'確認訂單',needPay:'待付款',paid:'已付款',selectPointFirst:'請先選擇自取點',tagHot:'爆款',tagNew:'新品',noPhone:'未綁定手機號',comingSoon:'敬請期待',statusPending:'待付款',statusPaid:'已付款',statusShipped:'已發貨',statusCompleted:'已完成',statusCancelled:'已取消',orderAll:'全部訂單',orderPending:'待付款',orderGroup:'拼團中',orderShipping:'待收貨',orderDone:'已完成',coupons:'優惠券',refundAfterSale:'退款售後',orderPcs:'件',orderTotal:'合計',noOrders:'暫無訂單',orderNo:'訂單號',orderStatus:'訂單狀態',clear:'清空' },
-  en: { home:'Home',category:'Categories',cart:'Cart',my:'My Account',search:'Search products',welcome:'Zhenzhen Fresh',slogan:'Fresh Daily · Delivered to You',groupBuy:'Group Buy · Free at ¥1000',groupBuySlogan:'Group together to save more',hot:'Popular Picks',pickPoint:'Pickup Point',freeShipping:'Free shipping at ¥1000',freeFee:'Free shipping',deliveryHome:'Home Delivery',deliveryHomeFee:'¥30',checkout:'Confirm Order',goodsAmount:'Subtotal',shipping:'Shipping',submit:'Place Order',cancel:'Cancel',myOrders:'My Orders',viewAll:'View all ›',address:'Address',contact:'Contact Us',help:'Delivery Info / Help',favorites:'Favorites',logout:'Log Out',clickLogin:'Tap to Login',loginHint:'Login to see orders',login:'Login',register:'Register',back:'Back',username:'Username',password:'Password',phone:'Phone',addToCart:'Add to Cart',checkOut:'Checkout',emptyCart:'Your cart is empty',favoriteEmpty:'No favorites yet',groupRemain:'Need',buyExtra:'Add one more',groupProgress:'Group progress',groupFull:'This point hits ¥1000 — free shipping!',introTitle:'Please Read First',introBtn:'Got it, shop now',next:'Next',gotIt:'Got it',step1Title:'1. Pick your point',step1Desc:'Tap 📍 top-left to choose',step2Title:'2. Browse & add',step2Desc:'Tap product to see, tap + to add',step3Title:'3. Group buy',step3Desc:'Group reaches ¥1000 = free shipping',step4Title:'4. Checkout',step4Desc:'Choose payment, scan QR, wait',deliveryRule:'Group ships when threshold reached; free shipping',details:'Details ›',groupBuyBanner:'Group Buy Today',youGet:'Threshold reached! Delivering today.',need:'to go',totalConfirmed:'Confirmed total',ordersConfirmed:'orders',all:'All',emptySearch:'No products found',emptyCat:'No products',reached:'✓ Threshold reached! Delivering today.',searchResult:'Results for "{kw}"',feeTitle:'Shipping info:',feeEach:'· Delivery fee applies below threshold',feeFree:'· Ship when this point totals ¥1000 today',feeNoRefund:'· If under threshold, wait — add items',feePerOrder:'Free shipping after ¥1000',ustFee:'Free shipping after ¥500',ustBenefit2:'🎓 Student deal: free shipping after ¥500',feeHint:'Free shipping after ¥1000',confirmOrder:'Confirm Order',needPay:'Pending',paid:'Paid',selectPointFirst:'Please select a pickup point',tagHot:'Hot',tagNew:'New',noPhone:'No phone linked',comingSoon:'Coming soon',statusPending:'To Pay',statusPaid:'Paid',statusShipped:'Shipped',statusCompleted:'Completed',statusCancelled:'Cancelled',orderAll:'All Orders',orderPending:'To Pay',orderGroup:'Group Buy',orderShipping:'To Receive',orderDone:'Completed',coupons:'Coupons',refundAfterSale:'Refund & After-sales',orderPcs:'items',orderTotal:'Total',noOrders:'No orders',orderNo:'Order No.',orderStatus:'Order Status',clear:'Clear' }
+  zh_CN: { home:'首页',category:'分类',cart:'购物车',my:'我的',search:'搜索商品',welcome:'珍珍优质果菜',slogan:'新鲜直达 · 每日优选 · 一件送达',groupBuy:'服务点凑单 满 ¥1000 统一配送',groupBuySlogan:'大家一起拼 越买越划算',hot:'热门推荐',pickPoint:'选择自取点',freeShipping:'满额免运费 · 该点统一配送',freeFee:'免运费',deliveryHome:'配送到家',deliveryHomeFee:'运费¥30',checkout:'确认订单',goodsAmount:'商品金额',shipping:'运费',submit:'提交订单',cancel:'取消',myOrders:'我的订单',viewAll:'查看全部 ›',address:'收货地址',contact:'联系客服',help:'配送规则 / 帮助',favorites:'我的收藏',logout:'退出登录',clickLogin:'点击登录',loginHint:'登录后查看订单和地址',login:'登录',register:'注册',back:'返回上一页',username:'账号',password:'密码',phone:'手机号',addToCart:'加入购物车',checkOut:'去结算',emptyCart:'购物车是空的',favoriteEmpty:'还没有收藏商品',groupRemain:'还差',buyExtra:'顺手买一件',groupProgress:'当前拼单进度',groupFull:'该自取点满 ¥1000，大家都免运费',introTitle:'下单前必读',introBtn:'我已知晓，开始购物',next:'下一步',gotIt:'我知道了',step1Title:'① 选自取点',step1Desc:'点左上角📍选你就近的自提点',step2Title:'② 逛商品加购物车',step2Desc:'点商品看详情，点+号加购',step3Title:'③ 凑单满额',step3Desc:'自取免运费，大家凑够¥1000后统一配送',step4Title:'④ 去结算',step4Desc:'选支付方式，扫码付款等配送',deliveryRule:'配送规则：凑满门槛统一配送，免运费',details:'详情 ›',groupBuyBanner:'服务点凑单',youGet:'已达起送门槛，请留意配送公告',need:'起送',totalConfirmed:'已确认订单总额',ordersConfirmed:'笔订单已确认',all:'全部',emptySearch:'没有找到相关商品',emptyCat:'暂无商品',reached:'✓ 已达门槛，请留意公告',searchResult:'搜索"{kw}"的结果',feeTitle:'运费说明：',feeEach:'· 自取订单始终免运费，待该点凑满起送额后统一配送',feeFree:'· 该自取点已付款订单满 ¥1000 后统一配送',feeNoRefund:'· 未满门槛先等待；已付款订单可申请加费单独配送或退款',feePerOrder:'自取免运费 · 满 ¥1000 统一配送',ustFee:'自取免运费 · 满 ¥500 统一配送',ustBenefit2:'🎓 科技大学自取点满¥500统一配送，自取免运费',feeHint:'满额免运费 · 该点统一配送',confirmOrder:'确认订单',needPay:'待付款',paid:'已付款',selectPointFirst:'请先选择自取点',tagHot:'爆款',tagNew:'新品',noPhone:'未绑定手机号',comingSoon:'敬请期待',statusPending:'待付款',statusPaid:'已付款',statusShipped:'已发货',statusCompleted:'已完成',statusCancelled:'已取消',orderAll:'全部订单',orderPending:'待付款',orderGroup:'拼团中',orderShipping:'待收货',orderDone:'已完成',coupons:'优惠券',refundAfterSale:'退款售后',orderPcs:'件',orderTotal:'合计',noOrders:'暂无订单',orderNo:'订单号',orderStatus:'订单状态',clear:'清空' },
+  zh_HK: { home:'首頁',category:'分類',cart:'購物車',my:'我的',search:'搜尋商品',welcome:'珍珍優質果菜',slogan:'新鮮直達 · 每日優選 · 一件送達',groupBuy:'服務點湊單 滿 ¥1000 統一配送',groupBuySlogan:'大家一起拼 越買越划算',hot:'熱門推薦',pickPoint:'選擇自取點',freeShipping:'滿額免運費 · 該點統一配送',freeFee:'免運費',deliveryHome:'配送到家',deliveryHomeFee:'運費¥30',checkout:'確認訂單',goodsAmount:'商品金額',shipping:'運費',submit:'提交訂單',cancel:'取消',myOrders:'我的訂單',viewAll:'查看全部 ›',address:'收貨地址',contact:'聯繫客服',help:'配送規則 / 幫助',favorites:'我的收藏',logout:'退出登錄',clickLogin:'點擊登錄',loginHint:'登錄後查看訂單和地址',login:'登錄',register:'註冊',back:'返回上一頁',username:'賬號',password:'密碼',phone:'手機號',addToCart:'加入購物車',checkOut:'去結算',emptyCart:'購物車是空的',favoriteEmpty:'還沒有收藏商品',groupRemain:'還差',buyExtra:'順手買一件',groupProgress:'當前拼單進度',groupFull:'該自取點滿 ¥1000，大家都免運費',introTitle:'下單前必讀',introBtn:'我已知曉，開始購物',next:'下一步',gotIt:'我知道了',step1Title:'① 選自取點',step1Desc:'點左上角📍選你就近的自提點',step2Title:'② 逛商品加購物車',step2Desc:'點商品看詳情，點+號加購',step3Title:'③ 湊單滿額',step3Desc:'自取免運費，大家湊夠¥1000後統一配送',step4Title:'④ 去結算',step4Desc:'選支付方式，掃碼付款等配送',deliveryRule:'配送規則：湊滿門檻統一配送，免運費',details:'詳情 ›',groupBuyBanner:'服務點湊單',youGet:'已達起送門檻，請留意配送公告',need:'起送',totalConfirmed:'已確認訂單總額',ordersConfirmed:'筆訂單已確認',all:'全部',emptySearch:'沒有找到相關商品',emptyCat:'暫無商品',reached:'✓ 已達門檻，請留意公告',searchResult:'搜索"{kw}"的結果',feeTitle:'運費說明：',feeEach:'· 自取訂單一律免運費，待該點湊滿起送額後統一配送',feeFree:'· 該自取點已付款訂單滿 ¥1000 後統一配送',feeNoRefund:'· 未滿門檻先等待；已付款訂單可申請加費單獨配送或退款',feePerOrder:'自取免運費 · 滿 ¥1000 統一配送',ustFee:'自取免運費 · 滿 ¥500 統一配送',ustBenefit2:'🎓 科技大學自取點滿¥500統一配送，自取免運費',feeHint:'滿額免運費 · 該點統一配送',confirmOrder:'確認訂單',needPay:'待付款',paid:'已付款',selectPointFirst:'請先選擇自取點',tagHot:'爆款',tagNew:'新品',noPhone:'未綁定手機號',comingSoon:'敬請期待',statusPending:'待付款',statusPaid:'已付款',statusShipped:'已發貨',statusCompleted:'已完成',statusCancelled:'已取消',orderAll:'全部訂單',orderPending:'待付款',orderGroup:'拼團中',orderShipping:'待收貨',orderDone:'已完成',coupons:'優惠券',refundAfterSale:'退款售後',orderPcs:'件',orderTotal:'合計',noOrders:'暫無訂單',orderNo:'訂單號',orderStatus:'訂單狀態',clear:'清空' },
+  en: { home:'Home',category:'Categories',cart:'Cart',my:'My Account',search:'Search products',welcome:'Zhenzhen Fresh',slogan:'Fresh Daily · Delivered to You',groupBuy:'Group delivery at ¥1000',groupBuySlogan:'Group together to save more',hot:'Popular Picks',pickPoint:'Pickup Point',freeShipping:'Free shipping at ¥1000',freeFee:'Free shipping',deliveryHome:'Home Delivery',deliveryHomeFee:'¥30',checkout:'Confirm Order',goodsAmount:'Subtotal',shipping:'Shipping',submit:'Place Order',cancel:'Cancel',myOrders:'My Orders',viewAll:'View all ›',address:'Address',contact:'Contact Us',help:'Delivery Info / Help',favorites:'Favorites',logout:'Log Out',clickLogin:'Tap to Login',loginHint:'Login to see orders',login:'Login',register:'Register',back:'Back',username:'Username',password:'Password',phone:'Phone',addToCart:'Add to Cart',checkOut:'Checkout',emptyCart:'Your cart is empty',favoriteEmpty:'No favorites yet',groupRemain:'Need',buyExtra:'Add one more',groupProgress:'Group progress',groupFull:'This point hits ¥1000 — free shipping!',introTitle:'Please Read First',introBtn:'Got it, shop now',next:'Next',gotIt:'Got it',step1Title:'1. Pick your point',step1Desc:'Tap 📍 top-left to choose',step2Title:'2. Browse & add',step2Desc:'Tap product to see, tap + to add',step3Title:'3. Group buy',step3Desc:'Pickup is free; group delivery starts at ¥1000',step4Title:'4. Checkout',step4Desc:'Choose payment, scan QR, wait',deliveryRule:'Group ships when threshold reached; free shipping',details:'Details ›',groupBuyBanner:'Group Buy Today',youGet:'Threshold reached; watch announcements',need:'to go',totalConfirmed:'Confirmed total',ordersConfirmed:'orders',all:'All',emptySearch:'No products found',emptyCat:'No products',reached:'✓ Threshold reached; watch notices',searchResult:'Results for "{kw}"',feeTitle:'Shipping info:',feeEach:'· Pickup is always free; orders ship together after the point reaches its threshold',feeFree:'· Deliver together when paid orders at this point reach ¥1000',feeNoRefund:'· If waiting, paid orders may request home delivery or a refund',feePerOrder:'Free pickup · group delivery at ¥1000',ustFee:'Free pickup · group delivery at ¥500',ustBenefit2:'🎓 UST pickup: free; group delivery at ¥500',feeHint:'Pickup is free; delivery follows group threshold',confirmOrder:'Confirm Order',needPay:'Pending',paid:'Paid',selectPointFirst:'Please select a pickup point',tagHot:'Hot',tagNew:'New',noPhone:'No phone linked',comingSoon:'Coming soon',statusPending:'To Pay',statusPaid:'Paid',statusShipped:'Shipped',statusCompleted:'Completed',statusCancelled:'Cancelled',orderAll:'All Orders',orderPending:'To Pay',orderGroup:'Group Buy',orderShipping:'To Receive',orderDone:'Completed',coupons:'Coupons',refundAfterSale:'Refund & After-sales',orderPcs:'items',orderTotal:'Total',noOrders:'No orders',orderNo:'Order No.',orderStatus:'Order Status',clear:'Clear' }
 }
 
 // ========== 商品名三语映射 ==========
@@ -188,6 +191,7 @@ export default function App() {
   const [lastOrderId, setLastOrderId] = useState(null)
   const [showUploadProof, setShowUploadProof] = useState(false)
   const [stats, setStats] = useState(null)
+  const [announcements, setAnnouncements] = useState([])
   const [deliveryPoints, setDeliveryPoints] = useState([])
   const [selectedPointId, setSelectedPointId] = useState(() => localStorage.getItem('selectedPointId') || null)
   const [showPointPicker, setShowPointPicker] = useState(false)
@@ -200,6 +204,11 @@ export default function App() {
   const [searchHistory, setSearchHistory] = useState(() => JSON.parse(localStorage.getItem('searchHistory') || '[]'))
   const [showHelp, setShowHelp] = useState(false)
   const [showContact, setShowContact] = useState(false)
+  const [showRefund, setShowRefund] = useState(false)
+  const [couponData, setCouponData] = useState({ campaigns: [], grants: [], claims: [] })
+  const [showActivity, setShowActivity] = useState(false)
+  const [claimUploading, setClaimUploading] = useState(false)
+  const [selectedCouponId, setSelectedCouponId] = useState('')
   const [lang, setLang] = useState(() => localStorage.getItem('lang') || 'zh_CN')
   const [currency, setCurrency] = useState(() => localStorage.getItem('currency') || '')
   const [exchangeRate, setExchangeRate] = useState(1.2)
@@ -214,7 +223,6 @@ export default function App() {
   }
   const ruleText = (key, threshold = 1000) => t(key)
     .replaceAll('¥1000', fmt(threshold))
-    .replaceAll('¥500', fmt(threshold))
     .replaceAll('¥30', fmt(30))
   const pn = (pname) => {
     if (lang === 'zh_CN') return pname
@@ -232,22 +240,14 @@ export default function App() {
     return (m && m[lang]) || pname
   }
   const priceText = (p) => {
-    let variants = []
-    try { variants = p.variants ? JSON.parse(p.variants) : [] } catch(e) {}
-    if (variants.length > 0) {
-      const prices = variants.map(v => Number(v.price) * (currency === 'HKD' ? exchangeRate : 1))
-      const min = Math.min(...prices)
-      const max = Math.max(...prices)
-      const sym = currency === 'HKD' ? 'HK$' : '¥'
-      return sym + (min === max ? min.toFixed(2) : min.toFixed(2) + '~' + max.toFixed(2))
-    }
     return fmt(p.price)
   }
-  const variants_text = (p) => {
-    let variants = []
-    try { variants = p.variants ? JSON.parse(p.variants) : [] } catch(e) {}
-    if (variants.length > 0) return ''
-    return <small style={{fontSize:11,color:'#999',fontWeight:400}}>/{p.unit || '斤'}</small>
+  const unitText = (p) => {
+    const raw = String(p?.unit || '').trim()
+    if (raw && raw !== '/斤') return raw.startsWith('/') ? raw : `/${raw}`
+    const legacy = String(p?.description || '').trim()
+    if (/^\/[\u4e00-\u9fff\d]+$/.test(legacy)) return legacy
+    return raw
   }
   const hasVariants = (p) => {
     try { return p.variants && JSON.parse(p.variants).length > 0 } catch(e) { return false }
@@ -316,6 +316,9 @@ export default function App() {
     return () => clearInterval(t)
   }, [])
 
+  const loadCoupons = () => authFetch(`${API}/coupons`).then(r => r.json()).then(setCouponData).catch(() => setCouponData({ campaigns: [], grants: [], claims: [] }))
+  useEffect(() => { if (tab === 'coupons' || showActivity || showCheckout) loadCoupons() }, [tab, showActivity, showCheckout, currentUser])
+
   // 加载配送点列表
   useEffect(() => {
     fetch(`${API}/delivery-points`).then(r => r.json()).then(points => {
@@ -336,6 +339,11 @@ export default function App() {
     return () => clearInterval(t)
   }, [selectedPointId])
 
+  useEffect(() => {
+    const point = selectedPointId ? `?point=${selectedPointId}` : ''
+    fetch(`${API}/announcements${point}`).then(r => r.ok ? r.json() : []).then(setAnnouncements).catch(() => {})
+  }, [selectedPointId])
+
   // 切回首页时也刷新一次
   useEffect(() => {
     if (tab === 'home') loadStats()
@@ -346,7 +354,7 @@ export default function App() {
     setSelectedPointId(String(pid))
     setShowPointPicker(false)
     loadStats()
-    // 科技大学学生优惠提示
+    // 科技大学自取规则提示
     const point = deliveryPoints.find(p => p.id == pid)
     if (point && (point.name.includes('科技大学') || point.name.includes('科大') || point.name.includes('UST'))) {
       setUstBenefit(true)
@@ -368,6 +376,41 @@ export default function App() {
       document.body.removeChild(ta)
       showToast(`${label || text} 已复制`)
     }
+  }
+
+  const submitCouponScreenshot = async (file) => {
+    if (!file || !activityCampaign || claimUploading) return
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) { showToast('请上传图片截图'); return }
+    setClaimUploading(true)
+    try {
+      const screenshot = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onerror = () => reject(new Error('无法读取截图'))
+        reader.onload = () => {
+          const img = new Image()
+          img.onerror = () => reject(new Error('截图格式无效'))
+          img.onload = () => {
+            const canvas = document.createElement('canvas')
+            const scale = Math.min(1, 1400 / Math.max(img.width, img.height))
+            canvas.width = Math.round(img.width * scale)
+            canvas.height = Math.round(img.height * scale)
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+            let data = canvas.toDataURL('image/jpeg', 0.75)
+            if (data.length > 1300000) data = canvas.toDataURL('image/jpeg', 0.5)
+            if (data.length > 1300000) return reject(new Error('截图过大，请裁剪后重试'))
+            resolve(data)
+          }
+          img.src = reader.result
+        }
+        reader.readAsDataURL(file)
+      })
+      const response = await authFetch(`${API}/coupons`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ campaign_id: activityCampaign.id, screenshot }) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || '上传失败')
+      showToast('截图已提交，请等待后台审核')
+      loadCoupons()
+    } catch (error) { showToast(error.message) }
+    finally { setClaimUploading(false) }
   }
 
   const toggleFavorite = (id) => {
@@ -422,12 +465,12 @@ export default function App() {
     })
     .filter(item => item.product)
   const cartTotal = cartItems.reduce((sum, item) => sum + item.variantPrice * item.qty, 0)
+  const selectedCoupon = couponData.grants.find(g => String(g.id) === String(selectedCouponId) && !g.used_order_no && cartTotal >= Number(g.min_spend))
+  const couponDiscount = selectedCoupon ? Number(selectedCoupon.discount_amount) : 0
+  const activityCampaign = couponData.campaigns.find(c => Number(c.id) === 1) || couponData.campaigns[0]
   const currentPoint = deliveryPoints.find(p => p.id == selectedPointId)
-  const isUstPoint = currentPoint && (currentPoint.name.includes('科技大学') || currentPoint.name.includes('科大') || currentPoint.name.includes('UST'))
-  const effectiveFee = deliveryType === 'delivery' ? 30 : currentPoint
-    ? (Number(stats?.confirmed_total || 0) + cartTotal >= Number(stats?.threshold || currentPoint.threshold) ? 0 : Number(stats?.delivery_fee ?? currentPoint.fee))
-    : 0
-  const effectiveThreshold = stats?.threshold || (isUstPoint ? 500 : 1000)
+  const effectiveFee = deliveryType === 'delivery' ? 30 : 0
+  const effectiveThreshold = stats?.threshold || 1000
   const effectiveReached = stats ? stats.confirmed_total >= effectiveThreshold : false
 
   const updateQty = (id, delta) => {
@@ -472,6 +515,7 @@ export default function App() {
         payment_method: paymentMethod,
         delivery_type: deliveryType,
         delivery_point_id: deliveryType === 'pickup' ? selectedPointId : null,
+        coupon_grant_id: selectedCoupon?.id || null,
         items: cartItems.map(item => ({ product_id: item.product.id, quantity: item.qty, variant: item.variantLabel || '' }))
       })
     })
@@ -481,6 +525,8 @@ export default function App() {
       setCart({})
       setShowCheckout(false)
       setRemark('')
+      setSelectedCouponId('')
+      loadCoupons()
       authFetch(`${API}/orders`).then(r => r.ok ? r.json() : []).then(setOrders)
       if (paymentMethod === 'wechat_transfer' || paymentMethod === 'alipay_transfer' || paymentMethod === 'fps_transfer') {
         setPaidOrderNo(data.order_no)
@@ -576,7 +622,15 @@ export default function App() {
   }
 
   if (tab === 'orderDetail' && selectedOrder) {
-    return <OrderDetailPage order={selectedOrder} onBack={() => setTab('myOrders')} pn={pn} fmt={fmt} t={t} statusTxt={statusTxt} showToast={showToast} />
+    return <OrderDetailPage order={selectedOrder} onBack={() => setTab('myOrders')} pn={pn} fmt={fmt} t={t} statusTxt={statusTxt} showToast={showToast} onRefresh={async () => {
+      const response = await authFetch(`${API}/orders`)
+      if (response.ok) {
+        const next = await response.json()
+        setOrders(next)
+        setSelectedOrder(next.find(o => o.id === selectedOrder.id) || selectedOrder)
+      }
+      loadStats()
+    }} />
   }
 
   if (tab === 'address') {
@@ -605,9 +659,9 @@ export default function App() {
         <h3 style={{ fontSize: 18, padding: '0 16px 12px' }}>❤️ 我的收藏</h3>
         <div className="product-grid" style={{ padding: '0 12px 80px' }}>
           {favProducts.map(p => (
-            <div className="product-card" key={p.id} onClick={() => { setSelectedProduct(p); setSelectedVariant(null) }}>
+            <div className="product-card" key={p.id} onClick={() => { setTab('home'); setSelectedProduct(p); setSelectedVariant(null) }}>
               <div className="emoji">
-                {p.image ? <img src={p.image} alt={p.name} /> : '🛒'}
+                {p.image ? <img src={p.image} alt={p.name} /> : <span className="product-no-image">{pn(p.name).replace(/^\[[^\]]+\]/, '').slice(0, 2)}</span>}
                 <span onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id) }} style={{
                   position: 'absolute', top: 6, right: 6, fontSize: 16,
                   background: 'rgba(255,255,255,0.9)', borderRadius: '50%', width: 26, height: 26,
@@ -617,8 +671,8 @@ export default function App() {
               <div className="info">
                 <div className="name">{pn(p.name)}</div>
                 <div className="bottom-row">
-                  <div className="price">{priceText(p)}</div>
-                  <button className="add-btn" onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>+</button>
+                  <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}{hasVariants(p) ? " · 多规格" : ""}</small></div>
+                  <button className="add-btn" onClick={(e) => { e.stopPropagation(); setTab('home'); quickAdd(p) }}>+</button>
                 </div>
               </div>
             </div>
@@ -632,40 +686,25 @@ export default function App() {
   return (
     <div>
       {/* 顶部栏 - 去掉服务点 */}
-      <div className="top-bar" style={{ paddingTop: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+      <div className="top-bar">
+        <div className="top-bar-main">
+          <strong className="shop-wordmark">{t('welcome')}</strong>
           {deliveryPoints.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14, color: '#1a1a1a' }} onClick={() => setShowPointPicker(true)}>
-              📍 <b>{dn(deliveryPoints.find(p => p.id == selectedPointId)?.name) || t('pickPoint')}</b>
-              <span style={{ fontSize: 12, color: '#666' }}>▼</span>
+            <div className="header-location" onClick={() => setShowPointPicker(true)}>
+              <span>{t('pickPoint')}</span><b>{dn(deliveryPoints.find(p => p.id == selectedPointId)?.name) || t('pickPoint')}</b>
+              <span aria-hidden="true">⌄</span>
             </div>
           )}
-          <div style={{ display: 'flex', gap: 4, fontSize: 11, alignItems: 'center' }}>
+          <div className="header-options">
             {Object.entries({ zh_CN:'简', zh_HK:'繁', en:'EN' }).map(([k,v]) => (
-              <span key={k} onClick={() => switchLang(k)} style={{
-                padding: '2px 8px', borderRadius: 8, cursor: 'pointer',
-                background: lang === k ? '#2eb85c' : '#f2f3f5',
-                color: lang === k ? '#fff' : '#666',
-                fontWeight: lang === k ? 600 : 400
-              }}>{v}</span>
+              <span key={k} onClick={() => switchLang(k)} className={`header-option ${lang === k ? 'active' : ''}`}>{v}</span>
             ))}
             <span onClick={() => {
               const c = currency === 'HKD' ? 'CNY' : 'HKD'
               setCurrency(c); localStorage.setItem('currency', c)
-            }} style={{
-              padding: '3px 8px', borderRadius: 8, cursor: 'pointer', marginLeft: 4,
-              fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 2
-            }}>
-              <span style={{
-                padding: '2px 6px', borderRadius: 5,
-                background: currency === 'HKD' ? '#ff4444' : '#f2f3f5',
-                color: currency === 'HKD' ? '#fff' : '#999'
-              }}>💲HKD</span>
-              <span style={{
-                padding: '2px 6px', borderRadius: 5,
-                background: currency === 'CNY' ? '#ff4444' : '#f2f3f5',
-                color: currency === 'CNY' ? '#fff' : '#999'
-              }}>¥CNY</span>
+            }} className="currency-switch">
+              <span className={currency === 'HKD' ? 'active' : ''}>HKD</span>
+              <span className={currency === 'CNY' ? 'active' : ''}>CNY</span>
             </span>
           </div>
         </div>
@@ -703,13 +742,13 @@ export default function App() {
             <div className={`banner-slide banner-poster ${bannerIdx === 0 ? 'banner-green' : 'banner-orange'}`}>
               {bannerIdx === 0 ? (
                 <>
-                  <div className="banner-title">🥬 {t('welcome')}</div>
+                  <div className="banner-title">{t('welcome')}</div>
                   <div className="banner-sub">{t('slogan')}</div>
                 </>
               ) : (
                 <>
-                  <div className="banner-title">🚚 {ruleText('groupBuy', effectiveThreshold)}</div>
-                  <div className="banner-sub">{t('groupBuySlogan')}</div>
+                  <div className="banner-title">{t('groupBuyBanner')}</div>
+                  <div className="banner-sub">{lang === 'en' ? `Group delivery at ${fmt(effectiveThreshold)}` : lang === 'zh_HK' ? `滿 ${fmt(effectiveThreshold)} 統一配送` : `满 ${fmt(effectiveThreshold)} 统一配送`}</div>
                 </>
               )}
             </div>
@@ -719,30 +758,22 @@ export default function App() {
             </div>
           </div>
 
-          {/* 分类宫格 */}
-          {categories.length > 0 && (
-            <div className="category-grid">
-              {categories.slice(0, 8).map(c => (
-                <div key={c.id} className="cat-item" onClick={() => { setSelectedCategory(c.id); setTab('category'); window.scrollTo(0,0) }}>
-                  <div className="cat-icon">{c.icon || '🛍️'}</div>
-                  <div className="cat-name">{cn(c.name)}</div>
-                </div>
-              ))}
-            </div>
-          )}
-
           {/* 配送规则小横幅 */}
-          <div style={{ margin: '8px 12px 0', background: '#e3f2fd', padding: '8px 12px', borderRadius: 8, fontSize: 12, color: '#1976d2', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+          <div className="delivery-rule-strip"
             onClick={() => setShowHelp(true)}>
-            <span>📦 {t('deliveryRule')}</span>
+            <span>{t('deliveryRule')}</span>
             <span>{t('details')}</span>
+          </div>
+
+          <div className="activity-strip" onClick={() => setShowActivity(true)} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') setShowActivity(true) }}>
+            <span>分享团购 · 集满 10 赞领 {fmt(activityCampaign?.discount_amount || 5)} 优惠券</span><span>查看活动 ›</span>
           </div>
 
           {/* 凑单进度条 */}
           {stats && (
             <div className="group-buy-banner">
               <div className="group-buy-row">
-                <span className="group-buy-label">🚚 {dn(deliveryPoints.find(p => p.id == selectedPointId)?.name) || '今日凑单'}</span>
+                <span className="group-buy-label">{dn(deliveryPoints.find(p => p.id == selectedPointId)?.name) || t('groupBuyBanner')}</span>
                 {effectiveReached ? (
                   <span className="group-buy-reached">{t('reached')}</span>
                 ) : (
@@ -756,11 +787,21 @@ export default function App() {
                 />
               </div>
               <div className="group-buy-footer">
-                <span>{t('totalConfirmed')}：<b style={{ color: effectiveReached ? '#3cb043' : '#ff6b35' }}>{fmt(stats.confirmed_total)}</b> / {fmt(effectiveThreshold)}</span>
+                <span>{t('totalConfirmed')}：<b style={{ color: 'var(--market-green)' }}>{fmt(stats.confirmed_total)}</b> / {fmt(effectiveThreshold)}</span>
                 <span>{stats.confirmed_count} {t('ordersConfirmed')}</span>
               </div>
             </div>
           )}
+
+          <section className="notice-board" aria-label="配送公告">
+            <div className="notice-board-heading"><span>配送公告</span><small>取货时间会在配送前一天公布</small></div>
+            {announcements.length ? announcements.slice(0, 3).map(notice => (
+              <article className="notice-item" key={notice.id}>
+                <strong>{notice.title}</strong><time>{notice.created_at?.slice(0, 16)}</time>
+                <p>{notice.content}</p>
+              </article>
+            )) : <p className="notice-empty">暂无新公告。凑满起送额后，请留意此处和群通知。</p>}
+          </section>
 
           {newUserProducts.length > 0 && (
             <div className="new-user-section">
@@ -774,7 +815,7 @@ export default function App() {
                     <div className="emoji">{p.image ? <img src={p.image} alt={p.name} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:8}} /> : '🛒'}</div>
                     <span className="tag">新人价</span>
                     <div className="name">{pn(p.name)}</div>
-                    <div className="price">{priceText(p)}</div>
+                    <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}{hasVariants(p) ? " · 多规格" : ""}</small></div>
                     
                   </div>
                 ))}
@@ -782,22 +823,13 @@ export default function App() {
             </div>
           )}
 
-          <div className="category-grid">
-            {categories.map(c => (
-              <div className="category-item" key={c.id} onClick={() => { setActiveCategory(c.id); setTab('category'); window.scrollTo(0, 0) }}>
-                <div className="icon">{c.icon || '📦'}</div>
-                <span className="name">{cn(c.name)}</span>
-              </div>
-            ))}
-          </div>
-
           <div className="product-list">
-            <div className="product-list-title">{search ? t('searchResult').replace('{kw}', search) : '🔥 ' + t('hot')}</div>
+            <div className="product-list-title">{search ? t('searchResult').replace('{kw}', search) : t('hot')}</div>
             <div className="product-grid">
               {filteredProducts.map(p => (
                 <div className="product-card" key={p.id} onClick={() => { setSelectedProduct(p); setSelectedVariant(null) }} style={p.is_active === false ? { opacity: 0.5, filter: 'grayscale(1)' } : {}}>
                   <div className="emoji">
-                    {p.image ? <img src={p.image} alt={p.name} /> : '🛒'}
+                    {p.image ? <img src={p.image} alt={p.name} /> : <span className="product-no-image">{pn(p.name).replace(/^\[[^\]]+\]/, '').slice(0, 2)}</span>}
                     {(p.is_hot || p.is_new) && <div className="promo-tag">{p.is_hot ? t('tagHot') : t('tagNew')}</div>}
                     {p.is_active === false && <div className="promo-tag" style={{background:'#999'}}>{t('offShelf') || '已下架'}</div>}
                     <span onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id) }} className="fav-btn">
@@ -810,7 +842,7 @@ export default function App() {
                       <div className="sales">{p.is_hot ? '🔥 ' + t('tagHot') : ''}</div>
                     </div>
                     <div className="bottom-row">
-                      <div className="price">{priceText(p)}</div>
+                      <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}{hasVariants(p) ? " · 多规格" : ""}</small></div>
                       {p.is_active !== false && <button className="add-btn" onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>+</button>}
                     </div>
                   </div>
@@ -822,6 +854,16 @@ export default function App() {
         </>
       )}
 
+      {tab === 'coupons' && (
+        <div className="coupon-page">
+          <div className="back-btn" onClick={() => setTab('my')}>‹ 返回</div>
+          <h2>分享团购 · 集赞领券</h2>
+          {couponData.campaigns.length ? couponData.campaigns.map(c => <div className="coupon-card coupon-action" key={c.id} onClick={() => setShowActivity(true)}><strong>{c.title}</strong><p>朋友圈集满 10 个赞，领满 {fmt(c.min_spend)} 减 {fmt(c.discount_amount)} 优惠券</p><small>查看活动与提交截图 ›</small></div>) : <div className="coupon-card"><strong>活动加载中</strong></div>}
+          <h3>我的优惠券</h3>
+          {!currentUser ? <p className="coupon-empty" onClick={() => setTab('login')}>登录后查看已发给你的优惠券 ›</p> : couponData.grants.length ? couponData.grants.map(g => <div className="coupon-card" key={g.id}><strong>满 {fmt(g.min_spend)} 减 {fmt(g.discount_amount)}</strong><p>{g.title}</p><small>{g.used_order_no ? '已使用' : '可在结算时使用'} · 领取时间：{g.granted_at}</small></div>) : <p className="coupon-empty">暂时没有收到优惠券。点击上方活动参与分享。</p>}
+        </div>
+      )}
+
       {tab === 'category' && (
         <div className="cat-layout">
           <div className="cat-sidebar">
@@ -830,7 +872,7 @@ export default function App() {
             </div>
             {categories.map(c => (
               <div className={`cat-side-item ${activeCategory === c.id ? 'active' : ''}`} key={c.id} onClick={() => { setActiveCategory(c.id); window.scrollTo(0, 0) }}>
-                {c.icon || '📦'} {cn(c.name)}
+                {cn(c.name)}
               </div>
             ))}
           </div>
@@ -839,7 +881,7 @@ export default function App() {
               {filteredProducts.map(p => (
                 <div className="product-card" key={p.id} onClick={() => { setSelectedProduct(p); setSelectedVariant(null) }} style={p.is_active === false ? { opacity: 0.5, filter: 'grayscale(1)' } : {}}>
                   <div className="emoji">
-                    {p.image ? <img src={p.image} alt={p.name} /> : '🛒'}
+                    {p.image ? <img src={p.image} alt={p.name} /> : <span className="product-no-image">{pn(p.name).replace(/^\[[^\]]+\]/, '').slice(0, 2)}</span>}
                     {(p.is_hot || p.is_new) && <div className="promo-tag">{p.is_hot ? t('tagHot') : t('tagNew')}</div>}
                     {p.is_active === false && <div className="promo-tag" style={{background:'#999'}}>{t('offShelf') || '已下架'}</div>}
                     <span onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id) }} className="fav-btn">
@@ -852,7 +894,7 @@ export default function App() {
                       <div className="sales">{p.is_hot ? '🔥 ' + t('tagHot') : ''}</div>
                     </div>
                     <div className="bottom-row">
-                      <div className="price">{priceText(p)}</div>
+                      <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}{hasVariants(p) ? " · 多规格" : ""}</small></div>
                       {p.is_active !== false && <button className="add-btn" onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>+</button>}
                     </div>
                   </div>
@@ -933,7 +975,7 @@ export default function App() {
 
                 {/* 功能入口 */}
                 <div className="my-card">
-                  <div className="my-menu-item" onClick={() => showToast(t('comingSoon'))}>
+                  <div className="my-menu-item" onClick={() => setTab('coupons')}>
                     <span className="icon">🎟️</span>
                     <span className="text">{t('coupons')}</span>
                     <span className="arrow">›</span>
@@ -943,7 +985,7 @@ export default function App() {
                     <span className="text">{t('favorites')} ({favorites.length})</span>
                     <span className="arrow">›</span>
                   </div>
-                  <div className="my-menu-item" onClick={() => showToast(t('comingSoon'))}>
+                  <div className="my-menu-item" onClick={() => setShowRefund(true)}>
                     <span className="icon">↩️</span>
                     <span className="text">{t('refundAfterSale')}</span>
                     <span className="arrow">›</span>
@@ -995,16 +1037,16 @@ export default function App() {
               {cartItems.map(item => {
                 const itemKey = item.variantLabel ? `${item.product.id}::${item.variantLabel}` : String(item.product.id)
                 return (
-                <div className="cart-item" key={itemKey}>
-                  <div className="emoji">{item.product.image ? <img src={item.product.image} alt="" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:6}} /> : '🛒'}</div>
+                <div className="cart-item" key={itemKey} onClick={() => { setShowCart(false); setSelectedProduct(item.product); setSelectedVariant(null) }} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') { setShowCart(false); setSelectedProduct(item.product); setSelectedVariant(null) } }}>
+                  <div className="emoji">{item.product.image ? <img src={item.product.image} alt="" /> : <span className="product-no-image">{pn(item.product.name).replace(/^\[[^\]]+\]/, '').slice(0, 2)}</span>}</div>
                   <div className="detail">
-                    <div className="name">{pn(item.product.name)}{item.variantLabel && <small style={{color:'#ff4444',marginLeft:6,fontSize:12}}>({item.variantLabel})</small>}</div>
-                    <div className="price">{fmt(item.variantPrice)}<small style={{fontSize:11,color:'#999'}}>{item.product.unit || '/斤'}</small></div>
+                    <div className="name">{pn(item.product.name)}{item.variantLabel && <small style={{color:'var(--market-accent)',marginLeft:6,fontSize:12}}>({item.variantLabel})</small>}</div>
+                    <div className="price">{fmt(item.variantPrice)}<small style={{fontSize:11,color:'#999'}}>{item.variantLabel ? `/${item.variantLabel}` : unitText(item.product)}</small></div>
                   </div>
                   <div className="qty-control">
-                    <button className="qty-btn" onClick={() => updateQty(itemKey, -1)}>−</button>
+                    <button className="qty-btn" onClick={(e) => { e.stopPropagation(); updateQty(itemKey, -1) }}>−</button>
                     <span className="qty-num">{item.qty}</span>
-                    <button className="qty-btn plus" onClick={() => updateQty(itemKey, 1)}>+</button>
+                    <button className="qty-btn plus" onClick={(e) => { e.stopPropagation(); updateQty(itemKey, 1) }}>+</button>
                   </div>
                 </div>
                 )
@@ -1012,20 +1054,20 @@ export default function App() {
             </div>
             {/* 凑单推荐 */}
             {deliveryType === 'pickup' && stats && !effectiveReached && (
-              <div style={{ padding: '10px 16px', background: '#fff8e1', borderTop: '1px solid #ffe0b2' }}>
-                <div style={{ fontSize: 14, color: '#f57c00', fontWeight: 600, marginBottom: 2 }}>
-                  💡 {t('buyExtra')}
+              <div className="cart-recommend">
+                <div className="cart-recommend-title">
+                  {t('buyExtra')}
                 </div>
-                <div style={{ fontSize: 12, color: '#8a6d3b', marginBottom: 8 }}>
+                <div className="cart-recommend-progress">
                   {t('groupProgress')}：<b>{fmt(stats.confirmed_total || 0)}</b> / <b>{fmt(effectiveThreshold)}</b> · {t('groupRemain')} <b>{fmt(effectiveThreshold - (stats.confirmed_total || 0))}</b>
                 </div>
-                <div style={{ display: 'flex', gap: 8, overflowX: 'auto' }}>
+                <div className="cart-recommend-list">
                   {products.filter(p => p.price <= 20 && !cart[p.id]).slice(0, 5).map(p => (
-                    <div key={p.id} style={{ minWidth: 80, background: '#fff', borderRadius: 8, padding: 6, textAlign: 'center', cursor: 'pointer' }}
+                    <div className="cart-recommend-item" key={p.id}
                       onClick={() => quickAdd(p)}>
-                      <div style={{ fontSize: 24 }}>{p.image ? '' : '🛒'}</div>
-                      <div style={{ fontSize: 11, color: '#333', margin: '4px 0' }}>{pn(p.name).slice(0, 4)}</div>
-                      <div style={{ fontSize: 12, color: '#ff4444', fontWeight: 600 }}>{fmt(p.price)}</div>
+                      <div className="cart-recommend-image">{p.image ? <img src={p.image} alt="" /> : <span className="product-no-image">{pn(p.name).slice(0, 2)}</span>}</div>
+                      <div className="cart-recommend-name">{pn(p.name)}</div>
+                      <div className="cart-recommend-price">{fmt(p.price)}</div>
                     </div>
                   ))}
                 </div>
@@ -1049,18 +1091,18 @@ export default function App() {
               <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                 <div onClick={() => setDeliveryType('pickup')} style={{
                   flex: 1, padding: 10, textAlign: 'center', borderRadius: 8, cursor: 'pointer',
-                  border: deliveryType === 'pickup' ? '2px solid #3cb043' : '1px solid #eee',
-                  background: deliveryType === 'pickup' ? '#f0fff0' : '#fff', fontSize: 14
+                  border: deliveryType === 'pickup' ? '2px solid var(--market-green)' : '1px solid #eee',
+                  background: deliveryType === 'pickup' ? 'var(--market-green-soft)' : '#fff', fontSize: 14
                 }}>
                   🛍️ 到自取点
                   <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
-                    {isUstPoint ? ruleText('ustBenefit2', effectiveThreshold) : t('feeHint')}
+                    自取免运费，凑满门槛后统一配送
                   </div>
                 </div>
                 <div onClick={() => setDeliveryType('delivery')} style={{
                   flex: 1, padding: 10, textAlign: 'center', borderRadius: 8, cursor: 'pointer',
-                  border: deliveryType === 'delivery' ? '2px solid #3cb043' : '1px solid #eee',
-                  background: deliveryType === 'delivery' ? '#f0fff0' : '#fff', fontSize: 14
+                  border: deliveryType === 'delivery' ? '2px solid var(--market-green)' : '1px solid #eee',
+                  background: deliveryType === 'delivery' ? 'var(--market-green-soft)' : '#fff', fontSize: 14
                 }}>
                   🏠 配送到家
                   <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>运费 {fmt(30)}</div>
@@ -1072,7 +1114,7 @@ export default function App() {
               <label>自取点</label>
               <div style={{ padding: 10, background: '#f9f9f9', borderRadius: 8, fontSize: 14, marginBottom: 10 }}>
                 📍 <b>{dn(deliveryPoints.find(p => p.id == selectedPointId)?.name) || '未选择'}</b>
-                <span style={{ color: '#3cb043', cursor: 'pointer', marginLeft: 10, fontSize: 13 }} onClick={() => setShowPointPicker(true)}>切换</span>
+                <span style={{ color: 'var(--market-green)', cursor: 'pointer', marginLeft: 10, fontSize: 13 }} onClick={() => setShowPointPicker(true)}>切换</span>
               </div>
             </div>
             )}
@@ -1081,7 +1123,7 @@ export default function App() {
               <label>收货地址</label>
               {addresses.length === 0 ? (
                 <div style={{ padding: 12, background: '#f9f9f9', borderRadius: 8, fontSize: 13, color: '#999' }}>
-                  暂无地址，<span style={{ color: '#3cb043', cursor: 'pointer' }} onClick={() => { setShowCheckout(false); setTab('address'); setEditingAddr(null); setTab('addrEdit') }}>去添加</span>
+                  暂无地址，<span style={{ color: 'var(--market-green)', cursor: 'pointer' }} onClick={() => { setShowCheckout(false); setTab('address'); setEditingAddr(null); setTab('addrEdit') }}>去添加</span>
                 </div>
               ) : (
                 <div style={{ maxHeight: 160, overflowY: 'auto' }}>
@@ -1091,11 +1133,11 @@ export default function App() {
                       onClick={() => setCheckoutAddrId(a.id)}
                       style={{
                         padding: 10,
-                        border: checkoutAddrId === a.id ? '2px solid #3cb043' : '1px solid #eee',
+                        border: checkoutAddrId === a.id ? '2px solid var(--market-green)' : '1px solid #eee',
                         borderRadius: 8,
                         marginBottom: 8,
                         cursor: 'pointer',
-                        background: checkoutAddrId === a.id ? '#f0fff0' : '#fff'
+                        background: checkoutAddrId === a.id ? 'var(--market-green-soft)' : '#fff'
                       }}
                     >
                       <div style={{ fontSize: 14, fontWeight: 600 }}>{a.name} <span style={{ color: '#666', fontWeight: 'normal', marginLeft: 8 }}>{a.phone}</span></div>
@@ -1111,36 +1153,44 @@ export default function App() {
               <input value={remark} onChange={e => setRemark(e.target.value)} placeholder="备注" />
             </div>
             <div className="form-group">
+              <label>优惠券</label>
+              <select value={selectedCouponId} onChange={e => setSelectedCouponId(e.target.value)} style={{ width: '100%', padding: 10, border: '1px solid #ddd', background: '#fff' }}>
+                <option value="">不使用优惠券</option>
+                {couponData.grants.filter(g => !g.used_order_no && cartTotal >= Number(g.min_spend)).map(g => <option key={g.id} value={g.id}>满 {fmt(g.min_spend)} 减 {fmt(g.discount_amount)}</option>)}
+              </select>
+              {couponData.grants.some(g => !g.used_order_no && cartTotal < Number(g.min_spend)) && <small style={{ color: '#777' }}>部分优惠券尚未达到使用门槛</small>}
+            </div>
+            <div className="form-group">
               <label>支付方式</label>
               <div style={{ display: 'flex', gap: 6 }}>
                 <div onClick={() => setPaymentMethod('cash_on_delivery')} style={{
                   flex: 1, padding: '8px 4px', textAlign: 'center', borderRadius: 8, cursor: 'pointer',
-                  border: paymentMethod === 'cash_on_delivery' ? '2px solid #3cb043' : '1px solid #eee',
-                  background: paymentMethod === 'cash_on_delivery' ? '#f0fff0' : '#fff'
+                  border: paymentMethod === 'cash_on_delivery' ? '2px solid var(--market-green)' : '1px solid #eee',
+                  background: paymentMethod === 'cash_on_delivery' ? 'var(--market-green-soft)' : '#fff'
                 }}>
                   <div style={{ fontSize: 18 }}>💵</div>
                   <div style={{ fontSize: 11, marginTop: 2 }}>货到付款</div>
                 </div>
                 <div onClick={() => setPaymentMethod('wechat_transfer')} style={{
                   flex: 1, padding: '8px 4px', textAlign: 'center', borderRadius: 8, cursor: 'pointer',
-                  border: paymentMethod === 'wechat_transfer' ? '2px solid #3cb043' : '1px solid #eee',
-                  background: paymentMethod === 'wechat_transfer' ? '#f0fff0' : '#fff'
+                  border: paymentMethod === 'wechat_transfer' ? '2px solid var(--market-green)' : '1px solid #eee',
+                  background: paymentMethod === 'wechat_transfer' ? 'var(--market-green-soft)' : '#fff'
                 }}>
                   <div style={{ fontSize: 18 }}>💚</div>
                   <div style={{ fontSize: 11, marginTop: 2 }}>微信</div>
                 </div>
                 <div onClick={() => setPaymentMethod('alipay_transfer')} style={{
                   flex: 1, padding: '8px 4px', textAlign: 'center', borderRadius: 8, cursor: 'pointer',
-                  border: paymentMethod === 'alipay_transfer' ? '2px solid #3cb043' : '1px solid #eee',
-                  background: paymentMethod === 'alipay_transfer' ? '#f0fff0' : '#fff'
+                  border: paymentMethod === 'alipay_transfer' ? '2px solid var(--market-green)' : '1px solid #eee',
+                  background: paymentMethod === 'alipay_transfer' ? 'var(--market-green-soft)' : '#fff'
                 }}>
                   <div style={{ fontSize: 18 }}>💙</div>
                   <div style={{ fontSize: 11, marginTop: 2 }}>支付宝</div>
                 </div>
                 <div onClick={() => setPaymentMethod('fps_transfer')} style={{
                   flex: 1, padding: '8px 4px', textAlign: 'center', borderRadius: 8, cursor: 'pointer',
-                  border: paymentMethod === 'fps_transfer' ? '2px solid #3cb043' : '1px solid #eee',
-                  background: paymentMethod === 'fps_transfer' ? '#f0fff0' : '#fff'
+                  border: paymentMethod === 'fps_transfer' ? '2px solid var(--market-green)' : '1px solid #eee',
+                  background: paymentMethod === 'fps_transfer' ? 'var(--market-green-soft)' : '#fff'
                 }}>
                   <div style={{ fontSize: 18 }}>💱</div>
                   <div style={{ fontSize: 11, marginTop: 2 }}>转数快</div>
@@ -1154,16 +1204,18 @@ export default function App() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
                 <span style={{ color: '#666' }}>运费</span>
-                <span style={{ color: effectiveFee ? '#ff4444' : '#3cb043', fontWeight: 600 }}>
+                <span style={{ color: effectiveFee ? 'var(--market-accent)' : 'var(--market-green)', fontWeight: 600 }}>
                   {effectiveFee ? fmt(effectiveFee) : t('freeFee')}
                 </span>
               </div>
+              {couponDiscount > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: 'var(--market-green)' }}><span>优惠券</span><span>−{fmt(couponDiscount)}</span></div>}
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0 4px', borderTop: '1px solid #eee', marginTop: 4 }}>
                 <span>共 {cartCount} 件</span>
-                <span style={{ color: '#ff4444', fontWeight: 'bold', fontSize: 18 }}>
-                  {fmt(cartTotal + effectiveFee)}
+                <span style={{ color: 'var(--market-accent)', fontWeight: 'bold', fontSize: 18 }}>
+                  {fmt(cartTotal + effectiveFee - couponDiscount)}
                 </span>
               </div>
+              {currency === 'HKD' && <div style={{ fontSize: 11, color: '#64746a', marginTop: 4 }}>按 1 人民币 = {exchangeRate} 港币展示；实际订单按人民币结算。</div>}
             </div>
             <div className="form-actions">
               <button className="btn-cancel" onClick={() => setShowCheckout(false)}>取消</button>
@@ -1177,7 +1229,7 @@ export default function App() {
       {selectedProduct && (
         <div className="checkout-overlay" onClick={() => { setSelectedProduct(null); setSelectedVariant(null) }}
           style={{ alignItems: 'flex-end' }}>
-          <div onClick={e => e.stopPropagation()}
+          <div className="product-detail-sheet" onClick={e => e.stopPropagation()}
             style={{
               background: '#fff', borderRadius: '16px 16px 0 0', maxWidth: 400, width: '100%',
               maxHeight: '85vh', overflowY: 'auto', paddingBottom: 0
@@ -1187,21 +1239,17 @@ export default function App() {
               {selectedProduct.image ? (
                 <img src={selectedProduct.image} alt={pn(selectedProduct.name)} style={{ width: 80, height: 80, borderRadius: 10, objectFit: 'cover' }} />
               ) : (
-                <div style={{ width: 80, height: 80, background: '#fafafa', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>🛒</div>
+                <div className="detail-no-image"><span className="product-no-image">{pn(selectedProduct.name).replace(/^\[[^\]]+\]/, '').slice(0, 2)}</span></div>
               )}
               <div style={{ flex: 1 }}>
                 <h3 style={{ fontSize: 18, marginBottom: 6 }}>{pn(selectedProduct.name)}</h3>
-                <div style={{ fontSize: 20, color: '#ff4444', fontWeight: 'bold' }}>
+                <div style={{ fontSize: 20, color: 'var(--market-accent)', fontWeight: 'bold' }}>
                   {(() => {
                     let variants = []
                     try { variants = selectedProduct.variants ? JSON.parse(selectedProduct.variants) : [] } catch(e) {}
                     const sym = currency === 'HKD' ? 'HK$' : '¥'
-                    if (variants.length > 0) {
-                      const prices = variants.map(v => Number(v.price) * (currency === 'HKD' ? exchangeRate : 1))
-                      return sym + Math.min(...prices).toFixed(2) + '~' + Math.max(...prices).toFixed(2)
-                    }
                     return fmt(selectedProduct.price)
-                  })()}<small style={{fontSize:13,color:'#999',fontWeight:400}}>/{selectedProduct.unit || '斤'}</small>
+                  })()}<small style={{fontSize:13,color:'#999',fontWeight:400}}>{unitText(selectedProduct)}</small>
                 </div>
               </div>
               <span onClick={() => { setSelectedProduct(null); setSelectedVariant(null) }}
@@ -1218,17 +1266,21 @@ export default function App() {
                     <div style={{ padding: '0 16px', borderTop: '8px solid #f7f7f7' }}>
                       <div style={{ fontSize: 14, color: '#333', fontWeight: 600, padding: '12px 0 8px' }}>规格</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingBottom: 12 }}>
+                        <div className="variant-choice" onClick={() => setSelectedVariant(-1)}
+                          style={{ padding: '8px 16px', borderRadius: 20, cursor: 'pointer', border: selectedVariant === -1 ? '2px solid var(--market-green)' : '1px solid #ddd', background: selectedVariant === -1 ? 'var(--market-green-soft)' : '#fff', fontSize: 14, fontWeight: selectedVariant === -1 ? 600 : 400 }}>
+                          基础规格 {unitText(selectedProduct)} <span style={{ color: 'var(--market-accent)' }}>{fmt(selectedProduct.price)}</span>
+                        </div>
                         {variants.map((v, i) => {
                           const isSel = selectedVariant === i
                           return (
-                            <div key={i} onClick={() => setSelectedVariant(i)}
+                            <div className="variant-choice" key={i} onClick={() => setSelectedVariant(i)}
                               style={{
                                 padding: '8px 16px', borderRadius: 20, cursor: 'pointer',
-                                border: isSel ? '2px solid #ff4444' : '1px solid #ddd',
-                                background: isSel ? '#fff5f5' : '#fff',
+                                border: isSel ? '2px solid var(--market-green)' : '1px solid #ddd',
+                                background: isSel ? 'var(--market-green-soft)' : '#fff',
                                 fontSize: 14, fontWeight: isSel ? 600 : 400,
                               }}>
-                              {v.label} <span style={{color:'#ff4444'}}>{fmt(v.price)}</span>
+                              {v.label} <span style={{color:'var(--market-accent)'}}>{fmt(v.price)}</span>
                             </div>
                           )
                         })}
@@ -1237,7 +1289,7 @@ export default function App() {
                   )}
 
                   {/* 描述 */}
-                  {selectedProduct.description && (
+                  {selectedProduct.description && !/^\/[\u4e00-\u9fff\d]+$/.test(selectedProduct.description.trim()) && (
                     <div style={{ padding: '0 16px', borderTop: '8px solid #f7f7f7' }}>
                       <p style={{ fontSize: 14, color: '#666', lineHeight: 1.6, padding: '12px 0' }}>{selectedProduct.description}</p>
                     </div>
@@ -1246,10 +1298,10 @@ export default function App() {
                   {/* 底部按钮 */}
                   <div style={{ position: 'sticky', bottom: 0, background: '#fff', padding: '12px 16px', borderTop: '1px solid #f0f0f0' }}>
                     {selectedProduct.is_active !== false ? (
-                      <button className="btn-submit" style={{ width: '100%', background: '#ff4444', opacity: (variants.length > 0 && selectedVariant === null) ? 0.5 : 1 }}
+                      <button className="btn-submit" style={{ width: '100%', background: 'var(--market-green)', opacity: (variants.length > 0 && selectedVariant === null) ? 0.5 : 1 }}
                         onClick={() => {
                           if (variants.length > 0 && selectedVariant === null) { showToast('请先选择规格'); return }
-                          if (variants.length > 0) {
+                          if (variants.length > 0 && selectedVariant >= 0) {
                             const v = variants[selectedVariant]
                             addToCart(selectedProduct.id, v.label, Number(v.price))
                           } else {
@@ -1281,14 +1333,14 @@ export default function App() {
                   key={p.id}
                   onClick={() => selectPoint(p.id)}
                   style={{
-                    padding: 12, border: selectedPointId == p.id ? '2px solid #3cb043' : '1px solid #eee',
+                    padding: 12, border: selectedPointId == p.id ? '2px solid var(--market-green)' : '1px solid #eee',
                     borderRadius: 8, marginBottom: 8, cursor: 'pointer',
-                    background: selectedPointId == p.id ? '#f0fff0' : '#fff'
+                    background: selectedPointId == p.id ? 'var(--market-green-soft)' : '#fff'
                   }}
                 >
                   <div style={{ fontSize: 15, fontWeight: 600 }}>{dn(p.name)}</div>
                   <div style={{ fontSize: 12, color: '#666', marginTop: 3 }}>{dn(p.address)}</div>
-                  <div style={{ fontSize: 12, color: '#3cb043', marginTop: 3 }}>🚚 {selectedPointId == p.id && isUstPoint ? ruleText('ustFee', 500) : ruleText('feePerOrder', 1000)}</div>
+                  <div style={{ fontSize: 12, color: 'var(--market-green)', marginTop: 3 }}>🚚 {ruleText('feePerOrder', p.threshold || 1000)}</div>
                 </div>
               ))}
             </div>
@@ -1302,7 +1354,7 @@ export default function App() {
           <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 340, textAlign: 'center' }}>
             <h3>{paymentMethod === 'wechat_transfer' ? '微信扫码付款' : paymentMethod === 'alipay_transfer' ? '支付宝扫码付款' : '转数快 FPS 扫码付款'}</h3>
             <div style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>订单号：{paidOrderNo}</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#ff4444', marginBottom: 12 }}>订单应付 ¥{paidOrderAmount.toFixed(2)}{currency === 'HKD' && <small style={{ display: 'block', fontSize: 12, color: '#666' }}>按 1 人民币 = {exchangeRate} 港币换算：{fmt(paidOrderAmount)}</small>}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--market-accent)', marginBottom: 12 }}>订单应付 ¥{paidOrderAmount.toFixed(2)}{currency === 'HKD' && <small style={{ display: 'block', fontSize: 12, color: '#666' }}>按 1 人民币 = {exchangeRate} 港币换算：{fmt(paidOrderAmount)}</small>}</div>
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
               {paymentMethod === 'fps_transfer' ? (
                 <div style={{ width: 220, height: 220, margin: '0 auto', background: '#f9f0ff', border: '2px solid #722ed1', borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -1385,7 +1437,7 @@ export default function App() {
             <p style={{ fontSize: 13, color: '#999', marginBottom: 20 }}>Please select your currency</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <button onClick={() => { setCurrency('HKD'); localStorage.setItem('currency', 'HKD'); setShowOnboard(true) }}
-                style={{ padding: 16, borderRadius: 12, border: '2px solid #ff4444', background: '#fff5f5', color: '#ff4444', fontSize: 18, fontWeight: 700, cursor: 'pointer' }}>
+                style={{ padding: 16, borderRadius: 12, border: '2px solid var(--market-green)', background: 'var(--market-green-soft)', color: 'var(--market-accent)', fontSize: 18, fontWeight: 700, cursor: 'pointer' }}>
                 HK$ 港币
               </button>
               <button onClick={() => { setCurrency('CNY'); localStorage.setItem('currency', 'CNY'); setShowOnboard(true) }}
@@ -1407,7 +1459,7 @@ export default function App() {
             <p style={{ fontSize: 14, color: '#666', lineHeight: 1.6, marginBottom: 24 }}>{ruleText(`step${onboardStep+1}Desc`, effectiveThreshold)}</p>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 20 }}>
               {[0,1,2,3].map(i => (
-                <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i === onboardStep ? '#3cb043' : '#ddd' }} />
+                <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i === onboardStep ? 'var(--market-green)' : '#ddd' }} />
               ))}
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
@@ -1436,17 +1488,15 @@ export default function App() {
             <div style={{ fontSize: 13, lineHeight: 1.8, color: '#333' }}>
               <div style={{ background: '#e3f2fd', padding: 12, borderRadius: 8, marginBottom: 10 }}>
                 <b>🚚 配送时间</b><br />
-                · 每天中午12:00前凑满起送额 → 当晚配送<br />
-                · 12:00后凑满 → 次日配送<br />
-                · 每天晚上12:00截单<br />
+                · 配送前一天在网站公告和群里通知取货时间<br />
                 · 配送通知会在对应微信群/WhatsApp群及本网站同步，下单后请及时加群或关注发货通知
               </div>
 
               <div style={{ background: '#e8f5e9', padding: 12, borderRadius: 8, marginBottom: 10 }}>
                 <b>💰 运费</b><br />
-                · 自取点满 {fmt(1000)} 免运费并起送（科技大学自取点满 {fmt(500)}）<br />
+                · 自取始终免运费；当前服务点凑满 {fmt(effectiveThreshold)} 后统一配送，其他服务点按各自门槛配送<br />
                 · 配送到家运费 {fmt(30)}<br />
-                · 未满门槛可先下单凑单，着急也可单独付运费配送
+                · 已付款待发货的自取订单可申请加 {fmt(30)} 单独配送，或取消并申请退款
               </div>
 
               <div style={{ background: '#fff8e1', padding: 12, borderRadius: 8, marginBottom: 10 }}>
@@ -1482,25 +1532,25 @@ export default function App() {
         </div>
       )}
 
-      {/* 科大学生优惠弹窗 */}
+      {/* 科大自取规则弹窗 */}
       {ustBenefit && (
         <div className="checkout-overlay" style={{ zIndex: 5000 }} onClick={() => setUstBenefit(false)}>
           <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 380, textAlign: 'center' }}>
             <div style={{ fontSize: 50, marginBottom: 12 }}>🎓</div>
-            <h3 style={{ color: '#3cb043', marginBottom: 8 }}>UST 科大学生优惠</h3>
+            <h3 style={{ color: 'var(--market-green)', marginBottom: 8 }}>恭喜你，科大学生福利</h3>
             <div style={{ fontSize: 14, color: '#333', lineHeight: 1.8, marginBottom: 16 }}>
               <div style={{ background: '#e8f5e9', padding: 12, borderRadius: 8, marginBottom: 8 }}>
-                🎓 <b>学生优惠</b><br/>
-                满 {fmt(500)} 免运费并起送
+                🎓 <b>自取免运费</b><br/>
+                科大服务点自取免运费，满 {fmt(500)} 统一配送
               </div>
               <div style={{ background: '#e3f2fd', padding: 12, borderRadius: 8 }}>
-                🎯 <b>起送门槛 {fmt(500)}</b><br/>
-                当天该点总订单满 {fmt(500)} 即起送统一配送<br/>
-                比其他自取点低一半！
+                🎯 <b>科大专属起送门槛 {fmt(500)}</b><br/>
+                该点已付款待配送订单满 {fmt(500)} 后统一配送<br/>
+                取货时间请留意网站公告和群通知
               </div>
             </div>
             <button className="btn-submit" style={{ width: '100%' }} onClick={() => setUstBenefit(false)}>
-              太好了，开始购物
+              知道了，开始购物
             </button>
           </div>
         </div>
@@ -1515,20 +1565,20 @@ export default function App() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16, textAlign: 'left' }}>
               <div style={{ border: '1px solid #e8f5e9', background: '#f6fff8', borderRadius: 10, padding: 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#3cb043' }}>🎓 UST科大学生 · 菜神</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--market-green)' }}>🎓 UST科大学生 · 菜神</div>
                 <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>加微信进群 / 咨询订单</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: '#222' }}>ustshucaizhishen</div>
-                  <button onClick={() => copyText('ustshucaizhishen', '微信号')} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #3cb043', color: '#3cb043', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>复制</button>
+                  <button onClick={() => copyText('ustshucaizhishen', '微信号')} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #3cb043', color: 'var(--market-green)', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>复制</button>
                 </div>
               </div>
 
               <div style={{ border: '1px solid #e8f5e9', background: '#f6fff8', borderRadius: 10, padding: 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#3cb043' }}>🏠 小区居民 · 老板</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--market-green)' }}>🏠 小区居民 · 老板</div>
                 <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>加微信咨询订单 / 售后</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#222' }}>jennybabi1988</div>
-                  <button onClick={() => copyText('jennybabi1988', '微信号')} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #3cb043', color: '#3cb043', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>复制</button>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#222' }}>{BOSS_WECHAT}</div>
+                  <button onClick={() => copyText(BOSS_WECHAT, '微信号')} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #3cb043', color: 'var(--market-green)', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>复制</button>
                 </div>
               </div>
 
@@ -1536,9 +1586,9 @@ export default function App() {
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#128c7e' }}>💬 WhatsApp 客服</div>
                 <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>海外 / 非微信用户首选</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#222' }}>+852 95228191</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#222' }}>{BOSS_WHATSAPP}</div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={() => copyText('+85295228191', 'WhatsApp号')} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #128c7e', color: '#128c7e', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>复制</button>
+                    <button onClick={() => copyText(BOSS_WHATSAPP, 'WhatsApp号')} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #128c7e', color: '#128c7e', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>复制</button>
                     <a href="https://wa.me/85295228191" target="_blank" rel="noreferrer" style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #128c7e', color: '#fff', background: '#128c7e', borderRadius: 14, cursor: 'pointer', textDecoration: 'none' }}>打开</a>
                   </div>
                 </div>
@@ -1546,6 +1596,34 @@ export default function App() {
             </div>
 
             <button className="btn-submit" style={{ width: '100%' }} onClick={() => setShowContact(false)}>我知道了</button>
+          </div>
+        </div>
+      )}
+
+      {showRefund && (
+        <div className="checkout-overlay" onClick={() => setShowRefund(false)}>
+          <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
+            <h3>退款售后</h3>
+            <p style={{ lineHeight: 1.7, color: '#555', margin: '12px 0' }}>如需退款或售后帮助，请联系老板。已付款待配送的自取订单，也可在订单详情提交退款申请。</p>
+            <div className="after-sale-contact"><span>老板微信</span><strong>{BOSS_WECHAT}</strong><button onClick={() => copyText(BOSS_WECHAT, '微信号')}>复制</button></div>
+            <div className="after-sale-contact"><span>WhatsApp</span><strong>{BOSS_WHATSAPP}</strong><a href="https://wa.me/85295228191" target="_blank" rel="noreferrer">联系</a></div>
+            <button className="btn-submit" style={{ width: '100%', marginTop: 16 }} onClick={() => setShowRefund(false)}>我知道了</button>
+          </div>
+        </div>
+      )}
+
+      {showActivity && (
+        <div className="checkout-overlay" onClick={() => setShowActivity(false)}>
+          <div className="checkout-panel activity-panel" onClick={e => e.stopPropagation()}>
+            <h3>分享团购 · 集赞领券</h3>
+            <p className="activity-intro">和邻居、同学一起买新鲜果菜。服务点凑满起送额后统一配送，自取免运费。</p>
+            <div className="activity-rule"><b>集满 10 个赞，领满 {fmt(activityCampaign?.min_spend || 15)} 减 {fmt(activityCampaign?.discount_amount || 5)}</b><p>复制下方团购链接分享到朋友圈；集满 10 个赞后，上传朋友圈截图。后台审核通过，优惠券会发到“我的优惠券”。每人限领一次。</p></div>
+            <div className="activity-link"><span>{GROUP_BUY_URL}</span><button onClick={() => copyText(GROUP_BUY_URL, '团购链接')}>复制链接</button></div>
+            {activityCampaign ? !currentUser ? <button className="btn-submit" style={{ width: '100%', marginTop: 16 }} onClick={() => { setShowActivity(false); setTab('login') }}>登录后上传截图</button> : <>
+              {(() => { const claim = couponData.claims.find(c => Number(c.campaign_id) === Number(activityCampaign.id)); return claim && <p className="activity-status">{claim.status === 'pending' ? '截图正在审核' : claim.status === 'approved' ? '审核通过，优惠券已发放' : `未通过：${claim.admin_note || '可以重新提交截图'}`}</p> })()}
+              {!couponData.claims.some(c => Number(c.campaign_id) === Number(activityCampaign.id) && c.status !== 'rejected') && <label className="activity-upload">{claimUploading ? '正在上传…' : '上传朋友圈截图'}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={claimUploading} onChange={e => { submitCouponScreenshot(e.target.files?.[0]); e.target.value = '' }} /></label>}
+            </> : <p className="activity-status">活动加载中…</p>}
+            <button className="btn-cancel" style={{ width: '100%', marginTop: 10 }} onClick={() => setShowActivity(false)}>关闭</button>
           </div>
         </div>
       )}
@@ -1558,19 +1636,18 @@ export default function App() {
             <div style={{ fontSize: 13, lineHeight: 1.8, color: '#333' }}>
               <div style={{ background: '#e3f2fd', padding: 12, borderRadius: 8, marginBottom: 10 }}>
                 <b>⏰ 配送时间</b><br />
-                · 当天中午12:00前凑满起送额 → 当天晚上配送<br />
-                · 中午12:00后才满额 → 第二天配送<br />
-                · 每天晚上12:00截止当天下单
+                · 各服务点凑满门槛后安排统一配送<br />
+                · 取货时间在配送前一天于网站公告和群里通知
               </div>
               <div style={{ background: '#e8f5e9', padding: 12, borderRadius: 8, marginBottom: 10 }}>
                 <b>🚚 运费规则</b><br />
-                · 自取点满额免运费，未满额按结算页收取运费<br />
-                · 当天该自取点总订单满 {fmt(isUstPoint ? 500 : 1000)} 即起送统一配送<br />
+                · 自取订单始终免运费；未满额则等待凑单<br />
+                · 该自取点已付款待配送订单满 {fmt(effectiveThreshold)} 即起送统一配送<br />
                 · 单独送到家：{fmt(30)}
               </div>
               <div style={{ background: '#fff8e1', padding: 12, borderRadius: 8, marginBottom: 10 }}>
                 <b>📍 自取点</b><br />
-                · 日出康城站 / 科技大学 / 坑口站 / 宝琳站 / 将军澳站 / 调景岭站
+                · 科技大学满 {fmt(500)} 起送；其他服务点满 {fmt(1000)} 起送
               </div>
               <div style={{ background: '#fce4ec', padding: 12, borderRadius: 8 }}>
                 <b>📞 有问题？</b><br />
@@ -1587,17 +1664,17 @@ export default function App() {
       {/* 底部导航 */}
       <div className="bottom-nav">
         <div className={`nav-item ${tab === 'home' ? 'active' : ''}`} onClick={() => setTab('home')}>
-          <span className="icon">🏠</span>{t('home')}
+          <NavIcon name="home" />{t('home')}
         </div>
         <div className={`nav-item ${tab === 'category' ? 'active' : ''}`} onClick={() => { setTab('category'); window.scrollTo(0, 0) }}>
-          <span className="icon">⬡</span>{t('category')}
+          <NavIcon name="category" />{t('category')}
         </div>
         <div className="nav-item" onClick={() => setShowCart(true)}>
-          <span className="icon">🛒</span>{t('cart')}
+          <NavIcon name="cart" />{t('cart')}
           {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
         </div>
         <div className={`nav-item ${tab === 'my' || tab === 'myOrders' || tab === 'address' || tab === 'orderDetail' ? 'active' : ''}`} onClick={() => setTab('my')}>
-          <span className="icon">👤</span>{t('my')}
+          <NavIcon name="user" />{t('my')}
         </div>
       </div>
     </div>
@@ -1605,6 +1682,16 @@ export default function App() {
 }
 
 /* ========== 登录页 ========== */
+function NavIcon({ name }) {
+  const paths = {
+    home: <><path d="m3 10 9-7 9 7v10H3z" /><path d="M9 20v-6h6v6" /></>,
+    category: <><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></>,
+    cart: <><path d="M3 4h2l2 12h12l2-9H6" /><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" /></>,
+    user: <><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3-7 8-7s8 3 8 7" /></>
+  }
+  return <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
+}
+
 function LoginPage({ onLogin, onRegister, onBack, t }) {
   const [mode, setMode] = useState('login')
   const [username, setUsername] = useState('')
@@ -1644,7 +1731,7 @@ function LoginPage({ onLogin, onRegister, onBack, t }) {
         )}
         <button className="login-btn" onClick={submit}>{mode === 'login' ? t('login') : t('register')}</button>
         <div style={{ textAlign: 'center', marginTop: 16, fontSize: 13, color: '#999' }}>
-          <span style={{ cursor: 'pointer', color: '#ee4d2d' }} onClick={onBack}>{t('back')}</span>
+          <span style={{ cursor: 'pointer', color: 'var(--market-green)' }} onClick={onBack}>{t('back')}</span>
         </div>
       </div>
     </div>
@@ -1663,7 +1750,7 @@ function AddressPage({ addresses, selectedId, onSelect, onEdit, onAdd, onDelete,
           <div className="addr-card" key={a.id} onClick={() => onSelect(a.id)}>
             <div className={`radio ${selectedId === a.id ? 'selected' : ''}`} />
             <div className="addr-info">
-              <div className="name-row">{a.name} <span className="phone">{a.phone}</span> {a.isDefault && <span style={{ background: '#3cb043', color: '#fff', fontSize: 10, padding: '1px 6px', borderRadius: 4, marginLeft: 8 }}>默认</span>}</div>
+              <div className="name-row">{a.name} <span className="phone">{a.phone}</span> {a.isDefault && <span style={{ background: 'var(--market-green)', color: '#fff', fontSize: 10, padding: '1px 6px', borderRadius: 4, marginLeft: 8 }}>默认</span>}</div>
               <div className="detail">{a.detail}</div>
               <div className="addr-actions">
                 <span onClick={e => { e.stopPropagation(); onEdit(a) }}>编辑</span>
@@ -1711,7 +1798,31 @@ function AddressEditPage({ addr, onSave, onBack }) {
 }
 
 /* ========== 订单详情页 ========== */
-function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast }) {
+function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast, onRefresh }) {
+  const [deliveryAddress, setDeliveryAddress] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const submitRequest = async (type) => {
+    if (submitting) return
+    if (type === 'delivery_upgrade' && deliveryAddress.trim().length < 5) {
+      showToast('请填写完整的送货地址')
+      return
+    }
+    const promptText = type === 'refund'
+      ? '确认申请取消订单并退款？退款将由店主线下处理。'
+      : '确认申请加 ¥30 单独配送？店主确认额外运费后才会改为送货到家。'
+    if (!window.confirm(promptText)) return
+    setSubmitting(true)
+    try {
+      const response = await authFetch(`${API}/orders/request`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id, type, address: deliveryAddress })
+      })
+      const data = await response.json()
+      showToast(response.ok ? '申请已提交，请等待店主处理' : data.error || '申请失败')
+      if (response.ok) await onRefresh()
+    } catch { showToast('申请失败，请重试') }
+    finally { setSubmitting(false) }
+  }
   return (
     <div>
       <div className="back-btn" onClick={onBack}>‹ 返回</div>
@@ -1742,7 +1853,7 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast }) {
           <div className="order-detail-summary">
             <div className="row"><span>商品总额</span><span>{fmt(order.total)}</span></div>
             <div className="row"><span>运费</span><span>{fmt(order.delivery_fee || 0)}</span></div>
-            <div className="row total"><span>应付</span><span>{fmt(Number(order.total) + Number(order.delivery_fee || 0))}</span></div>
+            <div className="row total"><span>{order.payment_status === 'refunded' ? '原订单金额' : '应付'}</span><span>{fmt(Number(order.total) + Number(order.delivery_fee || 0))}</span></div>
           </div>
         </div>
         <div className="order-detail-card">
@@ -1752,7 +1863,9 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast }) {
             <div>{t('orderStatus')}：{statusTxt[order.status] || order.status}</div>
             <div>支付方式：{paymentText[order.payment_method] || order.payment_method}</div>
             <div>支付状态：{payStatusText[order.payment_status] || order.payment_status}</div>
-            {order.payment_method !== 'cash_on_delivery' && order.payment_status !== 'confirmed' && (
+            {order.request && <div>最新申请：{order.request.type === 'refund' ? '取消退款' : '加费单独配送'} · {order.request.status === 'pending' ? '待店主处理' : order.request.status === 'approved' ? '已处理' : '未通过'}{order.request.admin_note ? `（${order.request.admin_note}）` : ''}</div>}
+            {order.request?.status === 'pending' && <div>{order.request.type === 'refund' ? '店主线下退款后会在后台标记，请留意订单状态。' : '请联系店主支付额外 ¥30；店主确认收款后改为送货到家。'}</div>}
+            {order.payment_method !== 'cash_on_delivery' && ['pending', 'paid'].includes(order.payment_status) && order.status !== 'cancelled' && (
               <div>上传付款凭证（PNG、JPEG 或 WebP，最多1MB）：
                 <input type="file" accept="image/png,image/jpeg,image/webp" onChange={async e => {
                   const file = e.target.files[0]
@@ -1766,6 +1879,18 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast }) {
             {order.remark && <div>备注：{order.remark}</div>}
           </div>
         </div>
+        {order.delivery_point_id && order.status === 'paid' && order.payment_status === 'confirmed' && order.request?.status !== 'pending' && (
+          <div className="order-detail-card order-service-actions">
+            <h4>等待凑单期间</h4>
+            <p>自取免运费。你也可以申请加 ¥30 单独配送，或取消订单并申请退款。</p>
+            <label htmlFor="delivery-upgrade-address">单独配送地址</label>
+            <input id="delivery-upgrade-address" value={deliveryAddress} onChange={e => setDeliveryAddress(e.target.value)} placeholder="填写完整收货地址" maxLength={300} />
+            <div className="service-action-row">
+              <button disabled={submitting} onClick={() => submitRequest('delivery_upgrade')}>加 ¥30 单独配送</button>
+              <button disabled={submitting} className="secondary" onClick={() => submitRequest('refund')}>取消订单并退款</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

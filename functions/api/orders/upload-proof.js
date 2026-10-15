@@ -27,10 +27,10 @@ export async function onRequest({ request, env }) {
       : image.startsWith('RIFF') && image.slice(8, 12) === 'WEBP' && image.length > 16
   if (!signature) return json({ error: '图片内容无效' }, 400)
 
-  const order = await env.DB.prepare('SELECT id, payment_method, payment_status FROM orders WHERE id = ? AND user_id = ?')
+  const order = await env.DB.prepare('SELECT id, payment_method, payment_status, status FROM orders WHERE id = ? AND user_id = ?')
     .bind(body.order_id, String(user.id)).first()
   if (!order) return json({ error: '订单不存在' }, 404)
-  if (order.payment_method === 'cash_on_delivery' || order.payment_status === 'confirmed') {
+  if (order.payment_method === 'cash_on_delivery' || order.payment_status === 'confirmed' || order.payment_status === 'refunded' || order.status === 'cancelled') {
     return json({ error: '该订单不能上传付款凭证' }, 409)
   }
   await env.DB.prepare('UPDATE orders SET payment_screenshot = ? WHERE id = ?')
