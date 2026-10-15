@@ -1494,7 +1494,7 @@ export default function App() {
 
               <div style={{ background: '#e8f5e9', padding: 12, borderRadius: 8, marginBottom: 10 }}>
                 <b>💰 运费</b><br />
-                · 自取始终免运费；每个服务点各自凑满 {fmt(1000)} 后统一配送<br />
+                · 自取始终免运费；当前服务点凑满 {fmt(effectiveThreshold)} 后统一配送，其他服务点按各自门槛配送<br />
                 · 配送到家运费 {fmt(30)}<br />
                 · 已付款待发货的自取订单可申请加 {fmt(30)} 单独配送，或取消并申请退款
               </div>
