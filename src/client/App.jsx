@@ -4,6 +4,7 @@ const API = '/api'
 const BOSS_WECHAT = 'jennybabi1988'
 const BOSS_WHATSAPP = '+85295228191'
 const GROUP_BUY_URL = 'https://order-system-bp4.pages.dev/'
+const GROUP_BUY_SHARE_TEXT = `想买新鲜水果蔬菜的朋友，一起到珍珍优质果菜拼单吧！服务点自取免运费，凑满后统一配送，取货时间会在网站和群里通知。\n选菜链接：${GROUP_BUY_URL}`
 const statusText = { pending: '待付款', paid: '已付款', shipped: '已发货', completed: '已完成', cancelled: '已取消' }
 const paymentText = { cash_on_delivery: '货到付款（现金）', wechat_transfer: '微信转账', alipay_transfer: '支付宝转账', fps_transfer: '转数快 FPS' }
 const payStatusText = { pending: '待支付', paid: '已支付', confirmed: '已确认收款', refunded: '已退款' }
@@ -1617,8 +1618,8 @@ export default function App() {
           <div className="checkout-panel activity-panel" onClick={e => e.stopPropagation()}>
             <h3>分享团购 · 集赞领券</h3>
             <p className="activity-intro">和邻居、同学一起买新鲜果菜。服务点凑满起送额后统一配送，自取免运费。</p>
-            <div className="activity-rule"><b>集满 10 个赞，领满 {fmt(activityCampaign?.min_spend || 15)} 减 {fmt(activityCampaign?.discount_amount || 5)}</b><p>复制下方团购链接分享到朋友圈；集满 10 个赞后，上传朋友圈截图。后台审核通过，优惠券会发到“我的优惠券”。每人限领一次。</p></div>
-            <div className="activity-link"><span>{GROUP_BUY_URL}</span><button onClick={() => copyText(GROUP_BUY_URL, '团购链接')}>复制链接</button></div>
+            <div className="activity-rule"><b>集满 10 个赞，领满 {fmt(activityCampaign?.min_spend || 15)} 减 {fmt(activityCampaign?.discount_amount || 5)}</b><p>复制下方宣传语发到朋友圈；集满 10 个赞后，上传朋友圈截图。后台审核通过，优惠券会发到“我的优惠券”。每人限领一次。</p></div>
+            <div className="activity-share"><small>朋友圈分享文案</small><p>{GROUP_BUY_SHARE_TEXT}</p><button onClick={() => copyText(GROUP_BUY_SHARE_TEXT, '宣传语')}>一键复制宣传语</button></div>
             {activityCampaign ? !currentUser ? <button className="btn-submit" style={{ width: '100%', marginTop: 16 }} onClick={() => { setShowActivity(false); setTab('login') }}>登录后上传截图</button> : <>
               {(() => { const claim = couponData.claims.find(c => Number(c.campaign_id) === Number(activityCampaign.id)); return claim && <p className="activity-status">{claim.status === 'pending' ? '截图正在审核' : claim.status === 'approved' ? '审核通过，优惠券已发放' : `未通过：${claim.admin_note || '可以重新提交截图'}`}</p> })()}
               {!couponData.claims.some(c => Number(c.campaign_id) === Number(activityCampaign.id) && c.status !== 'rejected') && <label className="activity-upload">{claimUploading ? '正在上传…' : '上传朋友圈截图'}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={claimUploading} onChange={e => { submitCouponScreenshot(e.target.files?.[0]); e.target.value = '' }} /></label>}
