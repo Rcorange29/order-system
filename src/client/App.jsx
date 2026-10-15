@@ -112,8 +112,11 @@ const getProdName = (pname) => pname
 // ========== 分类名三语映射 ==========
 const categoryNameMap = {
   '水果': { zh_HK:'水果', en:'Fruits' },
-  '蔬菜': { zh_HK:'蔬菜', en:'Vegetables' },
-  '香辛料蔬菜': { zh_HK:'香辛料蔬菜', en:'Herbs & Spices' },
+  '叶菜·花菜': { zh_HK:'葉菜·花菜', en:'Leafy Greens & Flower Vegetables' },
+  '瓜果类蔬菜': { zh_HK:'瓜果類蔬菜', en:'Fruit Vegetables' },
+  '根茎·茎菜': { zh_HK:'根莖·莖菜', en:'Roots & Stems' },
+  '葱姜蒜·香草': { zh_HK:'蔥薑蒜·香草', en:'Alliums & Herbs' },
+  '豆类·玉米': { zh_HK:'豆類·粟米', en:'Beans & Corn' },
   '蔬菜盲盒': { zh_HK:'蔬菜盲盒', en:'Veggie Blind Box' },
   '蛋类': { zh_HK:'蛋類', en:'Eggs' },
   '时令蔬果(限定)': { zh_HK:'時令蔬果(限定)', en:'Seasonal (Limited)' },
@@ -207,6 +210,8 @@ export default function App() {
   const [showContact, setShowContact] = useState(false)
   const [showRefund, setShowRefund] = useState(false)
   const [couponData, setCouponData] = useState({ campaigns: [], grants: [], claims: [] })
+  const [couponLoading, setCouponLoading] = useState(false)
+  const [couponError, setCouponError] = useState(false)
   const [showActivity, setShowActivity] = useState(false)
   const [claimUploading, setClaimUploading] = useState(false)
   const [selectedCouponId, setSelectedCouponId] = useState('')
@@ -317,7 +322,14 @@ export default function App() {
     return () => clearInterval(t)
   }, [])
 
-  const loadCoupons = () => authFetch(`${API}/coupons`).then(r => r.json()).then(setCouponData).catch(() => setCouponData({ campaigns: [], grants: [], claims: [] }))
+  const loadCoupons = () => {
+    setCouponLoading(true)
+    setCouponError(false)
+    return authFetch(`${API}/coupons`)
+      .then(r => { if (!r.ok) throw new Error('无法读取优惠券'); return r.json() })
+      .then(data => { setCouponData(data); setCouponLoading(false) })
+      .catch(() => { setCouponError(true); setCouponLoading(false) })
+  }
   useEffect(() => { if (tab === 'coupons' || showActivity || showCheckout) loadCoupons() }, [tab, showActivity, showCheckout, currentUser])
 
   // 加载配送点列表
@@ -614,6 +626,7 @@ export default function App() {
     const def = addresses.find(a => a.isDefault) || addresses[0]
     setCheckoutAddrId(def?.id || null)
     setShowCart(false)
+    setCouponLoading(true)
     setShowCheckout(true)
   }
 
@@ -1155,11 +1168,14 @@ export default function App() {
             </div>
             <div className="form-group">
               <label>优惠券</label>
-              <select value={selectedCouponId} onChange={e => setSelectedCouponId(e.target.value)} style={{ width: '100%', padding: 10, border: '1px solid #ddd', background: '#fff' }}>
-                <option value="">不使用优惠券</option>
-                {couponData.grants.filter(g => !g.used_order_no && cartTotal >= Number(g.min_spend)).map(g => <option key={g.id} value={g.id}>满 {fmt(g.min_spend)} 减 {fmt(g.discount_amount)}</option>)}
-              </select>
-              {couponData.grants.some(g => !g.used_order_no && cartTotal < Number(g.min_spend)) && <small style={{ color: '#777' }}>部分优惠券尚未达到使用门槛</small>}
+              {couponLoading ? <div className="checkout-coupon-empty">正在查看优惠券…</div>
+                : couponError ? <div className="checkout-coupon-empty">暂时无法读取优惠券 <button type="button" onClick={loadCoupons}>重试</button></div>
+                  : couponData.grants.some(g => !g.used_order_no && cartTotal >= Number(g.min_spend)) ? <select value={selectedCoupon ? selectedCouponId : ''} onChange={e => setSelectedCouponId(e.target.value)} style={{ width: '100%', padding: 10, border: '1px solid #ddd', background: '#fff' }}>
+                    <option value="">不使用优惠券</option>
+                    {couponData.grants.filter(g => !g.used_order_no && cartTotal >= Number(g.min_spend)).map(g => <option key={g.id} value={g.id}>满 {fmt(g.min_spend)} 减 {fmt(g.discount_amount)}</option>)}
+                  </select> : <div className="checkout-coupon-empty">无优惠券可用</div>}
+              {!couponLoading && !couponError && couponData.grants.some(g => !g.used_order_no && cartTotal < Number(g.min_spend)) && <small style={{ color: '#777' }}>已有优惠券，商品金额达到使用门槛后可选</small>}
+              {!couponLoading && !couponError && !couponData.grants.some(g => !g.used_order_no && cartTotal >= Number(g.min_spend)) && <button type="button" className="checkout-activity-link" onClick={() => setShowActivity(true)}>参加分享活动，领取满 {fmt(activityCampaign?.min_spend || 15)} 减 {fmt(activityCampaign?.discount_amount || 5)} 优惠券 ›</button>}
             </div>
             <div className="form-group">
               <label>支付方式</label>
