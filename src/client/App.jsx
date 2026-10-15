@@ -153,13 +153,32 @@ function authFetch(url, options = {}) {
 
 async function uploadProofFile(file, orderId) {
   if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return '请选择 PNG、JPEG 或 WebP 图片'
-  if (file.size > 1024 * 1024) return '图片不能超过1MB'
-  const screenshot = await new Promise((resolve, reject) => {
+  const original = await new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve(reader.result)
     reader.onerror = reject
     reader.readAsDataURL(file)
   })
+  let screenshot = original
+  if (file.size > 1024 * 1024) {
+    screenshot = await new Promise((resolve, reject) => {
+      const image = new Image()
+      image.onerror = () => reject(new Error('无法读取截图，请换一张图片'))
+      image.onload = () => {
+        const canvas = document.createElement('canvas')
+        const scale = Math.min(1, 1600 / Math.max(image.width, image.height))
+        canvas.width = Math.max(1, Math.round(image.width * scale))
+        canvas.height = Math.max(1, Math.round(image.height * scale))
+        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height)
+        for (const quality of [0.82, 0.68, 0.5]) {
+          const compressed = canvas.toDataURL('image/jpeg', quality)
+          if (compressed.length < 1300000) return resolve(compressed)
+        }
+        reject(new Error('截图过大，请裁剪后重试'))
+      }
+      image.src = original
+    })
+  }
   const response = await authFetch(`${API}/orders/upload-proof`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1478,7 +1497,7 @@ export default function App() {
                   const response = await authFetch(`${API}/orders`)
                   if (response.ok) setOrders(await response.json())
                 }
-              } catch { showToast('上传失败，请重试') }
+              } catch (error) { showToast(error.message || '上传失败，请重试') }
               finally { setProofUploading(false) }
             }}>{proofUploading ? '正在上传…' : '确认上传付款凭证'}</button>
             <button className="btn-cancel" style={{ width: '100%', padding: 12 }} onClick={() => { setShowUploadProof(false); setTab('myOrders') }}>稍后上传</button>
@@ -1904,10 +1923,10 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast, onRe
                 const error = await uploadProofFile(proofFile, order.id)
                 if (error) showToast(error)
                 else { showToast('凭证已保存，等待店主确认'); setProofFile(null); await onRefresh() }
-              } catch { showToast('上传失败，请重试') }
+                } catch (error) { showToast(error.message || '上传失败，请重试') }
               finally { setProofUploading(false) }
             }}>{proofUploading ? '正在上传…' : '确认上传付款凭证'}</button></>}
-            <small className="proof-file-hint">支持 PNG、JPEG、WebP，图片不超过 1MB</small>
+            <small className="proof-file-hint">支持 PNG、JPEG、WebP；较大的截图会自动压缩</small>
           </div>
         )}
         <div className="order-detail-card">
