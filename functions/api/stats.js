@@ -14,9 +14,6 @@ export async function onRequest(context) {
   }
   const threshold = point?.threshold ?? 1000
   const fee = point?.fee ?? 10
-  const rateRow = await env.DB.prepare("SELECT value FROM settings WHERE key = 'exchange_rate'").first()
-  const exchangeRate = Number(rateRow?.value || 1.2)
-  if (!Number.isFinite(exchangeRate) || exchangeRate <= 0) return json({ error: '汇率配置有误' }, 500)
 
   // 统计今天该配送点已确认收款的订单总额
   let sql = `
@@ -38,10 +35,10 @@ export async function onRequest(context) {
   return json({
     confirmed_total: total,
     confirmed_count: summary?.confirmed_count || 0,
-    threshold: threshold / exchangeRate,
-    remaining: Math.max(0, threshold / exchangeRate - total),
-    reached: total * exchangeRate >= threshold,
-    delivery_fee: fee / exchangeRate,
+    threshold,
+    remaining: Math.max(0, threshold - total),
+    reached: total >= threshold,
+    delivery_fee: fee,
     point_name: point?.name || null
   })
 }

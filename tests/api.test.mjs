@@ -70,7 +70,7 @@ test('uses the selected server-side variant price and stores the variant', async
   assert.equal(response.status, 201)
   const [insertOrder, insertItem] = db.state.batches[0]
   assert.equal(insertOrder.values[6], 30)
-  assert.equal(insertOrder.values[7], 8.33)
+  assert.equal(insertOrder.values[7], 10)
   assert.equal(insertItem.values[3], 15)
   assert.equal(insertItem.values[4], '大盒')
 })
@@ -81,23 +81,23 @@ test('rejects an unavailable product or pickup point', async () => {
 })
 
 test('waives pickup fee when the confirmed group total reaches the threshold', async () => {
-  const db = database({ confirmedTotal: 820 })
+  const db = database({ confirmedTotal: 990 })
   const response = await call(orders, db, '/api/orders', 'POST', orderBody())
   assert.equal(response.status, 201)
   assert.equal(db.state.batches[0][0].values[7], 0)
 })
 
-test('converts the HKD home-delivery fee and pickup threshold consistently', async () => {
+test('uses RMB 30 home-delivery fee and RMB 1000 pickup threshold', async () => {
   const db = database({ confirmedTotal: 800 })
   const response = await call(orders, db, '/api/orders', 'POST', {
     ...orderBody(), delivery_type: 'delivery', delivery_point_id: null, address: 'Test address', phone: '12345678'
   })
   assert.equal(response.status, 201)
-  assert.equal(db.state.batches[0][0].values[7], 25)
+  assert.equal(db.state.batches[0][0].values[7], 30)
   const progress = await call(stats, db, '/api/stats?point=2', 'GET')
   assert.equal(progress.status, 200)
   const data = await progress.json()
-  assert.equal(Math.round(data.threshold * 1.2), 1000)
+  assert.equal(data.threshold, 1000)
   assert.equal(data.reached, false)
 })
 

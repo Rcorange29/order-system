@@ -74,10 +74,7 @@ export async function onRequest(context) {
     items.push({ product_id: product.id, quantity: item.quantity, variant, price: unitCents / 100 })
   }
 
-  const rateRow = await env.DB.prepare("SELECT value FROM settings WHERE key = 'exchange_rate'").first()
-  const exchangeRate = Number(rateRow?.value || 1.2)
-  if (!Number.isFinite(exchangeRate) || exchangeRate <= 0) return json({ error: '汇率配置有误' }, 500)
-  let deliveryFeeHkd = 30
+  let deliveryFee = 30
   if (point) {
     const summary = await env.DB.prepare(
       `SELECT COALESCE(SUM(total), 0) as t FROM orders
@@ -85,9 +82,8 @@ export async function onRequest(context) {
        AND date(created_at) = date('now', '+8 hours')`
     ).bind(point.id).first()
     if (!validMoney(Number(point.threshold)) || !validMoney(Number(point.fee))) return json({ error: '运费配置有误' }, 500)
-    deliveryFeeHkd = (Number(summary?.t || 0) + subtotalCents / 100) * exchangeRate >= Number(point.threshold) ? 0 : Number(point.fee)
+    deliveryFee = Number(summary?.t || 0) + subtotalCents / 100 >= Number(point.threshold) ? 0 : Number(point.fee)
   }
-  const deliveryFee = cents(deliveryFeeHkd / exchangeRate) / 100
 
   const dbUser = await env.DB.prepare('SELECT username, phone FROM users WHERE id = ?').bind(user.id).first()
   const orderNo = 'ZZ' + crypto.randomUUID().replace(/-/g, '').slice(0, 16).toUpperCase()
