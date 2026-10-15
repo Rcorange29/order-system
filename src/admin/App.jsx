@@ -170,7 +170,7 @@ function AdminLogin({ onLogin, showToast }) {
 
 /* ========== 仪表盘 ========== */
 function Dashboard({ products, orders, categories }) {
-  const totalSales = orders.reduce((s, o) => s + (o.total || 0), 0)
+  const totalSales = orders.reduce((s, o) => s + (o.payment_status === 'confirmed' ? Number(o.total) + Number(o.delivery_fee || 0) : 0), 0)
   const pendingCount = orders.filter(o => o.status === 'pending').length
   return (
     <div>
@@ -468,6 +468,12 @@ function OrderManage({ orders, reload, showToast }) {
   const [statusFilter, setStatusFilter] = useState('')
   const [detail, setDetail] = useState(null)
 
+  const viewDetail = async (id) => {
+    const response = await authFetch(`${API}/admin/orders/${id}`)
+    if (response.ok) setDetail(await response.json())
+    else showToast('无法读取订单详情')
+  }
+
   const updateStatus = async (id, status) => {
     await authFetch(`${API}/admin/orders/${id}`, { method: 'PUT', body: { status } })
     showToast('状态已更新'); reload()
@@ -504,8 +510,8 @@ function OrderManage({ orders, reload, showToast }) {
                 <td>{o.order_no}</td>
                 <td>{o.customer}</td>
                 <td>{o.phone}</td>
-                <td style={{ maxWidth: 200 }}>{o.items?.map(i => `${i.product?.name} x${i.quantity}`).join('，')}</td>
-                <td style={{ color: '#ff4444', fontWeight: 600 }}>¥{o.total?.toFixed(2)}</td>
+                <td style={{ maxWidth: 200 }}>{o.items?.map(i => `${i.product?.name}${i.variant ? `（${i.variant}）` : ''} x${i.quantity}`).join('，')}</td>
+                <td style={{ color: '#ff4444', fontWeight: 600 }}>¥{(Number(o.total) + Number(o.delivery_fee || 0)).toFixed(2)}</td>
                 <td>{paymentText[o.payment_method] || o.payment_method}</td>
                 <td>
                   <span style={{ color: o.payment_status === 'confirmed' ? '#52c41a' : o.payment_status === 'paid' ? '#1890ff' : '#fa8c16', fontWeight: 500 }}>
@@ -520,7 +526,7 @@ function OrderManage({ orders, reload, showToast }) {
                 <td>{o.created_at?.slice(0, 19).replace('T', ' ')}</td>
                 <td>
                   <div className="action-btns">
-                    <button className="btn btn-default btn-sm" onClick={() => setDetail(o)}>详情</button>
+                    <button className="btn btn-default btn-sm" onClick={() => viewDetail(o.id)}>详情</button>
                     {(o.payment_method === 'wechat_transfer' || o.payment_method === 'alipay_transfer' || o.payment_method === 'fps_transfer') && o.payment_status !== 'confirmed' && (
                       <button className="btn btn-primary btn-sm" onClick={() => confirmPayment(o.id)}>确认收款</button>
                     )}
@@ -549,12 +555,12 @@ function OrderManage({ orders, reload, showToast }) {
                 <div className="order-detail-items">
                   {detail.items?.map(i => (
                     <div className="order-detail-item" key={i.id}>
-                      <span>{i.product?.image} {i.product?.name} x{i.quantity}</span>
+                      <span>{i.product?.name}{i.variant ? `（${i.variant}）` : ''} x{i.quantity}</span>
                       <span>¥{(i.price * i.quantity).toFixed(2)}</span>
                     </div>
                   ))}
                   <div className="order-detail-item" style={{ borderTop: '1px solid #e8e8e8', marginTop: 8, paddingTop: 10, fontWeight: 600 }}>
-                    <span>合计</span><span style={{ color: '#ff4444' }}>¥{detail.total?.toFixed(2)}</span>
+                    <span>合计（含运费）</span><span style={{ color: '#ff4444' }}>¥{(Number(detail.total) + Number(detail.delivery_fee || 0)).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -704,8 +710,8 @@ function UserManage({ users, showToast }) {
               {userOrders.length === 0 ? <div style={{ color: '#999', textAlign: 'center' }}>暂无订单</div> :
                 userOrders.map(o => (
                   <div key={o.id} style={{ padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
-                    <div style={{ fontWeight: 600 }}>{o.order_no} · HK${o.total_amount}</div>
-                    <div style={{ fontSize: 13, color: '#999' }}>{(o.items || '').substring(0, 60)} · {(o.created_at || '').substring(0, 16)}</div>
+                    <div style={{ fontWeight: 600 }}>{o.order_no} · ¥{Number(o.total || 0).toFixed(2)}</div>
+                    <div style={{ fontSize: 13, color: '#999' }}>{(o.items || []).map(i => `${i.product?.name || '商品'}${i.variant ? `（${i.variant}）` : ''} ×${i.quantity}`).join('，').slice(0, 60)} · {(o.created_at || '').substring(0, 16)}</div>
                   </div>
                 ))}
             </div>

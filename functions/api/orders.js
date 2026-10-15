@@ -1,4 +1,16 @@
-import { getAuthUser, json, cors, readBody } from './_utils'
+import { getAuthUser, json, cors, readBody } from './_utils.js'
+
+const MAX_ITEMS = 100
+const MAX_QUANTITY = 99
+const PAYMENT_METHODS = new Set(['cash_on_delivery', 'wechat_transfer', 'alipay_transfer', 'fps_transfer'])
+
+function validMoney(value) {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+}
+
+function cents(value) {
+  return Math.round(value * 100)
+}
 
 export async function onRequest(context) {
   const { request, env } = context
@@ -9,77 +21,89 @@ export async function onRequest(context) {
 
   if (request.method === 'GET') {
     const { results } = await env.DB.prepare(
-      'SELECT o.*, p.name as delivery_point_name FROM orders o LEFT JOIN delivery_points p ON o.delivery_point_id = p.id WHERE o.user_id = ? ORDER BY o.id DESC'
+      'SELECT o.id, o.order_no, o.user_id, o.customer, o.phone, o.address, o.status, o.total, o.delivery_fee, o.remark, o.payment_method, o.payment_status, o.delivery_point_id, o.created_at, o.updated_at, p.name as delivery_point_name FROM orders o LEFT JOIN delivery_points p ON o.delivery_point_id = p.id WHERE o.user_id = ? ORDER BY o.id DESC'
     ).bind(String(user.id)).all()
-
     const orders = []
     for (const order of results) {
       const { results: items } = await env.DB.prepare(
         'SELECT oi.*, pr.name as product_name, pr.image as product_image FROM order_items oi LEFT JOIN products pr ON oi.product_id = pr.id WHERE oi.order_id = ?'
       ).bind(order.id).all()
-      orders.push({
-        ...order,
-        items: items.map(i => ({ ...i, product: { id: i.product_id, name: i.product_name, image: i.product_image } }))
-      })
+      orders.push({ ...order, items: items.map(i => ({ ...i, product: { id: i.product_id, name: i.product_name, image: i.product_image } })) })
     }
     return json(orders)
   }
+  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
 
-  if (request.method === 'POST') {
-    const body = await readBody(request)
-    const dbUser = await env.DB.prepare('SELECT username, phone FROM users WHERE id = ?').bind(String(user.id)).first()
-    const orderNo = 'ZZ' + Date.now().toString().slice(-8) + Math.floor(Math.random() * 1000) + Math.floor(Math.random() * 1000)
+  const body = await readBody(request)
+  if (!Array.isArray(body.items) || body.items.length === 0 || body.items.length > MAX_ITEMS) {
+    return json({ error: '请选择商品（最多100项）' }, 400)
+  }
+  if (!PAYMENT_METHODS.has(body.payment_method || 'cash_on_delivery')) return json({ error: '支付方式无效' }, 400)
+  if (!['pickup', 'delivery'].includes(body.delivery_type)) return json({ error: '配送方式无效' }, 400)
 
-    let total = 0
-    const items = []
-    for (const item of body.items || []) {
-      const product = await env.DB.prepare('SELECT * FROM products WHERE id = ?').bind(item.product_id).first()
-      if (product) {
-        items.push({ product_id: item.product_id, quantity: item.quantity, price: product.price })
-        total += product.price * item.quantity
-      }
-    }
-
-    const paymentMethod = body.payment_method || 'cash_on_delivery'
-    const pointId = body.delivery_point_id || null
-
-    // 计算运费
-    const deliveryType = body.delivery_type || 'pickup'
-    let deliveryFee = 10
-    if (deliveryType === 'delivery') {
-      deliveryFee = 30  // 配送到家固定30元
-    } else if (pointId) {
-      const point = await env.DB.prepare('SELECT * FROM delivery_points WHERE id = ?').bind(pointId).first()
-      if (point) {
-        const summary = await env.DB.prepare(
-          `SELECT COALESCE(SUM(total), 0) as t FROM orders 
-           WHERE payment_status = 'confirmed' AND delivery_point_id = ? 
-           AND date(created_at) = date('now', '+8 hours')`
-        ).bind(pointId).first()
-        const todayTotal = (summary?.t || 0) + total
-        deliveryFee = todayTotal >= point.threshold ? 0 : point.fee
-      }
-    }
-
-    const result = await env.DB.prepare(
-      `INSERT INTO orders (order_no, user_id, customer, phone, address, status, total, delivery_fee, remark, payment_method, payment_status, delivery_point_id, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+8 hours'))`
-    ).bind(
-      orderNo, String(user.id), (body.customer || dbUser?.username || ''), (body.phone || dbUser?.phone || ''), body.address || '',
-      'pending', total, deliveryFee, body.remark || '', paymentMethod, 'pending', pointId
-    ).run()
-
-    const orderId = result.meta.last_row_id
-    for (const item of items) {
-      await env.DB.prepare('INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (?, ?, ?, ?)')
-        .bind(orderId, item.product_id, item.quantity, item.price).run()
-    }
-
-    const order = await env.DB.prepare(
-      `SELECT o.*, p.name as delivery_point_name FROM orders o LEFT JOIN delivery_points p ON o.delivery_point_id = p.id WHERE o.id = ?`
-    ).bind(orderId).first()
-    return json({ ...order, items }, 201)
+  let point = null
+  if (body.delivery_type === 'pickup') {
+    point = await env.DB.prepare('SELECT * FROM delivery_points WHERE id = ? AND is_active = 1')
+      .bind(body.delivery_point_id || null).first()
+    if (!point) return json({ error: '请选择有效的自取点' }, 400)
+  } else if (!String(body.address || '').trim() || !String(body.phone || '').trim()) {
+    return json({ error: '请填写配送地址和电话' }, 400)
   }
 
-  return json({ error: 'Method not allowed' }, 405)
+  const items = []
+  let subtotalCents = 0
+  for (const item of body.items) {
+    if (!item || typeof item !== 'object' || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > MAX_QUANTITY || !Number.isInteger(Number(item.product_id))) {
+      return json({ error: '商品数量或编号无效' }, 400)
+    }
+    const product = await env.DB.prepare('SELECT * FROM products WHERE id = ? AND is_active = 1')
+      .bind(item.product_id).first()
+    if (!product) return json({ error: '商品已下架或不存在，请刷新购物车' }, 400)
+
+    let variants = []
+    try { variants = product.variants ? JSON.parse(product.variants) : [] } catch { return json({ error: '商品规格配置有误' }, 500) }
+    if (!Array.isArray(variants)) return json({ error: '商品规格配置有误' }, 500)
+    const variant = String(item.variant || '')
+    const selected = variants.length ? variants.find(v => v && v.label === variant) : null
+    if ((variants.length && !selected) || (!variants.length && variant)) return json({ error: '商品规格无效' }, 400)
+    const price = Number(selected ? selected.price : product.price)
+    if (!validMoney(price)) return json({ error: '商品价格配置有误' }, 500)
+    const unitCents = cents(price)
+    subtotalCents += unitCents * item.quantity
+    if (!Number.isSafeInteger(subtotalCents)) return json({ error: '订单金额过大' }, 400)
+    items.push({ product_id: product.id, quantity: item.quantity, variant, price: unitCents / 100 })
+  }
+
+  let deliveryFee = 30
+  if (point) {
+    const summary = await env.DB.prepare(
+      `SELECT COALESCE(SUM(total), 0) as t FROM orders
+       WHERE payment_status = 'confirmed' AND delivery_point_id = ?
+       AND date(created_at) = date('now', '+8 hours')`
+    ).bind(point.id).first()
+    if (!validMoney(Number(point.threshold)) || !validMoney(Number(point.fee))) return json({ error: '运费配置有误' }, 500)
+    deliveryFee = Number(summary?.t || 0) + subtotalCents / 100 >= Number(point.threshold) ? 0 : Number(point.fee)
+  }
+
+  const dbUser = await env.DB.prepare('SELECT username, phone FROM users WHERE id = ?').bind(user.id).first()
+  const orderNo = 'ZZ' + crypto.randomUUID().replace(/-/g, '').slice(0, 16).toUpperCase()
+  const statements = [env.DB.prepare(
+    `INSERT INTO orders (order_no, user_id, customer, phone, address, status, total, delivery_fee, remark, payment_method, payment_status, delivery_point_id, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+8 hours'))`
+  ).bind(
+    orderNo, String(user.id), String(body.customer || dbUser?.username || '').trim(),
+    String(body.phone || dbUser?.phone || '').trim(), String(body.address || '').trim(),
+    'pending', subtotalCents / 100, deliveryFee, String(body.remark || ''),
+    body.payment_method || 'cash_on_delivery', 'pending', point?.id || null
+  )]
+  for (const item of items) {
+    statements.push(env.DB.prepare(
+      'INSERT INTO order_items (order_id, product_id, quantity, price, variant) VALUES ((SELECT id FROM orders WHERE order_no = ?), ?, ?, ?, ?)'
+    ).bind(orderNo, item.product_id, item.quantity, item.price, item.variant))
+  }
+  await env.DB.batch(statements)
+  const order = await env.DB.prepare(
+    'SELECT o.*, p.name as delivery_point_name FROM orders o LEFT JOIN delivery_points p ON o.delivery_point_id = p.id WHERE o.order_no = ?'
+  ).bind(orderNo).first()
+  return json({ ...order, items }, 201)
 }

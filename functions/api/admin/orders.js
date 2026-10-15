@@ -1,4 +1,4 @@
-import { json, cors, getAdminUser } from '../_utils'
+import { json, cors, getAdminUser } from '../_utils.js'
 
 export async function onRequest(context) {
   const { request, env } = context
@@ -10,9 +10,13 @@ export async function onRequest(context) {
 
   const url = new URL(request.url)
   const status = url.searchParams.get('status')
-  let sql = 'SELECT o.*, u.username, u.phone as user_phone, p.name as delivery_point_name FROM orders o LEFT JOIN users u ON o.user_id = u.id LEFT JOIN delivery_points p ON o.delivery_point_id = p.id'
+  const userId = url.searchParams.get('user_id')
+  let sql = 'SELECT o.id, o.order_no, o.user_id, o.customer, o.phone, o.address, o.status, o.total, o.delivery_fee, o.remark, o.payment_method, o.payment_status, o.delivery_point_id, o.created_at, o.updated_at, u.username, u.phone as user_phone, p.name as delivery_point_name FROM orders o LEFT JOIN users u ON o.user_id = u.id LEFT JOIN delivery_points p ON o.delivery_point_id = p.id'
   const params = []
-  if (status) { sql += ' WHERE o.status = ?'; params.push(status) }
+  const filters = []
+  if (status) { filters.push('o.status = ?'); params.push(status) }
+  if (userId) { filters.push('o.user_id = ?'); params.push(userId) }
+  if (filters.length) sql += ' WHERE ' + filters.join(' AND ')
   sql += ' ORDER BY o.id DESC'
 
   const { results } = await env.DB.prepare(sql).bind(...params).all()
