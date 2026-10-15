@@ -189,14 +189,14 @@ function AdminLogin({ onLogin, showToast }) {
 /* ========== 仪表盘 ========== */
 function Dashboard({ products, orders, categories }) {
   const totalSales = orders.reduce((s, o) => s + (o.payment_status === 'confirmed' ? Number(o.total) + Number(o.delivery_fee || 0) : 0), 0)
-  const pendingCount = orders.filter(o => o.status === 'pending').length
+  const pendingCount = orders.filter(o => o.status === 'awaiting_confirmation').length
   return (
     <div>
       <div className="page-header"><h2>数据概览</h2></div>
       <div className="stats-grid">
         <div className="stat-card"><div className="label">商品总数</div><div className="value green">{products.length}</div></div>
         <div className="stat-card"><div className="label">订单总数</div><div className="value blue">{orders.length}</div></div>
-        <div className="stat-card"><div className="label">待处理订单</div><div className="value orange">{pendingCount}</div></div>
+        <div className="stat-card"><div className="label">待确认收款</div><div className="value orange">{pendingCount}</div></div>
         <div className="stat-card"><div className="label">累计销售额</div><div className="value">¥{totalSales.toFixed(2)}</div></div>
       </div>
       <div className="card">
@@ -720,6 +720,9 @@ function OrderManage({ orders, reload, showToast }) {
                       <span>¥{(i.price * i.quantity).toFixed(2)}</span>
                     </div>
                   ))}
+                  <div className="order-detail-item"><span>商品小计</span><span>¥{detail.items?.reduce((sum, i) => sum + Number(i.price) * Number(i.quantity), 0).toFixed(2)}</span></div>
+                  {Number(detail.coupon_discount) > 0 && <div className="order-detail-item"><span>优惠券</span><span>−¥{Number(detail.coupon_discount).toFixed(2)}</span></div>}
+                  <div className="order-detail-item"><span>运费</span><span>¥{Number(detail.delivery_fee || 0).toFixed(2)}</span></div>
                   <div className="order-detail-item" style={{ borderTop: '1px solid #e8e8e8', marginTop: 8, paddingTop: 10, fontWeight: 600 }}>
                     <span>应收（含运费）</span><span style={{ color: '#ff4444' }}>{orderPaymentText(detail)}</span>
                   </div>
@@ -851,7 +854,7 @@ function UserManage({ users, showToast }) {
                 <td>{u.username}</td>
                 <td>{u.phone || '—'}</td>
                 <td>{u.order_count || 0}</td>
-                <td>HK${(u.total_spent || 0).toFixed(1)}</td>
+        <td>¥{Number(u.total_spent || 0).toFixed(2)}</td>
                 <td>{(u.created_at || '').substring(0, 16)}</td>
                 <td>{(u.last_order_at || '从未下单').substring(0, 16)}</td>
                 <td><button className="btn btn-default btn-sm" onClick={() => viewOrders(u)}>查看订单</button></td>
@@ -869,7 +872,7 @@ function UserManage({ users, showToast }) {
             <div className="modal-body" style={{ maxHeight: 400, overflowY: 'auto' }}>
               <div className="form-row"><label>手机号</label><div>{detail.phone || '未填写'}</div></div>
               <div className="form-row"><label>订单数</label><div>{detail.order_count}</div></div>
-              <div className="form-row"><label>累计消费</label><div>HK${(detail.total_spent || 0).toFixed(1)}</div></div>
+              <div className="form-row"><label>累计消费</label><div>¥{Number(detail.total_spent || 0).toFixed(2)}</div></div>
               <hr style={{ margin: '16px 0' }} />
               {userOrders.length === 0 ? <div style={{ color: '#999', textAlign: 'center' }}>暂无订单</div> :
                 userOrders.map(o => (

@@ -9,7 +9,7 @@ export async function onRequest(context) {
   const user = await getAuthUser(request, env)
   if (!user) return json({ error: '未登录' }, 401)
 
-  const order = await env.DB.prepare('SELECT * FROM orders WHERE id = ?').bind(id).first()
+  const order = await env.DB.prepare('SELECT o.*, n.number AS public_no, p.name AS delivery_point_name FROM orders o LEFT JOIN order_numbers n ON n.order_id = o.id LEFT JOIN delivery_points p ON p.id = o.delivery_point_id WHERE o.id = ?').bind(id).first()
   if (!order) return json({ error: 'not found' }, 404)
   if (order.user_id !== String(user.id)) return json({ error: '无权查看该订单' }, 403)
 

@@ -6,6 +6,8 @@ import { onRequest as adminOrders } from '../functions/api/admin/orders.js'
 import { onRequest as adminSettings } from '../functions/api/admin/settings.js'
 import { onRequest as stats } from '../functions/api/stats.js'
 import { onRequest as products } from '../functions/api/products.js'
+import { onRequest as couponClaims } from '../functions/api/coupons.js'
+import { onRequest as adminCouponClaims } from '../functions/api/admin/coupon-claims.js'
 
 const PNG_PROOF = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/pR8AAAAASUVORK5CYII='
 
@@ -172,4 +174,42 @@ test('filters admin order history by user and validates exchange rate', async ()
   assert.deepEqual(listQuery.values, ['7'])
   const badRate = await call(adminSettings, db, '/api/admin/settings', 'POST', { exchange_rate: -1 })
   assert.equal(badRate.status, 400)
+})
+
+test('coupon screenshot is saved for admin review and duplicate submission waits for review', async () => {
+  let saved = null
+  const db = {
+    prepare(sql) {
+      return {
+        bind(...values) {
+          return {
+            async first() {
+              if (sql.includes('FROM users WHERE token')) return { id: 7, username: 'buyer', is_admin: 1 }
+              if (sql.includes('FROM coupon_campaigns')) return { id: 1 }
+              if (sql.includes('FROM coupon_claims WHERE campaign_id')) return saved ? { id: 3, status: 'pending' } : null
+              return null
+            },
+            async run() {
+              if (sql.includes('INSERT INTO coupon_claims')) saved = { id: 3, screenshot: values[2], status: 'pending' }
+              return { success: true }
+            },
+            async all() {
+              if (sql.includes('FROM coupon_claims q')) return { results: saved ? [{ ...saved, campaign_id: 1, user_id: 7 }] : [] }
+              return { results: [] }
+            }
+          }
+        },
+        async all() {
+          if (sql.includes('FROM coupon_claims q')) return { results: saved ? [{ ...saved, campaign_id: 1, user_id: 7 }] : [] }
+          return { results: [] }
+        }
+      }
+    }
+  }
+  const upload = () => call(couponClaims, db, '/api/coupons', 'POST', { campaign_id: 1, screenshot: PNG_PROOF })
+  assert.equal((await upload()).status, 201)
+  assert.equal(saved.screenshot, PNG_PROOF)
+  const review = await call(adminCouponClaims, db, '/api/admin/coupon-claims', 'GET')
+  assert.equal((await review.json())[0].screenshot, PNG_PROOF)
+  assert.equal((await upload()).status, 409)
 })

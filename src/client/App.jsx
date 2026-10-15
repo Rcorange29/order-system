@@ -208,6 +208,7 @@ export default function App() {
   const [editingAddr, setEditingAddr] = useState(null)
   const [toast, setToast] = useState('')
   const [bannerIdx, setBannerIdx] = useState(0)
+  const [bannerPaused, setBannerPaused] = useState(false)
   const [checkoutAddrId, setCheckoutAddrId] = useState(null)
   const [remark, setRemark] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('wechat_transfer')
@@ -239,6 +240,10 @@ export default function App() {
   const [couponLoading, setCouponLoading] = useState(false)
   const [couponError, setCouponError] = useState(false)
   const [showActivity, setShowActivity] = useState(false)
+  const [showBrand, setShowBrand] = useState(false)
+  const [showActivityReturnGuide, setShowActivityReturnGuide] = useState(false)
+  const [activityProofFile, setActivityProofFile] = useState(null)
+  const [returnToActivityAfterLogin, setReturnToActivityAfterLogin] = useState(false)
   const [claimUploading, setClaimUploading] = useState(false)
   const [selectedCouponId, setSelectedCouponId] = useState('')
   const [lang, setLang] = useState(() => localStorage.getItem('lang') || 'zh_CN')
@@ -342,12 +347,14 @@ export default function App() {
     fetch(`${API}/categories`).then(r => r.json()).then(setCategories)
     fetch(`${API}/settings`).then(r => r.json()).then(d => setExchangeRate(d.exchange_rate || 1.2)).catch(()=>{})
     if (!localStorage.getItem('currency')) setShowOnboard(true)
+    if (new URLSearchParams(window.location.search).get('activity') === 'share') setShowActivity(true)
   }, [])
 
   useEffect(() => {
+    if (bannerPaused) return
     const t = setInterval(() => setBannerIdx(i => (i + 1) % 3), 6500)
     return () => clearInterval(t)
-  }, [])
+  }, [bannerPaused])
 
   const loadCoupons = () => {
     setCouponLoading(true)
@@ -425,6 +432,24 @@ export default function App() {
     }
   }
 
+  const openActivity = () => {
+    setShowActivityReturnGuide(false)
+    setShowActivity(true)
+    const url = new URL(window.location.href)
+    url.searchParams.set('activity', 'share')
+    window.history.replaceState({}, '', url)
+  }
+
+  const closeActivity = () => {
+    if (claimUploading) { showToast('正在上传截图，请稍候'); return }
+    setShowActivity(false)
+    const url = new URL(window.location.href)
+    url.searchParams.delete('activity')
+    window.history.replaceState({}, '', url)
+    const hasClaim = activityCampaign && couponData.claims.some(c => Number(c.campaign_id) === Number(activityCampaign.id) && c.status !== 'rejected')
+    if (!hasClaim) setShowActivityReturnGuide(true)
+  }
+
   const submitCouponScreenshot = async (file) => {
     if (!file || !activityCampaign || claimUploading) return
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) { showToast('请上传图片截图'); return }
@@ -454,8 +479,9 @@ export default function App() {
       const response = await authFetch(`${API}/coupons`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ campaign_id: activityCampaign.id, screenshot }) })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || '上传失败')
+      setActivityProofFile(null)
+      await loadCoupons()
       showToast('截图已提交，请等待后台审核')
-      loadCoupons()
     } catch (error) { showToast(error.message) }
     finally { setClaimUploading(false) }
   }
@@ -610,7 +636,11 @@ export default function App() {
     localStorage.setItem('token', data.token)
     localStorage.setItem('currentUser', JSON.stringify({ username: data.username, phone: data.phone }))
     setCurrentUser({ username: data.username, phone: data.phone })
-    setTab('my')
+    if (returnToActivityAfterLogin) {
+      setReturnToActivityAfterLogin(false)
+      setTab('home')
+      openActivity()
+    } else setTab('my')
     showToast('登录成功')
   }
 
@@ -626,7 +656,11 @@ export default function App() {
     localStorage.setItem('token', data.token)
     localStorage.setItem('currentUser', JSON.stringify({ username: data.username, phone: data.phone }))
     setCurrentUser({ username: data.username, phone: data.phone })
-    setTab('my')
+    if (returnToActivityAfterLogin) {
+      setReturnToActivityAfterLogin(false)
+      setTab('home')
+      openActivity()
+    } else setTab('my')
     showToast('注册成功')
   }
 
@@ -731,8 +765,8 @@ export default function App() {
               <div className="info">
                 <div className="name">{pn(p.name)}</div>
                 <div className="bottom-row">
-                  <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}{hasVariants(p) ? " · 多规格" : ""}</small></div>
-                  <button className="add-btn" aria-label={`${hasVariants(p) ? '选择规格' : '加入购物车'}：${pn(p.name)}`} onClick={(e) => { e.stopPropagation(); setTab('home'); quickAdd(p) }}>+</button>
+                  <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}</small></div>
+                  <button className={`add-btn ${hasVariants(p) ? 'variant-add-btn' : ''}`} aria-label={`${hasVariants(p) ? '选择规格' : '加入购物车'}：${pn(p.name)}`} onClick={(e) => { e.stopPropagation(); setTab('home'); quickAdd(p) }}>{hasVariants(p) ? '选规格' : '+'}</button>
                 </div>
               </div>
             </div>
@@ -765,8 +799,8 @@ export default function App() {
               const c = currency === 'HKD' ? 'CNY' : 'HKD'
               setCurrency(c); localStorage.setItem('currency', c)
             }} className="currency-switch">
-              <span className={currency === 'HKD' ? 'active' : ''}>HKD</span>
-              <span className={currency === 'CNY' ? 'active' : ''}>CNY</span>
+              <span className={currency === 'HKD' ? 'active' : ''}>HK$ HKD</span>
+              <span className={currency === 'CNY' ? 'active' : ''}>¥ CNY</span>
             </span>
           </div>
         </div>
@@ -805,13 +839,17 @@ export default function App() {
       {tab === 'home' && (
         <>
           <div className="banner">
-            <div className={`hero-poster hero-poster-${bannerIdx}`}>
+            <div className={`hero-poster hero-poster-${bannerIdx}`} role="button" tabIndex={0}
+              aria-label={bannerIdx === 0 ? '查看服务点凑单规则' : bannerIdx === 1 ? '了解珍珍优质果菜' : '打开分享团购活动'}
+              onPointerDown={() => setBannerPaused(true)} onFocus={() => setBannerPaused(true)}
+              onClick={() => { if (bannerIdx === 0) setShowHelp(true); else if (bannerIdx === 1) setShowBrand(true); else openActivity() }}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (bannerIdx === 0) setShowHelp(true); else if (bannerIdx === 1) setShowBrand(true); else openActivity() } }}>
               {bannerIdx === 0 && <>
                 <div className="hero-message">
                   <span className="hero-kicker">{lang === 'en' ? 'GROUP PICKUP' : lang === 'zh_HK' ? '服務點湊單' : '服务点凑单'}</span>
                   <h2>{lang === 'en' ? 'Free pickup' : lang === 'zh_HK' ? '自取免運費' : '自取免运费'}</h2>
                   <p>{lang === 'en' ? 'Orders at the same point add up for one delivery.' : lang === 'zh_HK' ? '同一服務點大家一起湊滿，統一配送。' : '同一服务点大家一起凑满，统一配送。'}</p>
-                  <button type="button" className="hero-link" onClick={() => setShowHelp(true)}>{lang === 'en' ? 'Delivery rules' : lang === 'zh_HK' ? '看配送規則' : '看配送规则'} <span aria-hidden="true">↗</span></button>
+                  <span className="hero-link">{lang === 'en' ? 'Delivery rules' : lang === 'zh_HK' ? '看配送規則' : '看配送规则'} <span aria-hidden="true">↗</span></span>
                 </div>
                 <div className="hero-visual hero-visual-threshold" aria-label={lang === 'en' ? `This point delivers from ¥${effectiveThreshold} CNY` : `本站点合计满 ¥${effectiveThreshold} CNY 配送`}>
                   <span>{lang === 'en' ? 'THIS POINT' : lang === 'zh_HK' ? '本站點合計滿' : '本站点合计满'}</span>
@@ -825,7 +863,7 @@ export default function App() {
                   <span className="hero-kicker">ZHENZHEN FRESH</span>
                   <h2>{t('welcome')}</h2>
                   <p>{lang === 'en' ? 'Fruit, vegetables and daily favourites in one place.' : lang === 'zh_HK' ? '水果、蔬菜、日常食材，一站挑選。' : '水果、蔬菜、日常食材，一站挑选。'}</p>
-                  <button type="button" className="hero-link" onClick={() => { setTab('category'); window.scrollTo(0, 0) }}>{lang === 'en' ? 'Browse produce' : lang === 'zh_HK' ? '去揀菜' : '去挑菜'} <span aria-hidden="true">↗</span></button>
+                  <span className="hero-link">{lang === 'en' ? 'About us' : lang === 'zh_HK' ? '認識珍珍' : '认识珍珍'} <span aria-hidden="true">↗</span></span>
                 </div>
                 <div className="hero-visual hero-visual-produce" aria-hidden="true"><img src="/images/market-hero.jpg" alt="" /></div>
               </>}
@@ -834,7 +872,7 @@ export default function App() {
                   <span className="hero-kicker">{lang === 'en' ? 'SHARE & SAVE' : lang === 'zh_HK' ? '分享團購活動' : '分享团购活动'}</span>
                   <h2>{lang === 'en' ? 'Share for a coupon' : lang === 'zh_HK' ? '分享團購，領券' : '分享团购，领券'}</h2>
                   <p>{lang === 'en' ? 'Get 10 likes, upload a screenshot and claim your coupon.' : lang === 'zh_HK' ? '朋友圈集滿 10 讚，截圖上傳審核後領券。' : '朋友圈集满 10 赞，截图上传审核后领券。'}</p>
-                  <button type="button" className="hero-link" onClick={() => setShowActivity(true)}>{lang === 'en' ? 'See the offer' : lang === 'zh_HK' ? '查看活動' : '查看活动'} <span aria-hidden="true">↗</span></button>
+                  <span className="hero-link">{lang === 'en' ? 'See the offer' : lang === 'zh_HK' ? '查看活動' : '查看活动'} <span aria-hidden="true">↗</span></span>
                 </div>
                 <div className="hero-visual hero-visual-coupon" aria-label={lang === 'en' ? `${activityCampaign?.discount_amount || 5} CNY off when spending ${activityCampaign?.min_spend || 15} CNY` : `满 ¥${activityCampaign?.min_spend || 15} 减 ¥${activityCampaign?.discount_amount || 5}`}>
                   <span>{lang === 'en' ? 'COUPON' : lang === 'zh_HK' ? '分享獎勵' : '分享奖励'}</span>
@@ -845,7 +883,7 @@ export default function App() {
             </div>
             <div className="hero-tabs" aria-label={lang === 'en' ? 'Poster selection' : '切换海报'}>
               {(lang === 'en' ? ['Free pickup', 'Fresh produce', 'Coupon offer'] : lang === 'zh_HK' ? ['自取免運', '珍珍果菜', '分享領券'] : ['自取免运', '珍珍果菜', '分享领券']).map((label, index) => (
-                <button type="button" key={label} className={bannerIdx === index ? 'active' : ''} aria-pressed={bannerIdx === index} onClick={() => setBannerIdx(index)}>{label}</button>
+                <button type="button" key={label} className={bannerIdx === index ? 'active' : ''} aria-pressed={bannerIdx === index} onClick={() => { setBannerPaused(true); setBannerIdx(index) }}>{label}</button>
               ))}
             </div>
           </div>
@@ -864,8 +902,8 @@ export default function App() {
             <span>{t('details')}</span>
           </div>
 
-          <div className="activity-strip" onClick={() => setShowActivity(true)} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') setShowActivity(true) }}>
-            <span>分享团购 · 集满 10 赞领 {fmt(activityCampaign?.discount_amount || 5)} 优惠券</span><span>查看活动 ›</span>
+          <div className="activity-strip" onClick={openActivity} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') openActivity() }}>
+            <span>分享团购 · 集满 10 赞领 {fmt(activityCampaign?.discount_amount || 5)} 优惠券</span><span>参加／上传截图 ›</span>
           </div>
 
           {/* 凑单进度条 */}
@@ -917,8 +955,8 @@ export default function App() {
                       <div className="sales">{p.is_hot ? '🔥 ' + t('tagHot') : ''}</div>
                     </div>
                     <div className="bottom-row">
-                      <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}{hasVariants(p) ? " · 多规格" : ""}</small></div>
-                      {p.is_active !== false && <button className="add-btn" aria-label={`${hasVariants(p) ? '选择规格' : '加入购物车'}：${pn(p.name)}`} onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>+</button>}
+                      <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}</small></div>
+                      {p.is_active !== false && <button className={`add-btn ${hasVariants(p) ? 'variant-add-btn' : ''}`} aria-label={`${hasVariants(p) ? '选择规格' : '加入购物车'}：${pn(p.name)}`} onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>{hasVariants(p) ? '选规格' : '+'}</button>}
                     </div>
                   </div>
                 </div>
@@ -934,7 +972,7 @@ export default function App() {
         <div className="coupon-page">
           <div className="back-btn" onClick={() => setTab('my')}>‹ 返回</div>
           <h2>分享团购 · 集赞领券</h2>
-          {couponData.campaigns.length ? couponData.campaigns.map(c => <div className="coupon-card coupon-action" key={c.id} onClick={() => setShowActivity(true)}><strong>{c.title}</strong><p>朋友圈集满 10 个赞，领满 {fmt(c.min_spend)} 减 {fmt(c.discount_amount)} 优惠券</p><small>查看活动与提交截图 ›</small></div>) : <div className="coupon-card"><strong>活动加载中</strong></div>}
+          {couponData.campaigns.length ? couponData.campaigns.map(c => <div className="coupon-card coupon-action" key={c.id} onClick={openActivity}><strong>{c.title}</strong><p>朋友圈集满 10 个赞，领满 {fmt(c.min_spend)} 减 {fmt(c.discount_amount)} 优惠券；每人限领一次。</p><small>查看活动与上传截图 ›</small></div>) : <div className="coupon-card"><strong>活动加载中</strong></div>}
           <h3>我的优惠券</h3>
           {!currentUser ? <p className="coupon-empty" onClick={() => setTab('login')}>登录后查看已发给你的优惠券 ›</p> : couponData.grants.length ? couponData.grants.map(g => <div className="coupon-card" key={g.id}><strong>满 {fmt(g.min_spend)} 减 {fmt(g.discount_amount)}</strong><p>{g.title}</p><small>{g.used_order_no ? '已使用' : '可在结算时使用'} · 领取时间：{g.granted_at}</small></div>) : <p className="coupon-empty">暂时没有收到优惠券。点击上方活动参与分享。</p>}
         </div>
@@ -982,8 +1020,8 @@ export default function App() {
                       <div className="sales">{p.is_hot ? '🔥 ' + t('tagHot') : ''}</div>
                     </div>
                     <div className="bottom-row">
-                      <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}{hasVariants(p) ? " · 多规格" : ""}</small></div>
-                      {p.is_active !== false && <button className="add-btn" aria-label={`${hasVariants(p) ? '选择规格' : '加入购物车'}：${pn(p.name)}`} onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>+</button>}
+                      <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}</small></div>
+                      {p.is_active !== false && <button className={`add-btn ${hasVariants(p) ? 'variant-add-btn' : ''}`} aria-label={`${hasVariants(p) ? '选择规格' : '加入购物车'}：${pn(p.name)}`} onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>{hasVariants(p) ? '选规格' : '+'}</button>}
                     </div>
                   </div>
                 </div>
@@ -1258,7 +1296,7 @@ export default function App() {
                     {couponData.grants.filter(g => !g.used_order_no && cartTotal >= Number(g.min_spend)).map(g => <option key={g.id} value={g.id}>满 {fmt(g.min_spend)} 减 {fmt(g.discount_amount)}</option>)}
                   </select> : <div className="checkout-coupon-empty">无优惠券可用</div>}
               {!couponLoading && !couponError && couponData.grants.some(g => !g.used_order_no && cartTotal < Number(g.min_spend)) && <small style={{ color: '#777' }}>已有优惠券，商品金额达到使用门槛后可选</small>}
-              {!couponLoading && !couponError && !couponData.grants.some(g => !g.used_order_no && cartTotal >= Number(g.min_spend)) && <button type="button" className="checkout-activity-link" onClick={() => setShowActivity(true)}>参加分享活动，领取满 {fmt(activityCampaign?.min_spend || 15)} 减 {fmt(activityCampaign?.discount_amount || 5)} 优惠券 ›</button>}
+              {!couponLoading && !couponError && !couponData.grants.some(g => !g.used_order_no && cartTotal >= Number(g.min_spend)) && <button type="button" className="checkout-activity-link" onClick={openActivity}>参加分享活动，领取满 {fmt(activityCampaign?.min_spend || 15)} 减 {fmt(activityCampaign?.discount_amount || 5)} 优惠券 ›</button>}
             </div>
             <div className="form-group">
               <label>选择付款币种 · 实际转账金额</label>
@@ -1545,11 +1583,11 @@ export default function App() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <button onClick={() => { setCurrency('HKD'); localStorage.setItem('currency', 'HKD'); setShowOnboard(true) }}
                 style={{ padding: 16, borderRadius: 12, border: '2px solid var(--market-green)', background: 'var(--market-green-soft)', color: 'var(--market-accent)', fontSize: 18, fontWeight: 700, cursor: 'pointer' }}>
-                HKD
+                HK$ HKD
               </button>
               <button onClick={() => { setCurrency('CNY'); localStorage.setItem('currency', 'CNY'); setShowOnboard(true) }}
                 style={{ padding: 16, borderRadius: 12, border: '2px solid #ddd', background: '#fff', color: '#333', fontSize: 18, fontWeight: 600, cursor: 'pointer' }}>
-                CNY
+                ¥ CNY
               </button>
             </div>
           </div>
@@ -1720,17 +1758,46 @@ export default function App() {
       )}
 
       {showActivity && (
-        <div className="checkout-overlay" onClick={() => setShowActivity(false)}>
+        <div className="checkout-overlay" onClick={closeActivity}>
           <div className="checkout-panel activity-panel" onClick={e => e.stopPropagation()}>
             <h3>分享团购 · 集赞领券</h3>
             <p className="activity-intro">和邻居、同学一起买新鲜果菜。服务点凑满起送额后统一配送，自取免运费。</p>
-            <div className="activity-rule"><b>集满 10 个赞，领满 {fmt(activityCampaign?.min_spend || 15)} 减 {fmt(activityCampaign?.discount_amount || 5)}</b><p>复制下方宣传语发到朋友圈；集满 10 个赞后，上传朋友圈截图。后台审核通过，优惠券会发到“我的优惠券”。每人限领一次。</p></div>
+            <div className="activity-rule"><b>集满 10 个赞，领满 {fmt(activityCampaign?.min_spend || 15)} 减 {fmt(activityCampaign?.discount_amount || 5)}</b><p>复制下方宣传语发到朋友圈；集满 10 个赞后，上传朋友圈截图。后台审核通过，优惠券会发到“我的优惠券”。</p><strong className="activity-limit">每人限领一次，请勿重复注册领取。</strong></div>
             <div className="activity-share"><small>朋友圈分享文案</small><p>{GROUP_BUY_SHARE_TEXT}</p><button onClick={() => copyText(GROUP_BUY_SHARE_TEXT, '宣传语')}>一键复制宣传语</button></div>
-            {activityCampaign ? !currentUser ? <button className="btn-submit" style={{ width: '100%', marginTop: 16 }} onClick={() => { setShowActivity(false); setTab('login') }}>登录后上传截图</button> : <>
+            <p className="activity-return-hint">稍后回来上传：从首页海报下方的「分享团购」入口，或「我的 → 优惠券」进入本活动。</p>
+            {activityCampaign ? !currentUser ? <button className="btn-submit" style={{ width: '100%', marginTop: 16 }} onClick={() => { setReturnToActivityAfterLogin(true); setShowActivity(false); setTab('login') }}>登录后上传截图</button> : <>
               {(() => { const claim = couponData.claims.find(c => Number(c.campaign_id) === Number(activityCampaign.id)); return claim && <p className="activity-status">{claim.status === 'pending' ? '截图正在审核' : claim.status === 'approved' ? '审核通过，优惠券已发放' : `未通过：${claim.admin_note || '可以重新提交截图'}`}</p> })()}
-              {!couponData.claims.some(c => Number(c.campaign_id) === Number(activityCampaign.id) && c.status !== 'rejected') && <label className="activity-upload">{claimUploading ? '正在上传…' : '上传朋友圈截图'}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={claimUploading} onChange={e => { submitCouponScreenshot(e.target.files?.[0]); e.target.value = '' }} /></label>}
+              {!couponData.claims.some(c => Number(c.campaign_id) === Number(activityCampaign.id) && c.status !== 'rejected') && <>
+                <label className="activity-upload">{activityProofFile ? '重新选择截图' : '选择朋友圈截图'}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={claimUploading} onChange={e => { const file = e.target.files?.[0]; if (file) setActivityProofFile(file); e.target.value = '' }} /></label>
+                {activityProofFile && <><p className="activity-selected">已选择：{activityProofFile.name}</p><button type="button" className="activity-confirm-upload" disabled={claimUploading} onClick={() => submitCouponScreenshot(activityProofFile)}>{claimUploading ? '正在上传…' : '确认上传截图'}</button></>}
+                <small className="activity-upload-note">支持 PNG、JPEG、WebP；提交后可在这里查看审核状态。</small>
+              </>}
             </> : <p className="activity-status">活动加载中…</p>}
-            <button className="btn-cancel" style={{ width: '100%', marginTop: 10 }} onClick={() => setShowActivity(false)}>关闭</button>
+            <button className="btn-cancel" style={{ width: '100%', marginTop: 10 }} onClick={closeActivity}>关闭活动</button>
+          </div>
+        </div>
+      )}
+
+      {showActivityReturnGuide && (
+        <div className="checkout-overlay" onClick={() => setShowActivityReturnGuide(false)}>
+          <div className="checkout-panel activity-guide-panel" onClick={e => e.stopPropagation()}>
+            <h3>下次怎么回来上传？</h3>
+            <p>打开首页海报下方的「分享团购」入口，或者到「我的 → 优惠券 → 分享团购活动」，就能重新找到截图上传处。</p>
+            {activityProofFile && <p className="activity-guide-warning">你选的截图尚未提交；离开网站后需要重新选择，再点「确认上传截图」。</p>}
+            <button type="button" className="btn-submit" onClick={() => setShowActivityReturnGuide(false)}>知道了</button>
+          </div>
+        </div>
+      )}
+
+      {showBrand && (
+        <div className="checkout-overlay" onClick={() => setShowBrand(false)}>
+          <div className="checkout-panel brand-panel" onClick={e => e.stopPropagation()}>
+            <span className="brand-eyebrow">ZHENZHEN FRESH</span>
+            <h3>认识珍珍优质果菜</h3>
+            <div className="brand-store-count"><strong>9</strong><span>家香港门店</span></div>
+            <p>珍珍优质果菜在香港设有 9 家门店，分布于不同地区。线上可以挑选水果、蔬菜和日常食材，选择方便的服务点自取；大家凑满起送额后统一配送，自取免运费。</p>
+            <button type="button" className="btn-submit" onClick={() => { setShowBrand(false); setTab('category'); window.scrollTo(0, 0) }}>去挑选果菜</button>
+            <button type="button" className="brand-close" onClick={() => setShowBrand(false)}>关闭</button>
           </div>
         </div>
       )}
@@ -1967,7 +2034,8 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast, onRe
             </div>
           ))}
           <div className="order-detail-summary">
-            <div className="row"><span>商品金额（优惠后）</span><span>{orderFmt(order.total)}</span></div>
+            <div className="row"><span>商品小计</span><span>{orderFmt(order.items?.reduce((sum, i) => sum + Number(i.price) * Number(i.quantity), 0) || 0)}</span></div>
+            {Number(order.coupon_discount) > 0 && <div className="row"><span>优惠券</span><span>−{orderFmt(order.coupon_discount)}</span></div>}
             <div className="row"><span>运费</span><span>{orderFmt(order.delivery_fee || 0)}</span></div>
             <div className="row total"><span>{order.payment_status === 'refunded' ? '原订单金额' : '应付'}</span><span>{orderPaymentText(order)} · {order.payment_currency || 'CNY'}</span></div>
           </div>
