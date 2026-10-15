@@ -345,7 +345,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    const t = setInterval(() => setBannerIdx(i => (i + 1) % 2), 4000)
+    const t = setInterval(() => setBannerIdx(i => (i + 1) % 3), 6500)
     return () => clearInterval(t)
   }, [])
 
@@ -805,22 +805,48 @@ export default function App() {
       {tab === 'home' && (
         <>
           <div className="banner">
-            <div className={`banner-slide banner-poster ${bannerIdx === 0 ? 'banner-green' : 'banner-orange'}`}>
-              <div className="banner-copy">{bannerIdx === 0 ? (
-                <>
-                  <div className="banner-title">{t('welcome')}</div>
-                  <div className="banner-sub">{t('slogan')}</div>
-                </>
-              ) : (
-                <>
-                  <div className="banner-title">{t('groupBuyBanner')}</div>
-                  <div className="banner-sub">{lang === 'en' ? `Group delivery at ${fmt(effectiveThreshold)}` : lang === 'zh_HK' ? `滿 ${fmt(effectiveThreshold)} 統一配送` : `满 ${fmt(effectiveThreshold)} 统一配送`}</div>
-                </>
-              )}</div>
+            <div className={`hero-poster hero-poster-${bannerIdx}`}>
+              {bannerIdx === 0 && <>
+                <div className="hero-message">
+                  <span className="hero-kicker">{lang === 'en' ? 'GROUP PICKUP' : lang === 'zh_HK' ? '服務點湊單' : '服务点凑单'}</span>
+                  <h2>{lang === 'en' ? 'Free pickup' : lang === 'zh_HK' ? '自取免運費' : '自取免运费'}</h2>
+                  <p>{lang === 'en' ? 'Orders at the same point add up for one delivery.' : lang === 'zh_HK' ? '同一服務點大家一起湊滿，統一配送。' : '同一服务点大家一起凑满，统一配送。'}</p>
+                  <button type="button" className="hero-link" onClick={() => setShowHelp(true)}>{lang === 'en' ? 'Delivery rules' : lang === 'zh_HK' ? '看配送規則' : '看配送规则'} <span aria-hidden="true">↗</span></button>
+                </div>
+                <div className="hero-visual hero-visual-threshold" aria-label={lang === 'en' ? `This point delivers from ¥${effectiveThreshold} CNY` : `本站点合计满 ¥${effectiveThreshold} CNY 配送`}>
+                  <span>{lang === 'en' ? 'THIS POINT' : lang === 'zh_HK' ? '本站點合計滿' : '本站点合计满'}</span>
+                  <strong>¥{effectiveThreshold}</strong>
+                  <small>CNY</small>
+                  <i aria-hidden="true" />
+                </div>
+              </>}
+              {bannerIdx === 1 && <>
+                <div className="hero-message">
+                  <span className="hero-kicker">ZHENZHEN FRESH</span>
+                  <h2>{t('welcome')}</h2>
+                  <p>{lang === 'en' ? 'Fruit, vegetables and daily favourites in one place.' : lang === 'zh_HK' ? '水果、蔬菜、日常食材，一站挑選。' : '水果、蔬菜、日常食材，一站挑选。'}</p>
+                  <button type="button" className="hero-link" onClick={() => { setTab('category'); window.scrollTo(0, 0) }}>{lang === 'en' ? 'Browse produce' : lang === 'zh_HK' ? '去揀菜' : '去挑菜'} <span aria-hidden="true">↗</span></button>
+                </div>
+                <div className="hero-visual hero-visual-produce" aria-hidden="true"><img src="/images/market-hero.jpg" alt="" /></div>
+              </>}
+              {bannerIdx === 2 && <>
+                <div className="hero-message">
+                  <span className="hero-kicker">{lang === 'en' ? 'SHARE & SAVE' : lang === 'zh_HK' ? '分享團購活動' : '分享团购活动'}</span>
+                  <h2>{lang === 'en' ? 'Share for a coupon' : lang === 'zh_HK' ? '分享團購，領券' : '分享团购，领券'}</h2>
+                  <p>{lang === 'en' ? 'Get 10 likes, upload a screenshot and claim your coupon.' : lang === 'zh_HK' ? '朋友圈集滿 10 讚，截圖上傳審核後領券。' : '朋友圈集满 10 赞，截图上传审核后领券。'}</p>
+                  <button type="button" className="hero-link" onClick={() => setShowActivity(true)}>{lang === 'en' ? 'See the offer' : lang === 'zh_HK' ? '查看活動' : '查看活动'} <span aria-hidden="true">↗</span></button>
+                </div>
+                <div className="hero-visual hero-visual-coupon" aria-label={lang === 'en' ? `${activityCampaign?.discount_amount || 5} CNY off when spending ${activityCampaign?.min_spend || 15} CNY` : `满 ¥${activityCampaign?.min_spend || 15} 减 ¥${activityCampaign?.discount_amount || 5}`}>
+                  <span>{lang === 'en' ? 'COUPON' : lang === 'zh_HK' ? '分享獎勵' : '分享奖励'}</span>
+                  <strong><small>¥</small>{activityCampaign?.discount_amount || 5}</strong>
+                  <em>{lang === 'en' ? `on ¥${activityCampaign?.min_spend || 15}+` : `满 ¥${activityCampaign?.min_spend || 15} 可用`}</em>
+                </div>
+              </>}
             </div>
-            <div className="banner-dots">
-              <span className={bannerIdx === 0 ? 'active' : ''} />
-              <span className={bannerIdx === 1 ? 'active' : ''} />
+            <div className="hero-tabs" aria-label={lang === 'en' ? 'Poster selection' : '切换海报'}>
+              {(lang === 'en' ? ['Free pickup', 'Fresh produce', 'Coupon offer'] : lang === 'zh_HK' ? ['自取免運', '珍珍果菜', '分享領券'] : ['自取免运', '珍珍果菜', '分享领券']).map((label, index) => (
+                <button type="button" key={label} className={bannerIdx === index ? 'active' : ''} aria-pressed={bannerIdx === index} onClick={() => setBannerIdx(index)}>{label}</button>
+              ))}
             </div>
           </div>
 
