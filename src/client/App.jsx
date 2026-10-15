@@ -732,7 +732,7 @@ export default function App() {
                 <div className="name">{pn(p.name)}</div>
                 <div className="bottom-row">
                   <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}{hasVariants(p) ? " · 多规格" : ""}</small></div>
-                  <button className="add-btn" onClick={(e) => { e.stopPropagation(); setTab('home'); quickAdd(p) }}>+</button>
+                  <button className="add-btn" aria-label={`${hasVariants(p) ? '选择规格' : '加入购物车'}：${pn(p.name)}`} onClick={(e) => { e.stopPropagation(); setTab('home'); quickAdd(p) }}>+</button>
                 </div>
               </div>
             </div>
@@ -773,17 +773,20 @@ export default function App() {
         )}
         {(tab === 'category' || search) && (
         <>
-        <div className="search-box">
-          🔍 <input
-            placeholder={t('search')}
+        <div className="category-search-label">{lang === 'en' ? 'Find a product' : '找商品'}</div>
+        <form className="search-box" role="search" onSubmit={e => { e.preventDefault(); setSearch(searchInput.trim()); if (searchInput.trim()) saveSearchHistory(searchInput.trim()); setActiveCategory(null); setTab('category') }}>
+          <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg>
+          <input
+            aria-label={t('search')}
+            placeholder={lang === 'en' ? 'Search fruit, vegetables…' : lang === 'zh_HK' ? '搜尋商品，例如番茄、蘋果' : '搜索商品，例如番茄、苹果'}
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') { setSearch(searchInput); saveSearchHistory(searchInput); setTab('home') } }}
           />
           {searchInput && (
-            <span style={{ color: '#999', cursor: 'pointer', fontSize: 13 }} onClick={() => { setSearchInput(''); setSearch('') }}>清除</span>
+            <button type="button" className="search-clear" onClick={() => { setSearchInput(''); setSearch('') }}>{lang === 'en' ? 'Clear' : '清除'}</button>
           )}
-        </div>
+          <button type="submit" className="search-submit">{lang === 'en' ? 'Search' : lang === 'zh_HK' ? '搜尋' : '搜索'}</button>
+        </form>
         {searchHistory.length > 0 && !searchInput && (
           <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
             <span style={{ fontSize: 12, opacity: 0.8 }}>热门:</span>
@@ -803,7 +806,7 @@ export default function App() {
         <>
           <div className="banner">
             <div className={`banner-slide banner-poster ${bannerIdx === 0 ? 'banner-green' : 'banner-orange'}`}>
-              {bannerIdx === 0 ? (
+              <div className="banner-copy">{bannerIdx === 0 ? (
                 <>
                   <div className="banner-title">{t('welcome')}</div>
                   <div className="banner-sub">{t('slogan')}</div>
@@ -813,7 +816,7 @@ export default function App() {
                   <div className="banner-title">{t('groupBuyBanner')}</div>
                   <div className="banner-sub">{lang === 'en' ? `Group delivery at ${fmt(effectiveThreshold)}` : lang === 'zh_HK' ? `滿 ${fmt(effectiveThreshold)} 統一配送` : `满 ${fmt(effectiveThreshold)} 统一配送`}</div>
                 </>
-              )}
+              )}</div>
             </div>
             <div className="banner-dots">
               <span className={bannerIdx === 0 ? 'active' : ''} />
@@ -889,7 +892,7 @@ export default function App() {
                     </div>
                     <div className="bottom-row">
                       <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}{hasVariants(p) ? " · 多规格" : ""}</small></div>
-                      {p.is_active !== false && <button className="add-btn" onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>+</button>}
+                      {p.is_active !== false && <button className="add-btn" aria-label={`${hasVariants(p) ? '选择规格' : '加入购物车'}：${pn(p.name)}`} onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>+</button>}
                     </div>
                   </div>
                 </div>
@@ -935,6 +938,7 @@ export default function App() {
             ))}
           </div>
           <div className="cat-main">
+            {search && <div className="category-search-result">{lang === 'en' ? `${filteredProducts.length} results for “${search}”` : lang === 'zh_HK' ? `找到 ${filteredProducts.length} 款「${search}」商品` : `找到 ${filteredProducts.length} 款“${search}”商品`} <button type="button" onClick={() => { setSearch(''); setSearchInput('') }}>{lang === 'en' ? 'Show all' : lang === 'zh_HK' ? '顯示全部' : '显示全部'}</button></div>}
             <div className="product-grid">
               {filteredProducts.map(p => (
                 <div className="product-card" key={p.id} onClick={() => { setSelectedProduct(p); setSelectedVariant(null) }} style={p.is_active === false ? { opacity: 0.5, filter: 'grayscale(1)' } : {}}>
@@ -953,7 +957,7 @@ export default function App() {
                     </div>
                     <div className="bottom-row">
                       <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}{hasVariants(p) ? " · 多规格" : ""}</small></div>
-                      {p.is_active !== false && <button className="add-btn" onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>+</button>}
+                      {p.is_active !== false && <button className="add-btn" aria-label={`${hasVariants(p) ? '选择规格' : '加入购物车'}：${pn(p.name)}`} onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>+</button>}
                     </div>
                   </div>
                 </div>
@@ -1708,30 +1712,15 @@ export default function App() {
       {/* 配送规则弹窗 */}
       {showHelp && (
         <div className="checkout-overlay" onClick={() => setShowHelp(false)}>
-          <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 420, maxHeight: '85vh', overflowY: 'auto' }}>
-            <h3>📋 配送规则</h3>
-            <div style={{ fontSize: 13, lineHeight: 1.8, color: '#333' }}>
-              <div style={{ background: '#e3f2fd', padding: 12, borderRadius: 8, marginBottom: 10 }}>
-                <b>⏰ 配送时间</b><br />
-                · 各服务点凑满门槛后安排统一配送<br />
-                · 取货时间在配送前一天于网站公告和群里通知
-              </div>
-              <div style={{ background: '#e8f5e9', padding: 12, borderRadius: 8, marginBottom: 10 }}>
-                <b>🚚 运费规则</b><br />
-                · 自取订单始终免运费；未满额则等待凑单<br />
-                · 该自取点已付款待配送订单满 {fmt(effectiveThreshold)} 即起送统一配送<br />
-                · 单独送到家：{fmt(30)}
-              </div>
-              <div style={{ background: '#fff8e1', padding: 12, borderRadius: 8, marginBottom: 10 }}>
-                <b>📍 自取点</b><br />
-                · 科技大学满 {fmt(500)} 起送；其他服务点满 {fmt(1000)} 起送
-              </div>
-              <div style={{ background: '#fce4ec', padding: 12, borderRadius: 8 }}>
-                <b>📞 有问题？</b><br />
-                UST学生加菜神微信，小区居民加老板微信
-              </div>
+          <div className="checkout-panel delivery-help-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 420, maxHeight: '85vh', overflowY: 'auto' }}>
+            <div className="rule-dialog-heading"><h3>配送规则</h3><button type="button" aria-label="关闭配送规则" onClick={() => setShowHelp(false)}>×</button></div>
+            <div className="rule-dialog-list">
+              <section><h4>配送时间</h4><p>各服务点凑满门槛后安排统一配送。取货时间在配送前一天于网站公告和群里通知。</p></section>
+              <section><h4>运费规则</h4><p>自取订单始终免运费；未满额则等待凑单。该自取点已付款待配送订单满 {fmt(effectiveThreshold)} 即起送统一配送。单独送到家：{fmt(30)}。</p></section>
+              <section><h4>自取点</h4><p>科技大学满 {fmt(500)} 起送；其他服务点满 {fmt(1000)} 起送。</p></section>
+              <section><h4>有问题？</h4><p>UST 学生加菜神微信，小区居民加老板微信。</p></section>
             </div>
-            <button className="btn-submit" style={{ width: '100%', marginTop: 12 }} onClick={() => setShowHelp(false)}>我知道了</button>
+            <button type="button" className="rule-close-btn" onClick={() => setShowHelp(false)}>关闭</button>
           </div>
         </div>
       )}

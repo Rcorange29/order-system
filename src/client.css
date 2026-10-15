@@ -1403,3 +1403,38 @@ body { background: var(--market-paper); color: var(--market-ink); }
 .proof-priority-card .proof-selected { display: block; margin: 9px 0; }
 .proof-priority-card .proof-confirm { margin: 0 0 8px; }
 .proof-file-hint { display: block; margin: 8px 0 0; font-size: 12px; color: #747c73; }
+
+/* The photo stays visible while the copy has its own quiet, readable surface. */
+.banner-copy { position: relative; z-index: 1; display: inline-block; max-width: 63%; padding: 11px 13px 10px; background: rgba(250, 247, 239, .95); box-shadow: 0 2px 14px rgba(24, 51, 41, .08); }
+.banner-copy .banner-title { max-width: none; color: #193629; text-shadow: none; }
+.banner-copy .banner-sub { max-width: none; color: #385047; font-size: 14px; font-weight: 600; line-height: 1.4; }
+.banner-dots { z-index: 2; }
+
+/* Clear search affordance on the category page. */
+.top-bar-compact .category-search-label { padding: 12px 16px 0; color: var(--market-ink); font-size: 15px; font-weight: 750; }
+.top-bar-compact .search-box { margin: 8px 12px 12px; padding: 5px 5px 5px 12px; min-height: 46px; border: 1.5px solid #8ca995; border-radius: 9px; background: #fff; box-shadow: 0 2px 7px rgba(24,51,41,.07); gap: 9px; }
+.search-box:focus-within { border-color: var(--market-green); box-shadow: 0 0 0 3px rgba(23,107,70,.12); }
+.search-icon { width: 21px; height: 21px; flex: 0 0 21px; color: var(--market-green); }
+.search-box input { min-width: 0; font-size: 15px; color: var(--market-ink); }
+.search-box input::placeholder { color: #77887c; opacity: 1; }
+.search-submit { align-self: stretch; min-width: 62px; padding: 0 10px; border: 0; border-radius: 6px; background: var(--market-green); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; }
+.search-clear { flex: 0 0 auto; border: 0; background: none; color: #687b6f; font-size: 12px; cursor: pointer; }
+.category-search-result { display: flex; gap: 8px; justify-content: space-between; align-items: center; margin-bottom: 10px; color: #506b57; font-size: 13px; }
+.category-search-result button { border: 0; background: none; color: var(--market-green); font-weight: 700; white-space: nowrap; cursor: pointer; }
+
+/* Touch-friendly add action, consistent across the storefront. */
+.add-btn { width: 34px; height: 34px; flex: 0 0 34px; border: 1.5px solid var(--market-green); border-radius: 50%; background: #fff; color: var(--market-green); box-shadow: 0 1px 4px rgba(24,51,41,.1); font-size: 24px; font-weight: 400; line-height: 1; transition: background .15s ease, color .15s ease, transform .15s ease; }
+.add-btn:hover, .add-btn:focus-visible { background: var(--market-green); color: #fff; outline: none; }
+.add-btn:active { transform: scale(.94); }
+
+/* Delivery rules keep the same information in a calmer dialog. */
+.delivery-help-panel { border-radius: 16px !important; padding: 20px 20px 16px; box-shadow: 0 16px 38px rgba(15,43,28,.18) !important; }
+.rule-dialog-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 7px; }
+.rule-dialog-heading h3 { margin: 0; font-size: 22px; letter-spacing: -.03em; color: var(--market-ink); }
+.rule-dialog-heading button { width: 30px; height: 30px; flex: 0 0 30px; border: 0; background: #f2f5f0; color: #43614c; border-radius: 50%; font-size: 23px; line-height: 1; cursor: pointer; }
+.rule-dialog-list section { padding: 12px 0; border-bottom: 1px solid var(--market-line); }
+.rule-dialog-list section:last-child { border-bottom: 0; }
+.rule-dialog-list h4 { margin: 0 0 5px; color: var(--market-green); font-size: 15px; }
+.rule-dialog-list p { margin: 0; color: #44584b; font-size: 14px; line-height: 1.6; }
+.rule-close-btn { display: block; width: 100%; margin-top: 12px; padding: 11px; border: 1px solid var(--market-line); border-radius: 9px; background: #f7f9f5; color: var(--market-green); font-size: 15px; font-weight: 700; cursor: pointer; }
+.rule-close-btn:hover, .rule-close-btn:focus-visible { border-color: var(--market-green); background: var(--market-green-soft); }
