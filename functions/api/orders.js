@@ -28,7 +28,8 @@ export async function onRequest(context) {
       const { results: items } = await env.DB.prepare(
         'SELECT oi.*, pr.name as product_name, pr.image as product_image FROM order_items oi LEFT JOIN products pr ON oi.product_id = pr.id WHERE oi.order_id = ?'
       ).bind(order.id).all()
-      orders.push({ ...order, items: items.map(i => ({ ...i, product: { id: i.product_id, name: i.product_name, image: i.product_image } })) })
+      const request = await env.DB.prepare('SELECT type, status, admin_note, created_at FROM order_requests WHERE order_id = ? ORDER BY id DESC LIMIT 1').bind(order.id).first()
+      orders.push({ ...order, request, items: items.map(i => ({ ...i, product: { id: i.product_id, name: i.product_name, image: i.product_image } })) })
     }
     return json(orders)
   }
@@ -74,16 +75,8 @@ export async function onRequest(context) {
     items.push({ product_id: product.id, quantity: item.quantity, variant, price: unitCents / 100 })
   }
 
-  let deliveryFee = 30
-  if (point) {
-    const summary = await env.DB.prepare(
-      `SELECT COALESCE(SUM(total), 0) as t FROM orders
-       WHERE payment_status = 'confirmed' AND delivery_point_id = ?
-       AND date(created_at) = date('now', '+8 hours')`
-    ).bind(point.id).first()
-    if (!validMoney(Number(point.threshold)) || !validMoney(Number(point.fee))) return json({ error: '运费配置有误' }, 500)
-    deliveryFee = Number(summary?.t || 0) + subtotalCents / 100 >= Number(point.threshold) ? 0 : Number(point.fee)
-  }
+  // 自取点订单始终免运费；门槛只决定该点何时统一配送。
+  const deliveryFee = point ? 0 : 30
 
   const dbUser = await env.DB.prepare('SELECT username, phone FROM users WHERE id = ?').bind(user.id).first()
   const orderNo = 'ZZ' + crypto.randomUUID().replace(/-/g, '').slice(0, 16).toUpperCase()

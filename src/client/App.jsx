@@ -3,13 +3,13 @@ import { useState, useEffect } from 'react'
 const API = '/api'
 const statusText = { pending: '待付款', paid: '已付款', shipped: '已发货', completed: '已完成', cancelled: '已取消' }
 const paymentText = { cash_on_delivery: '货到付款（现金）', wechat_transfer: '微信转账', alipay_transfer: '支付宝转账', fps_transfer: '转数快 FPS' }
-const payStatusText = { pending: '待支付', paid: '已支付', confirmed: '已确认收款' }
+const payStatusText = { pending: '待支付', paid: '已支付', confirmed: '已确认收款', refunded: '已退款' }
 
 // ========== 多语言 ==========
 const langPack = {
-  zh_CN: { home:'首页',category:'分类',cart:'购物车',my:'我的',search:'搜索商品',welcome:'珍珍优质果菜',slogan:'新鲜直达 · 每日优选 · 一件送达',groupBuy:'今日凑单 满 ¥1000 免运',groupBuySlogan:'大家一起拼 越买越划算',hot:'热门推荐',pickPoint:'选择自取点',freeShipping:'满额免运费 · 该点统一配送',freeFee:'免运费',deliveryHome:'配送到家',deliveryHomeFee:'运费¥30',checkout:'确认订单',goodsAmount:'商品金额',shipping:'运费',submit:'提交订单',cancel:'取消',myOrders:'我的订单',viewAll:'查看全部 ›',address:'收货地址',contact:'联系客服',help:'配送规则 / 帮助',favorites:'我的收藏',logout:'退出登录',clickLogin:'点击登录',loginHint:'登录后查看订单和地址',login:'登录',register:'注册',back:'返回上一页',username:'账号',password:'密码',phone:'手机号',addToCart:'加入购物车',checkOut:'去结算',emptyCart:'购物车是空的',favoriteEmpty:'还没有收藏商品',groupRemain:'还差',buyExtra:'顺手买一件',groupProgress:'当前拼单进度',groupFull:'该自取点满 ¥1000，大家都免运费',introTitle:'下单前必读',introBtn:'我已知晓，开始购物',next:'下一步',gotIt:'我知道了',step1Title:'① 选自取点',step1Desc:'点左上角📍选你就近的自提点',step2Title:'② 逛商品加购物车',step2Desc:'点商品看详情，点+号加购',step3Title:'③ 凑单满额',step3Desc:'大家一起凑够¥1000就免运费',step4Title:'④ 去结算',step4Desc:'选支付方式，扫码付款等配送',deliveryRule:'配送规则：凑满门槛统一配送，免运费',details:'详情 ›',groupBuyBanner:'今日凑单',youGet:'已达起送门槛，今日可配送！',need:'起送',totalConfirmed:'已确认订单总额',ordersConfirmed:'笔订单已确认',all:'全部',emptySearch:'没有找到相关商品',emptyCat:'暂无商品',reached:'✓ 已达起送门槛，今日可配送！',searchResult:'搜索"{kw}"的结果',feeTitle:'运费说明：',feeEach:'· 未满门槛按订单收运费',feeFree:'· 当天该自取点总订单额满 ¥1000 即起送统一配送',feeNoRefund:'· 未满门槛则暂不配送，可加购凑单',feePerOrder:'满 ¥1000 起送并免运费',ustFee:'满 ¥500 起送并免运费',ustBenefit2:'🎓 学生优惠：满¥500起送并免运费',feeHint:'满额免运费 · 该点统一配送',confirmOrder:'确认订单',needPay:'待付款',paid:'已付款',selectPointFirst:'请先选择自取点',tagHot:'爆款',tagNew:'新品',noPhone:'未绑定手机号',comingSoon:'敬请期待',statusPending:'待付款',statusPaid:'已付款',statusShipped:'已发货',statusCompleted:'已完成',statusCancelled:'已取消',orderAll:'全部订单',orderPending:'待付款',orderGroup:'拼团中',orderShipping:'待收货',orderDone:'已完成',coupons:'优惠券',refundAfterSale:'退款售后',orderPcs:'件',orderTotal:'合计',noOrders:'暂无订单',orderNo:'订单号',orderStatus:'订单状态',clear:'清空' },
-  zh_HK: { home:'首頁',category:'分類',cart:'購物車',my:'我的',search:'搜尋商品',welcome:'珍珍優質果菜',slogan:'新鮮直達 · 每日優選 · 一件送達',groupBuy:'今日湊單 滿 ¥1000 免運',groupBuySlogan:'大家一起拼 越買越划算',hot:'熱門推薦',pickPoint:'選擇自取點',freeShipping:'滿額免運費 · 該點統一配送',freeFee:'免運費',deliveryHome:'配送到家',deliveryHomeFee:'運費¥30',checkout:'確認訂單',goodsAmount:'商品金額',shipping:'運費',submit:'提交訂單',cancel:'取消',myOrders:'我的訂單',viewAll:'查看全部 ›',address:'收貨地址',contact:'聯繫客服',help:'配送規則 / 幫助',favorites:'我的收藏',logout:'退出登錄',clickLogin:'點擊登錄',loginHint:'登錄後查看訂單和地址',login:'登錄',register:'註冊',back:'返回上一頁',username:'賬號',password:'密碼',phone:'手機號',addToCart:'加入購物車',checkOut:'去結算',emptyCart:'購物車是空的',favoriteEmpty:'還沒有收藏商品',groupRemain:'還差',buyExtra:'順手買一件',groupProgress:'當前拼單進度',groupFull:'該自取點滿 ¥1000，大家都免運費',introTitle:'下單前必讀',introBtn:'我已知曉，開始購物',next:'下一步',gotIt:'我知道了',step1Title:'① 選自取點',step1Desc:'點左上角📍選你就近的自提點',step2Title:'② 逛商品加購物車',step2Desc:'點商品看詳情，點+號加購',step3Title:'③ 湊單滿額',step3Desc:'大家一起湊夠¥1000就免運費',step4Title:'④ 去結算',step4Desc:'選支付方式，掃碼付款等配送',deliveryRule:'配送規則：湊滿門檻統一配送，免運費',details:'詳情 ›',groupBuyBanner:'今日湊單',youGet:'已達起送門檻，今日可配送！',need:'起送',totalConfirmed:'已確認訂單總額',ordersConfirmed:'筆訂單已確認',all:'全部',emptySearch:'沒有找到相關商品',emptyCat:'暫無商品',reached:'✓ 已達起送門檻，今日可配送！',searchResult:'搜索"{kw}"的結果',feeTitle:'運費說明：',feeEach:'· 未滿門檻按訂單收運費',feeFree:'· 當天該自取點總訂單額滿 ¥1000 即起送統一配送',feeNoRefund:'· 未滿門檻則暫不配送，可加購湊單',feePerOrder:'滿 ¥1000 起送並免運費',ustFee:'滿 ¥500 起送並免運費',ustBenefit2:'🎓 學生優惠：滿¥500起送並免運費',feeHint:'滿額免運費 · 該點統一配送',confirmOrder:'確認訂單',needPay:'待付款',paid:'已付款',selectPointFirst:'請先選擇自取點',tagHot:'爆款',tagNew:'新品',noPhone:'未綁定手機號',comingSoon:'敬請期待',statusPending:'待付款',statusPaid:'已付款',statusShipped:'已發貨',statusCompleted:'已完成',statusCancelled:'已取消',orderAll:'全部訂單',orderPending:'待付款',orderGroup:'拼團中',orderShipping:'待收貨',orderDone:'已完成',coupons:'優惠券',refundAfterSale:'退款售後',orderPcs:'件',orderTotal:'合計',noOrders:'暫無訂單',orderNo:'訂單號',orderStatus:'訂單狀態',clear:'清空' },
-  en: { home:'Home',category:'Categories',cart:'Cart',my:'My Account',search:'Search products',welcome:'Zhenzhen Fresh',slogan:'Fresh Daily · Delivered to You',groupBuy:'Group Buy · Free at ¥1000',groupBuySlogan:'Group together to save more',hot:'Popular Picks',pickPoint:'Pickup Point',freeShipping:'Free shipping at ¥1000',freeFee:'Free shipping',deliveryHome:'Home Delivery',deliveryHomeFee:'¥30',checkout:'Confirm Order',goodsAmount:'Subtotal',shipping:'Shipping',submit:'Place Order',cancel:'Cancel',myOrders:'My Orders',viewAll:'View all ›',address:'Address',contact:'Contact Us',help:'Delivery Info / Help',favorites:'Favorites',logout:'Log Out',clickLogin:'Tap to Login',loginHint:'Login to see orders',login:'Login',register:'Register',back:'Back',username:'Username',password:'Password',phone:'Phone',addToCart:'Add to Cart',checkOut:'Checkout',emptyCart:'Your cart is empty',favoriteEmpty:'No favorites yet',groupRemain:'Need',buyExtra:'Add one more',groupProgress:'Group progress',groupFull:'This point hits ¥1000 — free shipping!',introTitle:'Please Read First',introBtn:'Got it, shop now',next:'Next',gotIt:'Got it',step1Title:'1. Pick your point',step1Desc:'Tap 📍 top-left to choose',step2Title:'2. Browse & add',step2Desc:'Tap product to see, tap + to add',step3Title:'3. Group buy',step3Desc:'Group reaches ¥1000 = free shipping',step4Title:'4. Checkout',step4Desc:'Choose payment, scan QR, wait',deliveryRule:'Group ships when threshold reached; free shipping',details:'Details ›',groupBuyBanner:'Group Buy Today',youGet:'Threshold reached! Delivering today.',need:'to go',totalConfirmed:'Confirmed total',ordersConfirmed:'orders',all:'All',emptySearch:'No products found',emptyCat:'No products',reached:'✓ Threshold reached! Delivering today.',searchResult:'Results for "{kw}"',feeTitle:'Shipping info:',feeEach:'· Delivery fee applies below threshold',feeFree:'· Ship when this point totals ¥1000 today',feeNoRefund:'· If under threshold, wait — add items',feePerOrder:'Free shipping after ¥1000',ustFee:'Free shipping after ¥500',ustBenefit2:'🎓 Student deal: free shipping after ¥500',feeHint:'Free shipping after ¥1000',confirmOrder:'Confirm Order',needPay:'Pending',paid:'Paid',selectPointFirst:'Please select a pickup point',tagHot:'Hot',tagNew:'New',noPhone:'No phone linked',comingSoon:'Coming soon',statusPending:'To Pay',statusPaid:'Paid',statusShipped:'Shipped',statusCompleted:'Completed',statusCancelled:'Cancelled',orderAll:'All Orders',orderPending:'To Pay',orderGroup:'Group Buy',orderShipping:'To Receive',orderDone:'Completed',coupons:'Coupons',refundAfterSale:'Refund & After-sales',orderPcs:'items',orderTotal:'Total',noOrders:'No orders',orderNo:'Order No.',orderStatus:'Order Status',clear:'Clear' }
+  zh_CN: { home:'首页',category:'分类',cart:'购物车',my:'我的',search:'搜索商品',welcome:'珍珍优质果菜',slogan:'新鲜直达 · 每日优选 · 一件送达',groupBuy:'服务点凑单 满 ¥1000 统一配送',groupBuySlogan:'大家一起拼 越买越划算',hot:'热门推荐',pickPoint:'选择自取点',freeShipping:'满额免运费 · 该点统一配送',freeFee:'免运费',deliveryHome:'配送到家',deliveryHomeFee:'运费¥30',checkout:'确认订单',goodsAmount:'商品金额',shipping:'运费',submit:'提交订单',cancel:'取消',myOrders:'我的订单',viewAll:'查看全部 ›',address:'收货地址',contact:'联系客服',help:'配送规则 / 帮助',favorites:'我的收藏',logout:'退出登录',clickLogin:'点击登录',loginHint:'登录后查看订单和地址',login:'登录',register:'注册',back:'返回上一页',username:'账号',password:'密码',phone:'手机号',addToCart:'加入购物车',checkOut:'去结算',emptyCart:'购物车是空的',favoriteEmpty:'还没有收藏商品',groupRemain:'还差',buyExtra:'顺手买一件',groupProgress:'当前拼单进度',groupFull:'该自取点满 ¥1000，大家都免运费',introTitle:'下单前必读',introBtn:'我已知晓，开始购物',next:'下一步',gotIt:'我知道了',step1Title:'① 选自取点',step1Desc:'点左上角📍选你就近的自提点',step2Title:'② 逛商品加购物车',step2Desc:'点商品看详情，点+号加购',step3Title:'③ 凑单满额',step3Desc:'自取免运费，大家凑够¥1000后统一配送',step4Title:'④ 去结算',step4Desc:'选支付方式，扫码付款等配送',deliveryRule:'配送规则：凑满门槛统一配送，免运费',details:'详情 ›',groupBuyBanner:'服务点凑单',youGet:'已达起送门槛，请留意配送公告',need:'起送',totalConfirmed:'已确认订单总额',ordersConfirmed:'笔订单已确认',all:'全部',emptySearch:'没有找到相关商品',emptyCat:'暂无商品',reached:'✓ 已达门槛，请留意公告',searchResult:'搜索"{kw}"的结果',feeTitle:'运费说明：',feeEach:'· 自取订单始终免运费，待该点凑满起送额后统一配送',feeFree:'· 该自取点已付款订单满 ¥1000 后统一配送',feeNoRefund:'· 未满门槛先等待；已付款订单可申请加费单独配送或退款',feePerOrder:'自取免运费 · 满 ¥1000 统一配送',ustFee:'自取免运费 · 满 ¥1000 统一配送',ustBenefit2:'🎓 科技大学自取点满¥1000统一配送，自取免运费',feeHint:'满额免运费 · 该点统一配送',confirmOrder:'确认订单',needPay:'待付款',paid:'已付款',selectPointFirst:'请先选择自取点',tagHot:'爆款',tagNew:'新品',noPhone:'未绑定手机号',comingSoon:'敬请期待',statusPending:'待付款',statusPaid:'已付款',statusShipped:'已发货',statusCompleted:'已完成',statusCancelled:'已取消',orderAll:'全部订单',orderPending:'待付款',orderGroup:'拼团中',orderShipping:'待收货',orderDone:'已完成',coupons:'优惠券',refundAfterSale:'退款售后',orderPcs:'件',orderTotal:'合计',noOrders:'暂无订单',orderNo:'订单号',orderStatus:'订单状态',clear:'清空' },
+  zh_HK: { home:'首頁',category:'分類',cart:'購物車',my:'我的',search:'搜尋商品',welcome:'珍珍優質果菜',slogan:'新鮮直達 · 每日優選 · 一件送達',groupBuy:'服務點湊單 滿 ¥1000 統一配送',groupBuySlogan:'大家一起拼 越買越划算',hot:'熱門推薦',pickPoint:'選擇自取點',freeShipping:'滿額免運費 · 該點統一配送',freeFee:'免運費',deliveryHome:'配送到家',deliveryHomeFee:'運費¥30',checkout:'確認訂單',goodsAmount:'商品金額',shipping:'運費',submit:'提交訂單',cancel:'取消',myOrders:'我的訂單',viewAll:'查看全部 ›',address:'收貨地址',contact:'聯繫客服',help:'配送規則 / 幫助',favorites:'我的收藏',logout:'退出登錄',clickLogin:'點擊登錄',loginHint:'登錄後查看訂單和地址',login:'登錄',register:'註冊',back:'返回上一頁',username:'賬號',password:'密碼',phone:'手機號',addToCart:'加入購物車',checkOut:'去結算',emptyCart:'購物車是空的',favoriteEmpty:'還沒有收藏商品',groupRemain:'還差',buyExtra:'順手買一件',groupProgress:'當前拼單進度',groupFull:'該自取點滿 ¥1000，大家都免運費',introTitle:'下單前必讀',introBtn:'我已知曉，開始購物',next:'下一步',gotIt:'我知道了',step1Title:'① 選自取點',step1Desc:'點左上角📍選你就近的自提點',step2Title:'② 逛商品加購物車',step2Desc:'點商品看詳情，點+號加購',step3Title:'③ 湊單滿額',step3Desc:'自取免運費，大家湊夠¥1000後統一配送',step4Title:'④ 去結算',step4Desc:'選支付方式，掃碼付款等配送',deliveryRule:'配送規則：湊滿門檻統一配送，免運費',details:'詳情 ›',groupBuyBanner:'服務點湊單',youGet:'已達起送門檻，請留意配送公告',need:'起送',totalConfirmed:'已確認訂單總額',ordersConfirmed:'筆訂單已確認',all:'全部',emptySearch:'沒有找到相關商品',emptyCat:'暫無商品',reached:'✓ 已達門檻，請留意公告',searchResult:'搜索"{kw}"的結果',feeTitle:'運費說明：',feeEach:'· 自取訂單一律免運費，待該點湊滿起送額後統一配送',feeFree:'· 該自取點已付款訂單滿 ¥1000 後統一配送',feeNoRefund:'· 未滿門檻先等待；已付款訂單可申請加費單獨配送或退款',feePerOrder:'自取免運費 · 滿 ¥1000 統一配送',ustFee:'自取免運費 · 滿 ¥1000 統一配送',ustBenefit2:'🎓 科技大學自取點滿¥1000統一配送，自取免運費',feeHint:'滿額免運費 · 該點統一配送',confirmOrder:'確認訂單',needPay:'待付款',paid:'已付款',selectPointFirst:'請先選擇自取點',tagHot:'爆款',tagNew:'新品',noPhone:'未綁定手機號',comingSoon:'敬請期待',statusPending:'待付款',statusPaid:'已付款',statusShipped:'已發貨',statusCompleted:'已完成',statusCancelled:'已取消',orderAll:'全部訂單',orderPending:'待付款',orderGroup:'拼團中',orderShipping:'待收貨',orderDone:'已完成',coupons:'優惠券',refundAfterSale:'退款售後',orderPcs:'件',orderTotal:'合計',noOrders:'暫無訂單',orderNo:'訂單號',orderStatus:'訂單狀態',clear:'清空' },
+  en: { home:'Home',category:'Categories',cart:'Cart',my:'My Account',search:'Search products',welcome:'Zhenzhen Fresh',slogan:'Fresh Daily · Delivered to You',groupBuy:'Group delivery at ¥1000',groupBuySlogan:'Group together to save more',hot:'Popular Picks',pickPoint:'Pickup Point',freeShipping:'Free shipping at ¥1000',freeFee:'Free shipping',deliveryHome:'Home Delivery',deliveryHomeFee:'¥30',checkout:'Confirm Order',goodsAmount:'Subtotal',shipping:'Shipping',submit:'Place Order',cancel:'Cancel',myOrders:'My Orders',viewAll:'View all ›',address:'Address',contact:'Contact Us',help:'Delivery Info / Help',favorites:'Favorites',logout:'Log Out',clickLogin:'Tap to Login',loginHint:'Login to see orders',login:'Login',register:'Register',back:'Back',username:'Username',password:'Password',phone:'Phone',addToCart:'Add to Cart',checkOut:'Checkout',emptyCart:'Your cart is empty',favoriteEmpty:'No favorites yet',groupRemain:'Need',buyExtra:'Add one more',groupProgress:'Group progress',groupFull:'This point hits ¥1000 — free shipping!',introTitle:'Please Read First',introBtn:'Got it, shop now',next:'Next',gotIt:'Got it',step1Title:'1. Pick your point',step1Desc:'Tap 📍 top-left to choose',step2Title:'2. Browse & add',step2Desc:'Tap product to see, tap + to add',step3Title:'3. Group buy',step3Desc:'Pickup is free; group delivery starts at ¥1000',step4Title:'4. Checkout',step4Desc:'Choose payment, scan QR, wait',deliveryRule:'Group ships when threshold reached; free shipping',details:'Details ›',groupBuyBanner:'Group Buy Today',youGet:'Threshold reached; watch announcements',need:'to go',totalConfirmed:'Confirmed total',ordersConfirmed:'orders',all:'All',emptySearch:'No products found',emptyCat:'No products',reached:'✓ Threshold reached; watch notices',searchResult:'Results for "{kw}"',feeTitle:'Shipping info:',feeEach:'· Pickup is always free; orders ship together after the point reaches its threshold',feeFree:'· Deliver together when paid orders at this point reach ¥1000',feeNoRefund:'· If waiting, paid orders may request home delivery or a refund',feePerOrder:'Free pickup · group delivery at ¥1000',ustFee:'Free pickup · group delivery at ¥1000',ustBenefit2:'🎓 UST pickup: free; group delivery at ¥1000',feeHint:'Pickup is free; delivery follows group threshold',confirmOrder:'Confirm Order',needPay:'Pending',paid:'Paid',selectPointFirst:'Please select a pickup point',tagHot:'Hot',tagNew:'New',noPhone:'No phone linked',comingSoon:'Coming soon',statusPending:'To Pay',statusPaid:'Paid',statusShipped:'Shipped',statusCompleted:'Completed',statusCancelled:'Cancelled',orderAll:'All Orders',orderPending:'To Pay',orderGroup:'Group Buy',orderShipping:'To Receive',orderDone:'Completed',coupons:'Coupons',refundAfterSale:'Refund & After-sales',orderPcs:'items',orderTotal:'Total',noOrders:'No orders',orderNo:'Order No.',orderStatus:'Order Status',clear:'Clear' }
 }
 
 // ========== 商品名三语映射 ==========
@@ -188,6 +188,7 @@ export default function App() {
   const [lastOrderId, setLastOrderId] = useState(null)
   const [showUploadProof, setShowUploadProof] = useState(false)
   const [stats, setStats] = useState(null)
+  const [announcements, setAnnouncements] = useState([])
   const [deliveryPoints, setDeliveryPoints] = useState([])
   const [selectedPointId, setSelectedPointId] = useState(() => localStorage.getItem('selectedPointId') || null)
   const [showPointPicker, setShowPointPicker] = useState(false)
@@ -214,7 +215,6 @@ export default function App() {
   }
   const ruleText = (key, threshold = 1000) => t(key)
     .replaceAll('¥1000', fmt(threshold))
-    .replaceAll('¥500', fmt(threshold))
     .replaceAll('¥30', fmt(30))
   const pn = (pname) => {
     if (lang === 'zh_CN') return pname
@@ -336,6 +336,11 @@ export default function App() {
     return () => clearInterval(t)
   }, [selectedPointId])
 
+  useEffect(() => {
+    const point = selectedPointId ? `?point=${selectedPointId}` : ''
+    fetch(`${API}/announcements${point}`).then(r => r.ok ? r.json() : []).then(setAnnouncements).catch(() => {})
+  }, [selectedPointId])
+
   // 切回首页时也刷新一次
   useEffect(() => {
     if (tab === 'home') loadStats()
@@ -346,7 +351,7 @@ export default function App() {
     setSelectedPointId(String(pid))
     setShowPointPicker(false)
     loadStats()
-    // 科技大学学生优惠提示
+    // 科技大学自取规则提示
     const point = deliveryPoints.find(p => p.id == pid)
     if (point && (point.name.includes('科技大学') || point.name.includes('科大') || point.name.includes('UST'))) {
       setUstBenefit(true)
@@ -423,11 +428,8 @@ export default function App() {
     .filter(item => item.product)
   const cartTotal = cartItems.reduce((sum, item) => sum + item.variantPrice * item.qty, 0)
   const currentPoint = deliveryPoints.find(p => p.id == selectedPointId)
-  const isUstPoint = currentPoint && (currentPoint.name.includes('科技大学') || currentPoint.name.includes('科大') || currentPoint.name.includes('UST'))
-  const effectiveFee = deliveryType === 'delivery' ? 30 : currentPoint
-    ? (Number(stats?.confirmed_total || 0) + cartTotal >= Number(stats?.threshold || currentPoint.threshold) ? 0 : Number(stats?.delivery_fee ?? currentPoint.fee))
-    : 0
-  const effectiveThreshold = stats?.threshold || (isUstPoint ? 500 : 1000)
+  const effectiveFee = deliveryType === 'delivery' ? 30 : 0
+  const effectiveThreshold = stats?.threshold || 1000
   const effectiveReached = stats ? stats.confirmed_total >= effectiveThreshold : false
 
   const updateQty = (id, delta) => {
@@ -576,7 +578,15 @@ export default function App() {
   }
 
   if (tab === 'orderDetail' && selectedOrder) {
-    return <OrderDetailPage order={selectedOrder} onBack={() => setTab('myOrders')} pn={pn} fmt={fmt} t={t} statusTxt={statusTxt} showToast={showToast} />
+    return <OrderDetailPage order={selectedOrder} onBack={() => setTab('myOrders')} pn={pn} fmt={fmt} t={t} statusTxt={statusTxt} showToast={showToast} onRefresh={async () => {
+      const response = await authFetch(`${API}/orders`)
+      if (response.ok) {
+        const next = await response.json()
+        setOrders(next)
+        setSelectedOrder(next.find(o => o.id === selectedOrder.id) || selectedOrder)
+      }
+      loadStats()
+    }} />
   }
 
   if (tab === 'address') {
@@ -658,12 +668,12 @@ export default function App() {
             }}>
               <span style={{
                 padding: '2px 6px', borderRadius: 5,
-                background: currency === 'HKD' ? '#ff4444' : '#f2f3f5',
+                background: currency === 'HKD' ? 'var(--market-green)' : '#f2f3f5',
                 color: currency === 'HKD' ? '#fff' : '#999'
               }}>💲HKD</span>
               <span style={{
                 padding: '2px 6px', borderRadius: 5,
-                background: currency === 'CNY' ? '#ff4444' : '#f2f3f5',
+                background: currency === 'CNY' ? 'var(--market-green)' : '#f2f3f5',
                 color: currency === 'CNY' ? '#fff' : '#999'
               }}>¥CNY</span>
             </span>
@@ -732,7 +742,7 @@ export default function App() {
           )}
 
           {/* 配送规则小横幅 */}
-          <div style={{ margin: '8px 12px 0', background: '#e3f2fd', padding: '8px 12px', borderRadius: 8, fontSize: 12, color: '#1976d2', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+          <div style={{ margin: '8px 12px 0', background: 'var(--market-green-soft)', padding: '8px 12px', borderRadius: 8, fontSize: 12, color: 'var(--market-green)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
             onClick={() => setShowHelp(true)}>
             <span>📦 {t('deliveryRule')}</span>
             <span>{t('details')}</span>
@@ -742,7 +752,7 @@ export default function App() {
           {stats && (
             <div className="group-buy-banner">
               <div className="group-buy-row">
-                <span className="group-buy-label">🚚 {dn(deliveryPoints.find(p => p.id == selectedPointId)?.name) || '今日凑单'}</span>
+                <span className="group-buy-label">🚚 {dn(deliveryPoints.find(p => p.id == selectedPointId)?.name) || t('groupBuyBanner')}</span>
                 {effectiveReached ? (
                   <span className="group-buy-reached">{t('reached')}</span>
                 ) : (
@@ -756,11 +766,21 @@ export default function App() {
                 />
               </div>
               <div className="group-buy-footer">
-                <span>{t('totalConfirmed')}：<b style={{ color: effectiveReached ? '#3cb043' : '#ff6b35' }}>{fmt(stats.confirmed_total)}</b> / {fmt(effectiveThreshold)}</span>
+                <span>{t('totalConfirmed')}：<b style={{ color: 'var(--market-green)' }}>{fmt(stats.confirmed_total)}</b> / {fmt(effectiveThreshold)}</span>
                 <span>{stats.confirmed_count} {t('ordersConfirmed')}</span>
               </div>
             </div>
           )}
+
+          <section className="notice-board" aria-label="配送公告">
+            <div className="notice-board-heading"><span>📣 配送公告</span><small>取货时间会在配送前一天公布</small></div>
+            {announcements.length ? announcements.slice(0, 3).map(notice => (
+              <article className="notice-item" key={notice.id}>
+                <strong>{notice.title}</strong><time>{notice.created_at?.slice(0, 16)}</time>
+                <p>{notice.content}</p>
+              </article>
+            )) : <p className="notice-empty">暂无新公告。凑满起送额后，请留意此处和群通知。</p>}
+          </section>
 
           {newUserProducts.length > 0 && (
             <div className="new-user-section">
@@ -1054,7 +1074,7 @@ export default function App() {
                 }}>
                   🛍️ 到自取点
                   <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
-                    {isUstPoint ? ruleText('ustBenefit2', effectiveThreshold) : t('feeHint')}
+                    自取免运费，凑满门槛后统一配送
                   </div>
                 </div>
                 <div onClick={() => setDeliveryType('delivery')} style={{
@@ -1164,6 +1184,7 @@ export default function App() {
                   {fmt(cartTotal + effectiveFee)}
                 </span>
               </div>
+              {currency === 'HKD' && <div style={{ fontSize: 11, color: '#64746a', marginTop: 4 }}>按 1 人民币 = {exchangeRate} 港币展示；实际订单按人民币结算。</div>}
             </div>
             <div className="form-actions">
               <button className="btn-cancel" onClick={() => setShowCheckout(false)}>取消</button>
@@ -1288,7 +1309,7 @@ export default function App() {
                 >
                   <div style={{ fontSize: 15, fontWeight: 600 }}>{dn(p.name)}</div>
                   <div style={{ fontSize: 12, color: '#666', marginTop: 3 }}>{dn(p.address)}</div>
-                  <div style={{ fontSize: 12, color: '#3cb043', marginTop: 3 }}>🚚 {selectedPointId == p.id && isUstPoint ? ruleText('ustFee', 500) : ruleText('feePerOrder', 1000)}</div>
+                  <div style={{ fontSize: 12, color: '#3cb043', marginTop: 3 }}>🚚 {ruleText('feePerOrder', p.threshold || 1000)}</div>
                 </div>
               ))}
             </div>
@@ -1436,17 +1457,15 @@ export default function App() {
             <div style={{ fontSize: 13, lineHeight: 1.8, color: '#333' }}>
               <div style={{ background: '#e3f2fd', padding: 12, borderRadius: 8, marginBottom: 10 }}>
                 <b>🚚 配送时间</b><br />
-                · 每天中午12:00前凑满起送额 → 当晚配送<br />
-                · 12:00后凑满 → 次日配送<br />
-                · 每天晚上12:00截单<br />
+                · 配送前一天在网站公告和群里通知取货时间<br />
                 · 配送通知会在对应微信群/WhatsApp群及本网站同步，下单后请及时加群或关注发货通知
               </div>
 
               <div style={{ background: '#e8f5e9', padding: 12, borderRadius: 8, marginBottom: 10 }}>
                 <b>💰 运费</b><br />
-                · 自取点满 {fmt(1000)} 免运费并起送（科技大学自取点满 {fmt(500)}）<br />
+                · 自取始终免运费；每个服务点各自凑满 {fmt(1000)} 后统一配送<br />
                 · 配送到家运费 {fmt(30)}<br />
-                · 未满门槛可先下单凑单，着急也可单独付运费配送
+                · 已付款待发货的自取订单可申请加 {fmt(30)} 单独配送，或取消并申请退款
               </div>
 
               <div style={{ background: '#fff8e1', padding: 12, borderRadius: 8, marginBottom: 10 }}>
@@ -1482,25 +1501,25 @@ export default function App() {
         </div>
       )}
 
-      {/* 科大学生优惠弹窗 */}
+      {/* 科大自取规则弹窗 */}
       {ustBenefit && (
         <div className="checkout-overlay" style={{ zIndex: 5000 }} onClick={() => setUstBenefit(false)}>
           <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 380, textAlign: 'center' }}>
             <div style={{ fontSize: 50, marginBottom: 12 }}>🎓</div>
-            <h3 style={{ color: '#3cb043', marginBottom: 8 }}>UST 科大学生优惠</h3>
+            <h3 style={{ color: '#3cb043', marginBottom: 8 }}>UST 科大自取规则</h3>
             <div style={{ fontSize: 14, color: '#333', lineHeight: 1.8, marginBottom: 16 }}>
               <div style={{ background: '#e8f5e9', padding: 12, borderRadius: 8, marginBottom: 8 }}>
-                🎓 <b>学生优惠</b><br/>
-                满 {fmt(500)} 免运费并起送
+                🎓 <b>自取免运费</b><br/>
+                自取免运费，满 {fmt(1000)} 统一配送
               </div>
               <div style={{ background: '#e3f2fd', padding: 12, borderRadius: 8 }}>
-                🎯 <b>起送门槛 {fmt(500)}</b><br/>
-                当天该点总订单满 {fmt(500)} 即起送统一配送<br/>
-                比其他自取点低一半！
+                🎯 <b>起送门槛 {fmt(1000)}</b><br/>
+                该点已付款待配送订单满 {fmt(1000)} 后统一配送<br/>
+                取货时间请留意网站公告和群通知
               </div>
             </div>
             <button className="btn-submit" style={{ width: '100%' }} onClick={() => setUstBenefit(false)}>
-              太好了，开始购物
+              知道了，开始购物
             </button>
           </div>
         </div>
@@ -1558,14 +1577,13 @@ export default function App() {
             <div style={{ fontSize: 13, lineHeight: 1.8, color: '#333' }}>
               <div style={{ background: '#e3f2fd', padding: 12, borderRadius: 8, marginBottom: 10 }}>
                 <b>⏰ 配送时间</b><br />
-                · 当天中午12:00前凑满起送额 → 当天晚上配送<br />
-                · 中午12:00后才满额 → 第二天配送<br />
-                · 每天晚上12:00截止当天下单
+                · 各服务点凑满门槛后安排统一配送<br />
+                · 取货时间在配送前一天于网站公告和群里通知
               </div>
               <div style={{ background: '#e8f5e9', padding: 12, borderRadius: 8, marginBottom: 10 }}>
                 <b>🚚 运费规则</b><br />
-                · 自取点满额免运费，未满额按结算页收取运费<br />
-                · 当天该自取点总订单满 {fmt(isUstPoint ? 500 : 1000)} 即起送统一配送<br />
+                · 自取订单始终免运费；未满额则等待凑单<br />
+                · 该自取点已付款待配送订单满 {fmt1000} 即起送统一配送<br />
                 · 单独送到家：{fmt(30)}
               </div>
               <div style={{ background: '#fff8e1', padding: 12, borderRadius: 8, marginBottom: 10 }}>
@@ -1711,7 +1729,31 @@ function AddressEditPage({ addr, onSave, onBack }) {
 }
 
 /* ========== 订单详情页 ========== */
-function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast }) {
+function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast, onRefresh }) {
+  const [deliveryAddress, setDeliveryAddress] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const submitRequest = async (type) => {
+    if (submitting) return
+    if (type === 'delivery_upgrade' && deliveryAddress.trim().length < 5) {
+      showToast('请填写完整的送货地址')
+      return
+    }
+    const promptText = type === 'refund'
+      ? '确认申请取消订单并退款？退款将由店主线下处理。'
+      : '确认申请加 ¥30 单独配送？店主确认额外运费后才会改为送货到家。'
+    if (!window.confirm(promptText)) return
+    setSubmitting(true)
+    try {
+      const response = await authFetch(`${API}/orders/request`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id, type, address: deliveryAddress })
+      })
+      const data = await response.json()
+      showToast(response.ok ? '申请已提交，请等待店主处理' : data.error || '申请失败')
+      if (response.ok) await onRefresh()
+    } catch { showToast('申请失败，请重试') }
+    finally { setSubmitting(false) }
+  }
   return (
     <div>
       <div className="back-btn" onClick={onBack}>‹ 返回</div>
@@ -1742,7 +1784,7 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast }) {
           <div className="order-detail-summary">
             <div className="row"><span>商品总额</span><span>{fmt(order.total)}</span></div>
             <div className="row"><span>运费</span><span>{fmt(order.delivery_fee || 0)}</span></div>
-            <div className="row total"><span>应付</span><span>{fmt(Number(order.total) + Number(order.delivery_fee || 0))}</span></div>
+            <div className="row total"><span>{order.payment_status === 'refunded' ? '原订单金额' : '应付'}</span><span>{fmt(Number(order.total) + Number(order.delivery_fee || 0))}</span></div>
           </div>
         </div>
         <div className="order-detail-card">
@@ -1752,7 +1794,9 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast }) {
             <div>{t('orderStatus')}：{statusTxt[order.status] || order.status}</div>
             <div>支付方式：{paymentText[order.payment_method] || order.payment_method}</div>
             <div>支付状态：{payStatusText[order.payment_status] || order.payment_status}</div>
-            {order.payment_method !== 'cash_on_delivery' && order.payment_status !== 'confirmed' && (
+            {order.request && <div>最新申请：{order.request.type === 'refund' ? '取消退款' : '加费单独配送'} · {order.request.status === 'pending' ? '待店主处理' : order.request.status === 'approved' ? '已处理' : '未通过'}{order.request.admin_note ? `（${order.request.admin_note}）` : ''}</div>}
+            {order.request?.status === 'pending' && <div>{order.request.type === 'refund' ? '店主线下退款后会在后台标记，请留意订单状态。' : '请联系店主支付额外 ¥30；店主确认收款后改为送货到家。'}</div>}
+            {order.payment_method !== 'cash_on_delivery' && ['pending', 'paid'].includes(order.payment_status) && order.status !== 'cancelled' && (
               <div>上传付款凭证（PNG、JPEG 或 WebP，最多1MB）：
                 <input type="file" accept="image/png,image/jpeg,image/webp" onChange={async e => {
                   const file = e.target.files[0]
@@ -1766,6 +1810,18 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast }) {
             {order.remark && <div>备注：{order.remark}</div>}
           </div>
         </div>
+        {order.delivery_point_id && order.status === 'paid' && order.payment_status === 'confirmed' && order.request?.status !== 'pending' && (
+          <div className="order-detail-card order-service-actions">
+            <h4>等待凑单期间</h4>
+            <p>自取免运费。你也可以申请加 ¥30 单独配送，或取消订单并申请退款。</p>
+            <label htmlFor="delivery-upgrade-address">单独配送地址</label>
+            <input id="delivery-upgrade-address" value={deliveryAddress} onChange={e => setDeliveryAddress(e.target.value)} placeholder="填写完整收货地址" maxLength={300} />
+            <div className="service-action-row">
+              <button disabled={submitting} onClick={() => submitRequest('delivery_upgrade')}>加 ¥30 单独配送</button>
+              <button disabled={submitting} className="secondary" onClick={() => submitRequest('refund')}>取消订单并退款</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

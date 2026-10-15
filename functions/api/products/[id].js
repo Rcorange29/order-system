@@ -1,4 +1,4 @@
-import { json, cors, readBody, getAdminUser } from '../_utils'
+import { json, cors, readBody, getAdminUser } from '../_utils.js'
 
 export async function onRequest(context) {
   const { request, env } = context
@@ -28,6 +28,8 @@ export async function onRequest(context) {
   if (request.method === 'DELETE') {
     const admin = await getAdminUser(request, env)
     if (!admin) return json({ error: '需要管理员权限' }, 403)
+    const used = await env.DB.prepare('SELECT id FROM order_items WHERE product_id = ? LIMIT 1').bind(id).first()
+    if (used) return json({ error: '商品已有订单记录，请改为下架' }, 409)
     await env.DB.prepare('DELETE FROM products WHERE id = ?').bind(id).run()
     return json({ message: 'deleted' })
   }

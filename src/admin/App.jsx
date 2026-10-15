@@ -21,13 +21,17 @@ export default function App() {
   const [categories, setCategories] = useState([])
   const [orders, setOrders] = useState([])
   const [users, setUsers] = useState([])
+  const [serviceRequests, setServiceRequests] = useState([])
+  const [announcements, setAnnouncements] = useState([])
   const [toast, setToast] = useState('')
 
   const reload = () => {
-    authFetch(`${API}/products`).then(r => r.json()).then(setProducts)
+    authFetch(`${API}/products?all=1`).then(r => r.json()).then(setProducts)
     authFetch(`${API}/categories`).then(r => r.json()).then(setCategories)
     authFetch(`${API}/admin/orders`).then(r => r.json()).then(setOrders)
     authFetch(`${API}/admin/users`).then(r => r.json()).then(setUsers)
+    authFetch(`${API}/admin/order-requests`).then(r => r.ok ? r.json() : []).then(setServiceRequests)
+    authFetch(`${API}/announcements?all=1`).then(r => r.ok ? r.json() : []).then(setAnnouncements)
   }
 
   useEffect(() => {
@@ -68,6 +72,8 @@ export default function App() {
     { key: 'dashboard', label: '📊 数据概览' },
     { key: 'products', label: '📦 商品管理' },
     { key: 'orders', label: '📋 订单管理' },
+    { key: 'requests', label: `↩️ 配送与退款申请${serviceRequests.filter(r => r.status === 'pending').length ? ` (${serviceRequests.filter(r => r.status === 'pending').length})` : ''}` },
+    { key: 'announcements', label: '📣 配送公告' },
     { key: 'users', label: '👥 用户管理' },
     { key: 'categories', label: '🏷️ 分类管理' },
     { key: 'settings', label: '⚙️ 系统设置' },
@@ -90,6 +96,8 @@ export default function App() {
         {page === 'dashboard' && <Dashboard products={products} orders={orders} categories={categories} />}
         {page === 'products' && <ProductManage products={products} categories={categories} reload={reload} showToast={showToast} />}
         {page === 'orders' && <OrderManage orders={orders} reload={reload} showToast={showToast} />}
+        {page === 'requests' && <RequestManage requests={serviceRequests} reload={reload} showToast={showToast} />}
+        {page === 'announcements' && <AnnouncementManage announcements={announcements} reload={reload} showToast={showToast} />}
         {page === 'users' && <UserManage users={users} showToast={showToast} />}
         {page === 'categories' && <CategoryManage categories={categories} reload={reload} showToast={showToast} />}
         {page === 'settings' && <SettingsPage authFetch={authFetch} showToast={showToast} />}
@@ -205,14 +213,93 @@ function Dashboard({ products, orders, categories }) {
 
 const statusText = { pending: '待付款', paid: '已付款', shipped: '已发货', completed: '已完成', cancelled: '已取消' }
 const paymentText = { cash_on_delivery: '货到付款', wechat_transfer: '微信转账', alipay_transfer: '支付宝转账', fps_transfer: '转数快 FPS' }
-const payStatusText = { pending: '待支付', paid: '已支付', confirmed: '已确认收款' }
+const payStatusText = { pending: '待支付', paid: '已支付', confirmed: '已确认收款', refunded: '已退款' }
+
+function RequestManage({ requests, reload, showToast }) {
+  const [notes, setNotes] = useState({})
+  const [busy, setBusy] = useState(false)
+  const resolve = async (entry, decision) => {
+    if (busy) return
+    const message = decision === 'reject' ? '确认拒绝这项申请？' : entry.type === 'refund'
+      ? `确认已经线下退还 ¥${(Number(entry.total) + Number(entry.delivery_fee || 0)).toFixed(2)}？此操作会把订单标记为已退款并取消。`
+      : '确认已收到额外 ¥30？此操作会把订单改为送货到家，并计入 ¥30 运费。'
+    if (!window.confirm(message)) return
+    setBusy(true)
+    try {
+      const response = await authFetch(`${API}/admin/order-requests`, { method: 'PUT', body: { id: entry.id, decision, note: notes[entry.id] || '' } })
+      const data = await response.json()
+      showToast(response.ok ? '申请已处理' : data.error || '处理失败')
+      if (response.ok) { setNotes(prev => ({ ...prev, [entry.id]: '' })); reload() }
+    } catch { showToast('处理失败，请重试') }
+    finally { setBusy(false) }
+  }
+  return <div>
+    <div className="page-header"><h2>配送与退款申请</h2></div>
+    <div className="request-list">
+      {requests.map(entry => <div className="card request-card" key={entry.id}>
+        <div className="request-title"><strong>{entry.type === 'refund' ? '取消订单并退款' : '加 ¥30 单独配送'}</strong><span className={`tag ${entry.status === 'pending' ? 'tag-pending' : 'tag-completed'}`}>{entry.status === 'pending' ? '待处理' : entry.status === 'approved' ? '已完成' : '已拒绝'}</span></div>
+        <p>订单 {entry.order_no} · {entry.customer} · {entry.phone} · {entry.delivery_point_name || '自取点'}</p>
+        <p>{entry.type === 'refund' ? '应退金额' : '商品金额'} ¥{(Number(entry.total) + Number(entry.delivery_fee || 0)).toFixed(2)} · 申请时间 {entry.created_at}</p>
+        {entry.address && <p>送货地址：{entry.address}</p>}
+        {entry.admin_note && <p>处理备注：{entry.admin_note}</p>}
+        {entry.status === 'pending' && <div className="request-controls">
+          <input value={notes[entry.id] || ''} onChange={e => setNotes(prev => ({ ...prev, [entry.id]: e.target.value }))} placeholder="处理备注（可选）" maxLength={500} />
+          <button disabled={busy} className="btn btn-primary" onClick={() => resolve(entry, 'approve')}>{entry.type === 'refund' ? '已线下退款，完成申请' : '已收 ¥30，改为送货到家'}</button>
+          <button disabled={busy} className="btn btn-default" onClick={() => resolve(entry, 'reject')}>拒绝申请</button>
+        </div>}
+      </div>)}
+      {!requests.length && <div className="card">暂无申请</div>}
+    </div>
+  </div>
+}
+
+function AnnouncementManage({ announcements, reload, showToast }) {
+  const [points, setPoints] = useState([])
+  const [editing, setEditing] = useState(null)
+  const [title, setTitle] = useState('')
+  const [content, setContent] = useState('')
+  const [pointId, setPointId] = useState('')
+  const [published, setPublished] = useState(true)
+  useEffect(() => { fetch(`${API}/delivery-points`).then(r => r.json()).then(setPoints).catch(() => {}) }, [])
+  const reset = () => { setEditing(null); setTitle(''); setContent(''); setPointId(''); setPublished(true) }
+  const edit = (item) => { setEditing(item); setTitle(item.title); setContent(item.content); setPointId(item.delivery_point_id || ''); setPublished(Boolean(item.is_published)) }
+  const save = async () => {
+    const response = await authFetch(`${API}/announcements`, { method: editing ? 'PUT' : 'POST', body: { id: editing?.id, title, content, delivery_point_id: pointId || null, is_published: published } })
+    const data = await response.json()
+    showToast(response.ok ? '公告已保存' : data.error || '保存失败')
+    if (response.ok) { reset(); reload() }
+  }
+  const remove = async (id) => {
+    if (!window.confirm('确定删除这条公告？')) return
+    const response = await authFetch(`${API}/announcements`, { method: 'DELETE', body: { id } })
+    showToast(response.ok ? '公告已删除' : '删除失败')
+    if (response.ok) reload()
+  }
+  return <div>
+    <div className="page-header"><h2>配送公告</h2></div>
+    <div className="card announcement-editor">
+      <p>配送前一天，在这里发布取货时间；顾客会在所选服务点首页看到。群通知仍由你自行发送。</p>
+      <div className="form-row"><label>标题</label><input value={title} onChange={e => setTitle(e.target.value)} maxLength={100} placeholder="例如：周五科技大学取货安排" /></div>
+      <div className="form-row"><label>服务点</label><select value={pointId} onChange={e => setPointId(e.target.value)}><option value="">所有服务点</option>{points.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
+      <div className="form-row"><label>公告内容</label><textarea value={content} onChange={e => setContent(e.target.value)} maxLength={2000} placeholder="写明日期、时间、地点和取货提醒" rows={4} /></div>
+      <label className="publish-toggle"><input type="checkbox" checked={published} onChange={e => setPublished(e.target.checked)} /> 立即在网站显示</label>
+      <div className="announcement-actions"><button className="btn btn-primary" onClick={save}>{editing ? '保存修改' : '发布公告'}</button>{editing && <button className="btn btn-default" onClick={reset}>取消编辑</button>}</div>
+    </div>
+    <div className="announcement-list">{announcements.map(item => <div className="card" key={item.id}>
+      <div className="request-title"><strong>{item.title}</strong><span className="tag">{item.is_published ? '已发布' : '草稿'}</span></div>
+      <p>{points.find(p => p.id === item.delivery_point_id)?.name || '所有服务点'} · {item.created_at}</p>
+      <p className="announcement-content">{item.content}</p>
+      <div className="announcement-actions"><button className="btn btn-default btn-sm" onClick={() => edit(item)}>编辑</button><button className="btn btn-danger btn-sm" onClick={() => remove(item.id)}>删除</button></div>
+    </div>)}</div>
+  </div>
+}
 
 /* ========== 商品管理 ========== */
 function ProductManage({ products, categories, reload, showToast }) {
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState(null)
   const [search, setSearch] = useState('')
-  const emptyForm = { name: '', price: '', original_price: '', image: '', category_id: '', stock: '', is_new: false, is_hot: false, description: '', unit: '/斤', variants: [], is_active: true }
+  const emptyForm = { name: '', price: '', original_price: 0, image: '', category_id: '', stock: 999, is_new: false, is_hot: false, description: '', unit: '/斤', variants: [], is_active: true }
   const [form, setForm] = useState(emptyForm)
   const fileInputRef = useRef(null)
 
@@ -289,8 +376,10 @@ function ProductManage({ products, categories, reload, showToast }) {
 
   const del = async (id) => {
     if (!confirm('确定删除该商品？')) return
-    await authFetch(`${API}/products/${id}`, { method: 'DELETE' })
-    showToast('删除成功'); reload()
+    const response = await authFetch(`${API}/products/${id}`, { method: 'DELETE' })
+    const data = await response.json()
+    showToast(response.ok ? '删除成功' : data.error || '删除失败')
+    if (response.ok) reload()
   }
 
   const filtered = products.filter(p => !search || p.name.includes(search))
@@ -306,7 +395,7 @@ function ProductManage({ products, categories, reload, showToast }) {
           <input placeholder="搜索商品名称" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <table>
-          <thead><tr><th>ID</th><th>图标</th><th>名称</th><th>分类</th><th>价格</th><th>原价</th><th>库存</th><th>标签</th><th>操作</th></tr></thead>
+          <thead><tr><th>ID</th><th>图标</th><th>名称</th><th>分类</th><th>价格</th><th>标签</th><th>操作</th></tr></thead>
           <tbody>
             {filtered.map(p => (
               <tr key={p.id}>
@@ -315,13 +404,11 @@ function ProductManage({ products, categories, reload, showToast }) {
                 <td>{p.name}</td>
                 <td>{p.category?.name || '-'}</td>
                 <td style={{ color: '#ff4444', fontWeight: 600 }}>¥{p.price?.toFixed(2)}{p.unit || '/斤'}</td>
-                <td><s style={{ color: '#999' }}>¥{p.original_price?.toFixed(2)}{p.unit || '/斤'}</s></td>
-                <td>{p.stock}</td>
                 <td>{p.is_new && <span className="tag tag-pending" style={{ marginRight: 4 }}>新人</span>}{p.is_hot && <span className="tag tag-paid" style={{ marginRight: 4 }}>热门</span>}{p.is_active === false && <span style={{background:'#999',color:'#fff',padding:'2px 8px',borderRadius:4,fontSize:11}}>已下架</span>}</td>
                 <td><div className="action-btns"><button className="btn btn-default btn-sm" onClick={() => openEdit(p)}>编辑</button><button className="btn btn-danger btn-sm" onClick={() => del(p.id)}>删除</button></div></td>
               </tr>
             ))}
-            {filtered.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', color: '#999', padding: 30 }}>暂无数据</td></tr>}
+            {filtered.length === 0 && <tr><td colSpan={7} style={{ textAlign: 'center', color: '#999', padding: 30 }}>暂无数据</td></tr>}
           </tbody>
         </table>
       </div>
@@ -400,7 +487,6 @@ function ProductManage({ products, categories, reload, showToast }) {
               </div>
               <div className="form-inline">
                 <div className="form-row"><label>售价 <span className="req">*</span></label><input type="number" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} /></div>
-                <div className="form-row"><label>原价</label><input type="number" value={form.original_price} onChange={e => setForm({ ...form, original_price: e.target.value })} /></div>
                 <div className="form-row"><label>单位</label><input value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })} placeholder="/斤" /></div>
               </div>
               <div className="form-inline">
@@ -410,7 +496,6 @@ function ProductManage({ products, categories, reload, showToast }) {
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
-                <div className="form-row"><label>库存</label><input type="number" value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} /></div>
               </div>
               <div className="form-inline">
                 <div className="form-row"><label><input type="checkbox" checked={form.is_new} onChange={e => setForm({ ...form, is_new: e.target.checked })} style={{ width: 'auto', marginRight: 6 }} />新人专享</label></div>
@@ -466,6 +551,7 @@ function ProductManage({ products, categories, reload, showToast }) {
 /* ========== 订单管理 ========== */
 function OrderManage({ orders, reload, showToast }) {
   const [statusFilter, setStatusFilter] = useState('')
+  const [search, setSearch] = useState('')
   const [detail, setDetail] = useState(null)
 
   const viewDetail = async (id) => {
@@ -475,28 +561,36 @@ function OrderManage({ orders, reload, showToast }) {
   }
 
   const updateStatus = async (id, status) => {
-    await authFetch(`${API}/admin/orders/${id}`, { method: 'PUT', body: { status } })
-    showToast('状态已更新'); reload()
+    const response = await authFetch(`${API}/admin/orders/${id}`, { method: 'PUT', body: { status } })
+    const data = await response.json()
+    showToast(response.ok ? '状态已更新' : data.error || '更新失败')
+    if (response.ok) reload()
   }
 
   const del = async (id) => {
-    if (!confirm('确定删除该订单？')) return
-    await authFetch(`${API}/admin/orders/${id}`, { method: 'DELETE' })
-    showToast('删除成功'); reload()
+    const order = orders.find(o => o.id === id)
+    if (window.prompt(`永久删除订单 ${order?.order_no}？此操作无法恢复。请输入订单号确认：`) !== order?.order_no) return
+    const response = await authFetch(`${API}/admin/orders/${id}`, { method: 'DELETE' })
+    showToast(response.ok ? '删除成功' : '删除失败')
+    if (response.ok) reload()
   }
 
   const confirmPayment = async (id) => {
-    await authFetch(`${API}/admin/orders/${id}`, { method: 'PUT', body: { payment_status: 'confirmed', status: 'paid' } })
-    showToast('已确认收款'); reload()
+    if (!window.confirm('确认实际收到这笔订单的款项？')) return
+    const response = await authFetch(`${API}/admin/orders/${id}`, { method: 'PUT', body: { payment_status: 'confirmed', status: 'paid' } })
+    const data = await response.json()
+    showToast(response.ok ? '已确认收款' : data.error || '操作失败')
+    if (response.ok) reload()
   }
 
-  const filtered = orders.filter(o => !statusFilter || o.status === statusFilter)
+  const filtered = orders.filter(o => (!statusFilter || o.status === statusFilter) && (!search || `${o.order_no} ${o.customer} ${o.phone}`.toLowerCase().includes(search.toLowerCase())))
 
   return (
     <div>
       <div className="page-header"><h2>订单管理</h2></div>
       <div className="card">
         <div className="toolbar">
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索订单号、客户或电话" />
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
             <option value="">全部状态</option>
             {Object.entries(statusText).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -604,8 +698,10 @@ function CategoryManage({ categories, reload, showToast }) {
 
   const del = async (id) => {
     if (!confirm('确定删除该分类？')) return
-    await authFetch(`${API}/categories/${id}`, { method: 'DELETE' })
-    showToast('删除成功'); reload()
+    const response = await authFetch(`${API}/categories/${id}`, { method: 'DELETE' })
+    const data = await response.json()
+    showToast(response.ok ? '删除成功' : data.error || '删除失败')
+    if (response.ok) reload()
   }
 
   return (

@@ -16,9 +16,11 @@ export async function onRequest(context) {
   const { results: items } = await env.DB.prepare(
     'SELECT oi.*, p.name as product_name, p.image as product_image FROM order_items oi LEFT JOIN products p ON oi.product_id = p.id WHERE oi.order_id = ?'
   ).bind(id).all()
+  const serviceRequest = await env.DB.prepare('SELECT type, status, admin_note, created_at FROM order_requests WHERE order_id = ? ORDER BY id DESC LIMIT 1').bind(id).first()
 
   return json({
     ...order,
+    request: serviceRequest,
     items: items.map(i => ({ ...i, product: { id: i.product_id, name: i.product_name, image: i.product_image } }))
   })
 }

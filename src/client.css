@@ -1080,3 +1080,50 @@ body {
   font-size: 12px;
   color: #999;
 }
+
+/* Compact fresh-market treatment: one clear green action, warm price accent. */
+:root {
+  --market-ink: #183329;
+  --market-green: #176b46;
+  --market-green-soft: #eaf4ec;
+  --market-accent: #d65a24;
+  --market-paper: #f4f7f2;
+  --market-line: #dfe8df;
+}
+body { background: var(--market-paper); color: var(--market-ink); }
+.top-bar { padding: 10px 14px; box-shadow: 0 1px 0 var(--market-line); }
+.category-grid { margin-top: 8px; padding: 10px 6px; gap: 8px 2px; border-radius: 12px; }
+.category-grid .cat-icon { width: 48px; height: 48px; border-radius: 12px; background: var(--market-green-soft); font-size: 25px; }
+.banner { height: 122px; margin-top: 8px; border-radius: 14px; box-shadow: none; }
+.banner-green { background: linear-gradient(115deg, #165339, #26764b); }
+.banner-orange { background: linear-gradient(115deg, #245940, #4e8651); }
+.banner-title { font-size: 23px; letter-spacing: 0; text-shadow: none; margin-bottom: 4px; }
+.banner-sub { font-size: 13px; letter-spacing: 0; }
+.group-buy-banner { margin: 8px 12px; padding: 12px; background: #fff; border: 1px solid var(--market-line); box-shadow: none; }
+.group-buy-label, .group-buy-remain b, .group-buy-reached { color: var(--market-green); }
+.group-buy-progress { background: var(--market-green-soft); height: 7px; }
+.group-buy-progress-bar { background: var(--market-green); }
+.product-grid { gap: 8px; }
+.product-card { border-radius: 12px; border: 1px solid var(--market-line); box-shadow: none; }
+.product-card .price, .cart-item .price, .cart-total span, .order-detail-goods-item .g-info .price, .order-detail-summary .row.total span { color: var(--market-accent); font-variant-numeric: tabular-nums; }
+.add-btn, .qty-btn.plus, .checkout-btn, .btn-submit { background: var(--market-green); border-color: var(--market-green); }
+.nav-item.active, .cat-side-item.active { color: var(--market-green); }
+.cat-side-item.active { border-left-color: var(--market-green); }
+.bottom-nav { border-top-color: var(--market-line); }
+.notice-board { margin: 8px 12px 12px; padding: 12px; background: #fff; border: 1px solid var(--market-line); border-radius: 12px; }
+.notice-board-heading { display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-bottom: 7px; }
+.notice-board-heading span { font-size: 15px; font-weight: 700; }
+.notice-board-heading small { font-size: 11px; color: #607469; text-align: end; }
+.notice-item { padding: 8px 0; border-top: 1px solid var(--market-line); }
+.notice-item strong { font-size: 13px; }
+.notice-item time { float: right; font-size: 11px; color: #738379; }
+.notice-item p, .notice-empty { margin-top: 4px; color: #52645a; font-size: 12px; line-height: 1.5; white-space: pre-wrap; }
+.order-service-actions p { font-size: 13px; color: #52645a; line-height: 1.5; margin-bottom: 10px; }
+.order-service-actions label { display: block; font-size: 13px; margin-bottom: 6px; }
+.order-service-actions input { width: 100%; padding: 10px; border: 1px solid var(--market-line); border-radius: 8px; font-size: 14px; }
+.service-action-row { display: flex; gap: 8px; margin-top: 10px; }
+.service-action-row button { flex: 1; min-height: 42px; padding: 8px; border: 1px solid var(--market-green); border-radius: 8px; background: var(--market-green); color: white; font-size: 13px; font-weight: 600; }
+.service-action-row button.secondary { color: var(--market-green); background: #fff; }
+.service-action-row button:disabled { opacity: .55; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--market-green); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .group-buy-progress-bar { transition: none; } }

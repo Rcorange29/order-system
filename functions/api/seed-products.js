@@ -10,9 +10,11 @@ export async function onRequestPost(context) {
     const body = await readBody(request)
     const admin = await getAdminUser(request, env)
     if (!admin) return json({ error: '未授权' }, 401)
+    if (body.confirm !== 'REPLACE_CATALOG') return json({ error: '请明确确认替换商品目录' }, 400)
+    const existingOrders = await env.DB.prepare('SELECT COUNT(*) AS count FROM orders').first()
+    if (Number(existingOrders?.count || 0) > 0) return json({ error: '已有订单，不能重置商品目录' }, 409)
 
     // 清空旧商品和分类
-    await env.DB.prepare('DELETE FROM order_items').run()
     await env.DB.prepare('DELETE FROM products').run()
     await env.DB.prepare('DELETE FROM categories').run()
 

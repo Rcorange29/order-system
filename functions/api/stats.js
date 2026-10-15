@@ -13,16 +13,14 @@ export async function onRequest(context) {
     point = await env.DB.prepare('SELECT * FROM delivery_points WHERE id = ?').bind(pointId).first()
   }
   const threshold = point?.threshold ?? 1000
-  const fee = point?.fee ?? 10
 
-  // 统计今天该配送点已确认收款的订单总额
+  // 统计尚待配送的已收款订单；凑单不按自然日清零，发货后退出进度。
   let sql = `
     SELECT
       COALESCE(SUM(total), 0) as confirmed_total,
       COUNT(*) as confirmed_count
     FROM orders
-    WHERE payment_status = 'confirmed'
-      AND date(created_at) = date('now', '+8 hours')
+    WHERE payment_status = 'confirmed' AND status = 'paid'
   `
   const params = []
   if (pointId) {
@@ -38,7 +36,7 @@ export async function onRequest(context) {
     threshold,
     remaining: Math.max(0, threshold - total),
     reached: total >= threshold,
-    delivery_fee: fee,
+    delivery_fee: 0,
     point_name: point?.name || null
   })
 }
