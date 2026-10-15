@@ -76,6 +76,14 @@ test('uses the selected server-side variant price and stores the variant', async
   assert.equal(insertItem.values[4], '大盒')
 })
 
+test('allows the base price alongside additional product variants', async () => {
+  const db = database()
+  const response = await call(orders, db, '/api/orders', 'POST', { ...orderBody(), items: [{ product_id: 1, quantity: 2, variant: '' }] })
+  assert.equal(response.status, 201)
+  assert.equal(db.state.batches[0][0].values[6], 18)
+  assert.equal(db.state.batches[0][1].values[3], 9)
+})
+
 test('rejects an unavailable product or pickup point', async () => {
   assert.equal((await call(orders, database({ product: null }), '/api/orders', 'POST', orderBody())).status, 400)
   assert.equal((await call(orders, database({ point: null }), '/api/orders', 'POST', orderBody())).status, 400)

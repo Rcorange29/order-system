@@ -13,7 +13,10 @@ export async function onRequest({ request, env }) {
     const title = String(body.title || '').trim()
     const details = String(body.details || '').trim()
     if (!title || title.length > 100 || details.length > 2000) return json({ error: '请填写活动名称，内容不超过 2000 字' }, 400)
-    const result = await env.DB.prepare('INSERT INTO coupon_campaigns (title, details, is_published) VALUES (?, ?, ?)').bind(title, details, body.is_published ? 1 : 0).run()
+    const minSpend = Number(body.min_spend)
+    const discount = Number(body.discount_amount)
+    if (!Number.isFinite(minSpend) || !Number.isFinite(discount) || minSpend <= 0 || discount <= 0 || discount >= minSpend || !Number.isInteger(minSpend * 100) || !Number.isInteger(discount * 100)) return json({ error: '请填写有效的满减金额' }, 400)
+    const result = await env.DB.prepare('INSERT INTO coupon_campaigns (title, details, min_spend, discount_amount, is_published) VALUES (?, ?, ?, ?, ?)').bind(title, details, minSpend, discount, body.is_published ? 1 : 0).run()
     return json({ id: result.meta.last_row_id }, 201)
   }
   if (request.method === 'PUT') {
@@ -23,7 +26,10 @@ export async function onRequest({ request, env }) {
     const title = String(body.title || '').trim()
     const details = String(body.details || '').trim()
     if (!title || title.length > 100 || details.length > 2000) return json({ error: '请填写活动名称，内容不超过 2000 字' }, 400)
-    await env.DB.prepare('UPDATE coupon_campaigns SET title = ?, details = ?, is_published = ? WHERE id = ?').bind(title, details, body.is_published ? 1 : 0, id).run()
+    const minSpend = Number(body.min_spend)
+    const discount = Number(body.discount_amount)
+    if (!Number.isFinite(minSpend) || !Number.isFinite(discount) || minSpend <= 0 || discount <= 0 || discount >= minSpend || !Number.isInteger(minSpend * 100) || !Number.isInteger(discount * 100)) return json({ error: '请填写有效的满减金额' }, 400)
+    await env.DB.prepare('UPDATE coupon_campaigns SET title = ?, details = ?, min_spend = ?, discount_amount = ?, is_published = ? WHERE id = ?').bind(title, details, minSpend, discount, body.is_published ? 1 : 0, id).run()
     return json({ success: true })
   }
   if (request.method === 'PATCH') {

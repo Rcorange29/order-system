@@ -52,6 +52,9 @@ export async function onRequest(context) {
       nextPayment,
       id
     ).run()
+    if (nextStatus === 'cancelled' && (nextPayment === 'refunded' || order.payment_status === 'pending')) {
+      await env.DB.prepare('UPDATE coupon_grants SET used_order_no = NULL, used_at = NULL WHERE used_order_no = ?').bind(order.order_no).run()
+    }
     const updated = await env.DB.prepare('SELECT * FROM orders WHERE id = ?').bind(id).first()
     return json(updated)
   }
@@ -64,6 +67,7 @@ export async function onRequest(context) {
     await env.DB.batch([
       env.DB.prepare('DELETE FROM order_requests WHERE order_id = ?').bind(id),
       env.DB.prepare('DELETE FROM order_items WHERE order_id = ?').bind(id),
+      env.DB.prepare('UPDATE coupon_grants SET used_order_no = NULL, used_at = NULL WHERE used_order_no = ?').bind((await env.DB.prepare('SELECT order_no FROM orders WHERE id = ?').bind(id).first())?.order_no || ''),
       env.DB.prepare('DELETE FROM orders WHERE id = ?').bind(id)
     ])
     return json({ message: 'deleted' })

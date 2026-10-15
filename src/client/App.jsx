@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 const API = '/api'
 const BOSS_WECHAT = 'jennybabi1988'
 const BOSS_WHATSAPP = '+85295228191'
+const GROUP_BUY_URL = 'https://order-system-bp4.pages.dev/'
 const statusText = { pending: '待付款', paid: '已付款', shipped: '已发货', completed: '已完成', cancelled: '已取消' }
 const paymentText = { cash_on_delivery: '货到付款（现金）', wechat_transfer: '微信转账', alipay_transfer: '支付宝转账', fps_transfer: '转数快 FPS' }
 const payStatusText = { pending: '待支付', paid: '已支付', confirmed: '已确认收款', refunded: '已退款' }
@@ -204,7 +205,10 @@ export default function App() {
   const [showHelp, setShowHelp] = useState(false)
   const [showContact, setShowContact] = useState(false)
   const [showRefund, setShowRefund] = useState(false)
-  const [couponData, setCouponData] = useState({ campaigns: [], grants: [] })
+  const [couponData, setCouponData] = useState({ campaigns: [], grants: [], claims: [] })
+  const [showActivity, setShowActivity] = useState(false)
+  const [claimUploading, setClaimUploading] = useState(false)
+  const [selectedCouponId, setSelectedCouponId] = useState('')
   const [lang, setLang] = useState(() => localStorage.getItem('lang') || 'zh_CN')
   const [currency, setCurrency] = useState(() => localStorage.getItem('currency') || '')
   const [exchangeRate, setExchangeRate] = useState(1.2)
@@ -236,15 +240,6 @@ export default function App() {
     return (m && m[lang]) || pname
   }
   const priceText = (p) => {
-    let variants = []
-    try { variants = p.variants ? JSON.parse(p.variants) : [] } catch(e) {}
-    if (variants.length > 0) {
-      const prices = variants.map(v => Number(v.price) * (currency === 'HKD' ? exchangeRate : 1))
-      const min = Math.min(...prices)
-      const max = Math.max(...prices)
-      const sym = currency === 'HKD' ? 'HK$' : '¥'
-      return sym + (min === max ? min.toFixed(2) : min.toFixed(2) + '~' + max.toFixed(2))
-    }
     return fmt(p.price)
   }
   const unitText = (p) => {
@@ -321,9 +316,8 @@ export default function App() {
     return () => clearInterval(t)
   }, [])
 
-  useEffect(() => {
-    if (tab === 'coupons') authFetch(`${API}/coupons`).then(r => r.json()).then(setCouponData).catch(() => setCouponData({ campaigns: [], grants: [] }))
-  }, [tab, currentUser])
+  const loadCoupons = () => authFetch(`${API}/coupons`).then(r => r.json()).then(setCouponData).catch(() => setCouponData({ campaigns: [], grants: [], claims: [] }))
+  useEffect(() => { if (tab === 'coupons' || showActivity || showCheckout) loadCoupons() }, [tab, showActivity, showCheckout, currentUser])
 
   // 加载配送点列表
   useEffect(() => {
@@ -384,6 +378,41 @@ export default function App() {
     }
   }
 
+  const submitCouponScreenshot = async (file) => {
+    if (!file || !activityCampaign || claimUploading) return
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) { showToast('请上传图片截图'); return }
+    setClaimUploading(true)
+    try {
+      const screenshot = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onerror = () => reject(new Error('无法读取截图'))
+        reader.onload = () => {
+          const img = new Image()
+          img.onerror = () => reject(new Error('截图格式无效'))
+          img.onload = () => {
+            const canvas = document.createElement('canvas')
+            const scale = Math.min(1, 1400 / Math.max(img.width, img.height))
+            canvas.width = Math.round(img.width * scale)
+            canvas.height = Math.round(img.height * scale)
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+            let data = canvas.toDataURL('image/jpeg', 0.75)
+            if (data.length > 1300000) data = canvas.toDataURL('image/jpeg', 0.5)
+            if (data.length > 1300000) return reject(new Error('截图过大，请裁剪后重试'))
+            resolve(data)
+          }
+          img.src = reader.result
+        }
+        reader.readAsDataURL(file)
+      })
+      const response = await authFetch(`${API}/coupons`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ campaign_id: activityCampaign.id, screenshot }) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || '上传失败')
+      showToast('截图已提交，请等待后台审核')
+      loadCoupons()
+    } catch (error) { showToast(error.message) }
+    finally { setClaimUploading(false) }
+  }
+
   const toggleFavorite = (id) => {
     setFavorites(prev => {
       const next = prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]
@@ -436,6 +465,9 @@ export default function App() {
     })
     .filter(item => item.product)
   const cartTotal = cartItems.reduce((sum, item) => sum + item.variantPrice * item.qty, 0)
+  const selectedCoupon = couponData.grants.find(g => String(g.id) === String(selectedCouponId) && !g.used_order_no && cartTotal >= Number(g.min_spend))
+  const couponDiscount = selectedCoupon ? Number(selectedCoupon.discount_amount) : 0
+  const activityCampaign = couponData.campaigns.find(c => Number(c.id) === 1) || couponData.campaigns[0]
   const currentPoint = deliveryPoints.find(p => p.id == selectedPointId)
   const effectiveFee = deliveryType === 'delivery' ? 30 : 0
   const effectiveThreshold = stats?.threshold || 1000
@@ -483,6 +515,7 @@ export default function App() {
         payment_method: paymentMethod,
         delivery_type: deliveryType,
         delivery_point_id: deliveryType === 'pickup' ? selectedPointId : null,
+        coupon_grant_id: selectedCoupon?.id || null,
         items: cartItems.map(item => ({ product_id: item.product.id, quantity: item.qty, variant: item.variantLabel || '' }))
       })
     })
@@ -492,6 +525,8 @@ export default function App() {
       setCart({})
       setShowCheckout(false)
       setRemark('')
+      setSelectedCouponId('')
+      loadCoupons()
       authFetch(`${API}/orders`).then(r => r.ok ? r.json() : []).then(setOrders)
       if (paymentMethod === 'wechat_transfer' || paymentMethod === 'alipay_transfer' || paymentMethod === 'fps_transfer') {
         setPaidOrderNo(data.order_no)
@@ -636,7 +671,7 @@ export default function App() {
               <div className="info">
                 <div className="name">{pn(p.name)}</div>
                 <div className="bottom-row">
-                  <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}</small></div>
+                  <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}{hasVariants(p) ? " · 多规格" : ""}</small></div>
                   <button className="add-btn" onClick={(e) => { e.stopPropagation(); setTab('home'); quickAdd(p) }}>+</button>
                 </div>
               </div>
@@ -730,6 +765,10 @@ export default function App() {
             <span>{t('details')}</span>
           </div>
 
+          <div className="activity-strip" onClick={() => setShowActivity(true)} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') setShowActivity(true) }}>
+            <span>分享团购 · 集满 10 赞领 {fmt(activityCampaign?.discount_amount || 5)} 优惠券</span><span>查看活动 ›</span>
+          </div>
+
           {/* 凑单进度条 */}
           {stats && (
             <div className="group-buy-banner">
@@ -776,7 +815,7 @@ export default function App() {
                     <div className="emoji">{p.image ? <img src={p.image} alt={p.name} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:8}} /> : '🛒'}</div>
                     <span className="tag">新人价</span>
                     <div className="name">{pn(p.name)}</div>
-                    <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}</small></div>
+                    <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}{hasVariants(p) ? " · 多规格" : ""}</small></div>
                     
                   </div>
                 ))}
@@ -803,7 +842,7 @@ export default function App() {
                       <div className="sales">{p.is_hot ? '🔥 ' + t('tagHot') : ''}</div>
                     </div>
                     <div className="bottom-row">
-                      <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}</small></div>
+                      <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}{hasVariants(p) ? " · 多规格" : ""}</small></div>
                       {p.is_active !== false && <button className="add-btn" onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>+</button>}
                     </div>
                   </div>
@@ -818,10 +857,10 @@ export default function App() {
       {tab === 'coupons' && (
         <div className="coupon-page">
           <div className="back-btn" onClick={() => setTab('my')}>‹ 返回</div>
-          <h2>优惠券活动</h2>
-          {couponData.campaigns.length ? couponData.campaigns.map(c => <div className="coupon-card" key={c.id}><strong>{c.title}</strong><p>{c.details || '活动规则即将公布，请留意此页。'}</p></div>) : <div className="coupon-card"><strong>活动即将公布</strong><p>活动方案确认后会在这里发布，请留意更新。</p></div>}
+          <h2>分享团购 · 集赞领券</h2>
+          {couponData.campaigns.length ? couponData.campaigns.map(c => <div className="coupon-card coupon-action" key={c.id} onClick={() => setShowActivity(true)}><strong>{c.title}</strong><p>朋友圈集满 10 个赞，领满 {fmt(c.min_spend)} 减 {fmt(c.discount_amount)} 优惠券</p><small>查看活动与提交截图 ›</small></div>) : <div className="coupon-card"><strong>活动加载中</strong></div>}
           <h3>我的优惠券</h3>
-          {!currentUser ? <p className="coupon-empty" onClick={() => setTab('login')}>登录后查看已发给你的优惠券 ›</p> : couponData.grants.length ? couponData.grants.map(g => <div className="coupon-card" key={g.id}><strong>{g.title}</strong><p>{g.details || '活动规则待公布'}</p><small>领取时间：{g.granted_at}</small></div>) : <p className="coupon-empty">暂时没有收到优惠券</p>}
+          {!currentUser ? <p className="coupon-empty" onClick={() => setTab('login')}>登录后查看已发给你的优惠券 ›</p> : couponData.grants.length ? couponData.grants.map(g => <div className="coupon-card" key={g.id}><strong>满 {fmt(g.min_spend)} 减 {fmt(g.discount_amount)}</strong><p>{g.title}</p><small>{g.used_order_no ? '已使用' : '可在结算时使用'} · 领取时间：{g.granted_at}</small></div>) : <p className="coupon-empty">暂时没有收到优惠券。点击上方活动参与分享。</p>}
         </div>
       )}
 
@@ -855,7 +894,7 @@ export default function App() {
                       <div className="sales">{p.is_hot ? '🔥 ' + t('tagHot') : ''}</div>
                     </div>
                     <div className="bottom-row">
-                      <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}</small></div>
+                      <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}{hasVariants(p) ? " · 多规格" : ""}</small></div>
                       {p.is_active !== false && <button className="add-btn" onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>+</button>}
                     </div>
                   </div>
@@ -1002,7 +1041,7 @@ export default function App() {
                   <div className="emoji">{item.product.image ? <img src={item.product.image} alt="" /> : <span className="product-no-image">{pn(item.product.name).replace(/^\[[^\]]+\]/, '').slice(0, 2)}</span>}</div>
                   <div className="detail">
                     <div className="name">{pn(item.product.name)}{item.variantLabel && <small style={{color:'var(--market-accent)',marginLeft:6,fontSize:12}}>({item.variantLabel})</small>}</div>
-                    <div className="price">{fmt(item.variantPrice)}<small style={{fontSize:11,color:'#999'}}>{unitText(item.product)}</small></div>
+                    <div className="price">{fmt(item.variantPrice)}<small style={{fontSize:11,color:'#999'}}>{item.variantLabel ? `/${item.variantLabel}` : unitText(item.product)}</small></div>
                   </div>
                   <div className="qty-control">
                     <button className="qty-btn" onClick={(e) => { e.stopPropagation(); updateQty(itemKey, -1) }}>−</button>
@@ -1114,6 +1153,14 @@ export default function App() {
               <input value={remark} onChange={e => setRemark(e.target.value)} placeholder="备注" />
             </div>
             <div className="form-group">
+              <label>优惠券</label>
+              <select value={selectedCouponId} onChange={e => setSelectedCouponId(e.target.value)} style={{ width: '100%', padding: 10, border: '1px solid #ddd', background: '#fff' }}>
+                <option value="">不使用优惠券</option>
+                {couponData.grants.filter(g => !g.used_order_no && cartTotal >= Number(g.min_spend)).map(g => <option key={g.id} value={g.id}>满 {fmt(g.min_spend)} 减 {fmt(g.discount_amount)}</option>)}
+              </select>
+              {couponData.grants.some(g => !g.used_order_no && cartTotal < Number(g.min_spend)) && <small style={{ color: '#777' }}>部分优惠券尚未达到使用门槛</small>}
+            </div>
+            <div className="form-group">
               <label>支付方式</label>
               <div style={{ display: 'flex', gap: 6 }}>
                 <div onClick={() => setPaymentMethod('cash_on_delivery')} style={{
@@ -1161,10 +1208,11 @@ export default function App() {
                   {effectiveFee ? fmt(effectiveFee) : t('freeFee')}
                 </span>
               </div>
+              {couponDiscount > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: 'var(--market-green)' }}><span>优惠券</span><span>−{fmt(couponDiscount)}</span></div>}
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0 4px', borderTop: '1px solid #eee', marginTop: 4 }}>
                 <span>共 {cartCount} 件</span>
                 <span style={{ color: 'var(--market-accent)', fontWeight: 'bold', fontSize: 18 }}>
-                  {fmt(cartTotal + effectiveFee)}
+                  {fmt(cartTotal + effectiveFee - couponDiscount)}
                 </span>
               </div>
               {currency === 'HKD' && <div style={{ fontSize: 11, color: '#64746a', marginTop: 4 }}>按 1 人民币 = {exchangeRate} 港币展示；实际订单按人民币结算。</div>}
@@ -1200,10 +1248,6 @@ export default function App() {
                     let variants = []
                     try { variants = selectedProduct.variants ? JSON.parse(selectedProduct.variants) : [] } catch(e) {}
                     const sym = currency === 'HKD' ? 'HK$' : '¥'
-                    if (variants.length > 0) {
-                      const prices = variants.map(v => Number(v.price) * (currency === 'HKD' ? exchangeRate : 1))
-                      return sym + Math.min(...prices).toFixed(2) + '~' + Math.max(...prices).toFixed(2)
-                    }
                     return fmt(selectedProduct.price)
                   })()}<small style={{fontSize:13,color:'#999',fontWeight:400}}>{unitText(selectedProduct)}</small>
                 </div>
@@ -1222,6 +1266,10 @@ export default function App() {
                     <div style={{ padding: '0 16px', borderTop: '8px solid #f7f7f7' }}>
                       <div style={{ fontSize: 14, color: '#333', fontWeight: 600, padding: '12px 0 8px' }}>规格</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingBottom: 12 }}>
+                        <div className="variant-choice" onClick={() => setSelectedVariant(-1)}
+                          style={{ padding: '8px 16px', borderRadius: 20, cursor: 'pointer', border: selectedVariant === -1 ? '2px solid var(--market-green)' : '1px solid #ddd', background: selectedVariant === -1 ? 'var(--market-green-soft)' : '#fff', fontSize: 14, fontWeight: selectedVariant === -1 ? 600 : 400 }}>
+                          基础规格 {unitText(selectedProduct)} <span style={{ color: 'var(--market-accent)' }}>{fmt(selectedProduct.price)}</span>
+                        </div>
                         {variants.map((v, i) => {
                           const isSel = selectedVariant === i
                           return (
@@ -1253,7 +1301,7 @@ export default function App() {
                       <button className="btn-submit" style={{ width: '100%', background: 'var(--market-green)', opacity: (variants.length > 0 && selectedVariant === null) ? 0.5 : 1 }}
                         onClick={() => {
                           if (variants.length > 0 && selectedVariant === null) { showToast('请先选择规格'); return }
-                          if (variants.length > 0) {
+                          if (variants.length > 0 && selectedVariant >= 0) {
                             const v = variants[selectedVariant]
                             addToCart(selectedProduct.id, v.label, Number(v.price))
                           } else {
@@ -1560,6 +1608,22 @@ export default function App() {
             <div className="after-sale-contact"><span>老板微信</span><strong>{BOSS_WECHAT}</strong><button onClick={() => copyText(BOSS_WECHAT, '微信号')}>复制</button></div>
             <div className="after-sale-contact"><span>WhatsApp</span><strong>{BOSS_WHATSAPP}</strong><a href="https://wa.me/85295228191" target="_blank" rel="noreferrer">联系</a></div>
             <button className="btn-submit" style={{ width: '100%', marginTop: 16 }} onClick={() => setShowRefund(false)}>我知道了</button>
+          </div>
+        </div>
+      )}
+
+      {showActivity && (
+        <div className="checkout-overlay" onClick={() => setShowActivity(false)}>
+          <div className="checkout-panel activity-panel" onClick={e => e.stopPropagation()}>
+            <h3>分享团购 · 集赞领券</h3>
+            <p className="activity-intro">和邻居、同学一起买新鲜果菜。服务点凑满起送额后统一配送，自取免运费。</p>
+            <div className="activity-rule"><b>集满 10 个赞，领满 {fmt(activityCampaign?.min_spend || 15)} 减 {fmt(activityCampaign?.discount_amount || 5)}</b><p>复制下方团购链接分享到朋友圈；集满 10 个赞后，上传朋友圈截图。后台审核通过，优惠券会发到“我的优惠券”。每人限领一次。</p></div>
+            <div className="activity-link"><span>{GROUP_BUY_URL}</span><button onClick={() => copyText(GROUP_BUY_URL, '团购链接')}>复制链接</button></div>
+            {activityCampaign ? !currentUser ? <button className="btn-submit" style={{ width: '100%', marginTop: 16 }} onClick={() => { setShowActivity(false); setTab('login') }}>登录后上传截图</button> : <>
+              {(() => { const claim = couponData.claims.find(c => Number(c.campaign_id) === Number(activityCampaign.id)); return claim && <p className="activity-status">{claim.status === 'pending' ? '截图正在审核' : claim.status === 'approved' ? '审核通过，优惠券已发放' : `未通过：${claim.admin_note || '可以重新提交截图'}`}</p> })()}
+              {!couponData.claims.some(c => Number(c.campaign_id) === Number(activityCampaign.id) && c.status !== 'rejected') && <label className="activity-upload">{claimUploading ? '正在上传…' : '上传朋友圈截图'}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={claimUploading} onChange={e => { submitCouponScreenshot(e.target.files?.[0]); e.target.value = '' }} /></label>}
+            </> : <p className="activity-status">活动加载中…</p>}
+            <button className="btn-cancel" style={{ width: '100%', marginTop: 10 }} onClick={() => setShowActivity(false)}>关闭</button>
           </div>
         </div>
       )}

@@ -48,6 +48,8 @@ CREATE TABLE IF NOT EXISTS orders (
   address TEXT DEFAULT '',
   status TEXT DEFAULT 'pending',
   total REAL DEFAULT 0,
+  coupon_discount REAL DEFAULT 0,
+  coupon_grant_id INTEGER,
   delivery_fee REAL DEFAULT 0,
   delivery_point_id INTEGER,
   remark TEXT DEFAULT '',
@@ -116,6 +118,8 @@ CREATE TABLE IF NOT EXISTS coupon_campaigns (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   title TEXT NOT NULL,
   details TEXT NOT NULL DEFAULT '',
+  min_spend REAL NOT NULL DEFAULT 0,
+  discount_amount REAL NOT NULL DEFAULT 0,
   is_published INTEGER NOT NULL DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now', '+8 hours'))
 );
@@ -125,10 +129,28 @@ CREATE TABLE IF NOT EXISTS coupon_grants (
   user_id INTEGER NOT NULL,
   granted_by INTEGER NOT NULL,
   granted_at TEXT DEFAULT (datetime('now', '+8 hours')),
+  used_order_no TEXT,
+  used_at TEXT,
   UNIQUE(campaign_id, user_id),
   FOREIGN KEY (campaign_id) REFERENCES coupon_campaigns(id),
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
+CREATE TABLE IF NOT EXISTS coupon_claims (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  campaign_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  screenshot TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  admin_note TEXT DEFAULT '',
+  created_at TEXT DEFAULT (datetime('now', '+8 hours')),
+  reviewed_at TEXT,
+  reviewed_by INTEGER,
+  UNIQUE(campaign_id, user_id),
+  FOREIGN KEY (campaign_id) REFERENCES coupon_campaigns(id),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+INSERT OR IGNORE INTO coupon_campaigns (id, title, details, min_spend, discount_amount, is_published)
+VALUES (1, '分享团购，集赞领券', '复制团购链接，分享到朋友圈。集满 10 个赞后上传截图，审核通过即可领取满 ¥15 减 ¥5 优惠券。', 15, 5, 1);
 INSERT OR IGNORE INTO delivery_points (name, address, fee, threshold, sort_order) VALUES
   ('日出康城站', '港铁日出康城站', 0, 1000, 1),
   ('科技大学', '香港科技大学', 0, 500, 2),

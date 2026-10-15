@@ -4,11 +4,14 @@ import { readFileSync } from 'fs'
 const BASE = 'https://order-system-bp4.pages.dev'
 
 async function main() {
+  if (!process.env.ORDER_ADMIN_USER || !process.env.ORDER_ADMIN_PASSWORD) {
+    throw new Error('Set ORDER_ADMIN_USER and ORDER_ADMIN_PASSWORD before running')
+  }
   // 1. 登录
   const loginRes = await fetch(`${BASE}/api/admin/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: 'jchengat', password: 'Jenny@123' })
+    body: JSON.stringify({ username: process.env.ORDER_ADMIN_USER, password: process.env.ORDER_ADMIN_PASSWORD })
   })
   const loginData = await loginRes.json()
   if (!loginData.token) {

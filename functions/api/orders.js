@@ -66,7 +66,7 @@ export async function onRequest(context) {
     if (!Array.isArray(variants)) return json({ error: '商品规格配置有误' }, 500)
     const variant = String(item.variant || '')
     const selected = variants.length ? variants.find(v => v && v.label === variant) : null
-    if ((variants.length && !selected) || (!variants.length && variant)) return json({ error: '商品规格无效' }, 400)
+    if ((variant && !selected) || (!variants.length && variant)) return json({ error: '商品规格无效' }, 400)
     const price = Number(selected ? selected.price : product.price)
     if (!validMoney(price)) return json({ error: '商品价格配置有误' }, 500)
     const unitCents = cents(price)
@@ -78,23 +78,44 @@ export async function onRequest(context) {
   // 自取点订单始终免运费；门槛只决定该点何时统一配送。
   const deliveryFee = point ? 0 : 30
 
+  let coupon = null
+  let discountCents = 0
+  if (body.coupon_grant_id !== undefined && body.coupon_grant_id !== null) {
+    const grantId = Number(body.coupon_grant_id)
+    if (!Number.isInteger(grantId) || grantId <= 0) return json({ error: '优惠券无效' }, 400)
+    coupon = await env.DB.prepare('SELECT g.id, c.min_spend, c.discount_amount FROM coupon_grants g JOIN coupon_campaigns c ON c.id = g.campaign_id WHERE g.id = ? AND g.user_id = ? AND g.used_order_no IS NULL').bind(grantId, user.id).first()
+    if (!coupon) return json({ error: '优惠券不存在或已使用' }, 409)
+    if (subtotalCents < cents(Number(coupon.min_spend))) return json({ error: `商品金额需满 ¥${coupon.min_spend} 才能使用此券` }, 400)
+    discountCents = cents(Number(coupon.discount_amount))
+    if (!validMoney(Number(coupon.discount_amount)) || discountCents >= subtotalCents) return json({ error: '优惠券配置有误' }, 500)
+  }
+
   const dbUser = await env.DB.prepare('SELECT username, phone FROM users WHERE id = ?').bind(user.id).first()
   const orderNo = 'ZZ' + crypto.randomUUID().replace(/-/g, '').slice(0, 16).toUpperCase()
   const statements = [env.DB.prepare(
-    `INSERT INTO orders (order_no, user_id, customer, phone, address, status, total, delivery_fee, remark, payment_method, payment_status, delivery_point_id, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+8 hours'))`
+    `INSERT INTO orders (order_no, user_id, customer, phone, address, status, total, delivery_fee, remark, payment_method, payment_status, delivery_point_id, coupon_discount, coupon_grant_id, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+8 hours'))`
   ).bind(
     orderNo, String(user.id), String(body.customer || dbUser?.username || '').trim(),
     String(body.phone || dbUser?.phone || '').trim(), String(body.address || '').trim(),
-    'pending', subtotalCents / 100, deliveryFee, String(body.remark || ''),
-    body.payment_method || 'cash_on_delivery', 'pending', point?.id || null
+    'pending', (subtotalCents - discountCents) / 100, deliveryFee, String(body.remark || ''),
+    body.payment_method || 'cash_on_delivery', 'pending', point?.id || null, discountCents / 100, coupon?.id || null
   )]
   for (const item of items) {
     statements.push(env.DB.prepare(
       'INSERT INTO order_items (order_id, product_id, quantity, price, variant) VALUES ((SELECT id FROM orders WHERE order_no = ?), ?, ?, ?, ?)'
     ).bind(orderNo, item.product_id, item.quantity, item.price, item.variant))
   }
-  await env.DB.batch(statements)
+  if (coupon) {
+    const reserved = await env.DB.prepare("UPDATE coupon_grants SET used_order_no = ?, used_at = datetime('now', '+8 hours') WHERE id = ? AND user_id = ? AND used_order_no IS NULL").bind(orderNo, coupon.id, user.id).run()
+    if (reserved.meta.changes !== 1) return json({ error: '优惠券已被使用，请刷新后重试' }, 409)
+  }
+  try {
+    await env.DB.batch(statements)
+  } catch (error) {
+    if (coupon) await env.DB.prepare('UPDATE coupon_grants SET used_order_no = NULL, used_at = NULL WHERE id = ? AND used_order_no = ?').bind(coupon.id, orderNo).run()
+    throw error
+  }
   const order = await env.DB.prepare(
     'SELECT o.*, p.name as delivery_point_name FROM orders o LEFT JOIN delivery_points p ON o.delivery_point_id = p.id WHERE o.order_no = ?'
   ).bind(orderNo).first()
