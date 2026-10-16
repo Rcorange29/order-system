@@ -10,6 +10,9 @@ const persistTo = process.argv.find(arg => arg.startsWith('--persist-to='))
 const catalogRepair = process.argv.includes('--repair-catalog')
   ? readFileSync(new URL('../migrations/product-catalog-repair.sql', import.meta.url), 'utf8')
   : ''
+const categoryRepair = process.argv.includes('--simplify-categories')
+  ? readFileSync(new URL('../migrations/reclassify-produce-2026-10.sql', import.meta.url), 'utf8')
+  : ''
 
 function execute(sql) {
   const args = [wrangler, 'd1', 'execute', 'order-db', location, '--command', sql, '--json']
@@ -86,6 +89,7 @@ statements.push("UPDATE delivery_points SET threshold = 500 WHERE name = '科技
 // Existing product prices, images, descriptions, units and variants are merchant-owned data.
 // A schema upgrade must never rewrite them unless explicitly requested.
 statements.push(...catalogRepair.split('\n').filter(line => line.startsWith('UPDATE products ')))
+if (categoryRepair) statements.push(categoryRepair)
 statements.push("UPDATE orders SET delivery_fee = 0 WHERE delivery_point_id IS NOT NULL AND status = 'pending' AND payment_status = 'pending' AND delivery_fee <> 0")
 
 console.log(`Database: order-db (${remote ? 'remote' : 'local'})`)

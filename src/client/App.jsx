@@ -115,6 +115,8 @@ const getProdName = (pname) => pname
 // ========== 分类名三语映射 ==========
 const categoryNameMap = {
   '水果': { zh_HK:'水果', en:'Fruits' },
+  '蔬菜': { zh_HK:'蔬菜', en:'Vegetables' },
+  '香辛料蔬菜': { zh_HK:'香辛料蔬菜', en:'Aromatics & Spices' },
   '叶菜·花菜': { zh_HK:'葉菜·花菜', en:'Leafy Greens & Flower Vegetables' },
   '瓜果类蔬菜': { zh_HK:'瓜果類蔬菜', en:'Fruit Vegetables' },
   '根茎·茎菜': { zh_HK:'根莖·莖菜', en:'Roots & Stems' },
@@ -123,6 +125,7 @@ const categoryNameMap = {
   '蔬菜盲盒': { zh_HK:'蔬菜盲盒', en:'Veggie Blind Box' },
   '蛋类': { zh_HK:'蛋類', en:'Eggs' },
   '时令蔬果(限定)': { zh_HK:'時令蔬果(限定)', en:'Seasonal (Limited)' },
+  '时令蔬果（限定）': { zh_HK:'時令蔬果（限定）', en:'Seasonal (Limited)' },
   '菌菇': { zh_HK:'菌菇', en:'Mushrooms' }
 }
 
