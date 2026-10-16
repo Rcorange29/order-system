@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import useVisualViewport from '../useVisualViewport.js'
 
 const API = '/api'
 const displayOrderNo = order => String(order?.public_no ?? order?.id ?? '').padStart(2, '0')
@@ -28,6 +29,7 @@ function matchingPhone(a, b) {
 }
 
 export default function App() {
+  useVisualViewport()
   const [token, setToken] = useState(localStorage.getItem('admin_token') || '')
   const [adminUser, setAdminUser] = useState(null)
   const [page, setPage] = useState('dashboard')

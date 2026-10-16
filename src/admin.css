@@ -119,6 +119,10 @@ tr:hover { background: #fafafa; }
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  top: var(--app-viewport-top, 0px);
+  height: var(--app-viewport-height, 100dvh);
+  bottom: auto;
+  padding: 20px 0;
 }
 .modal {
   background: #fff;
@@ -126,9 +130,16 @@ tr:hover { background: #fafafa; }
   width: 500px;
   max-width: 90vw;
   max-height: 85vh;
+  max-height: calc(var(--app-viewport-height, 100dvh) - 40px);
   overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
 }
 .modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #fff;
   padding: 16px 24px;
   border-bottom: 1px solid #f0f0f0;
   display: flex;
@@ -139,6 +150,10 @@ tr:hover { background: #fafafa; }
 .modal-close { cursor: pointer; font-size: 20px; color: #999; background: none; border: none; }
 .modal-body { padding: 24px; }
 .modal-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #fff;
   padding: 16px 24px;
   border-top: 1px solid #f0f0f0;
   display: flex;

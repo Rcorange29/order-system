@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { normalizePhone } from '../../functions/api/_phone.js'
+import useVisualViewport from '../useVisualViewport.js'
 
 const API = '/api'
 const BOSS_WECHAT = 'jennybabi1988'
@@ -192,6 +193,7 @@ async function uploadProofFile(file, orderId) {
 }
 
 export default function App() {
+  useVisualViewport()
   const [tab, setTab] = useState('home')
   const [orderFilter, setOrderFilter] = useState('all')
   const [currentUser, setCurrentUser] = useState(null)
@@ -343,6 +345,18 @@ export default function App() {
       setAddresses([])
     }
   }, [currentUser])
+
+  useEffect(() => {
+    if (tab !== 'orderDetail' || !selectedOrder?.id) return
+    let active = true
+    authFetch(`${API}/orders/${selectedOrder.id}`).then(async response => {
+      if (response.ok) {
+        const detail = await response.json()
+        if (active) setSelectedOrder(detail)
+      }
+    }).catch(() => {})
+    return () => { active = false }
+  }, [tab, selectedOrder?.id])
 
   useEffect(() => {
     fetch(`${API}/products`).then(r => r.json()).then(setProducts)
@@ -718,15 +732,15 @@ export default function App() {
   }
 
   if (tab === 'orderDetail' && selectedOrder) {
-    return <OrderDetailPage order={selectedOrder} onBack={() => setTab('myOrders')} pn={pn} fmt={fmt} t={t} statusTxt={statusTxt} showToast={showToast} onRefresh={async () => {
-      const response = await authFetch(`${API}/orders`)
+    return <><OrderDetailPage order={selectedOrder} onBack={() => setTab('myOrders')} pn={pn} fmt={fmt} t={t} statusTxt={statusTxt} showToast={showToast} onRefresh={async () => {
+      const [response, detailResponse] = await Promise.all([authFetch(`${API}/orders`), authFetch(`${API}/orders/${selectedOrder.id}`)])
       if (response.ok) {
         const next = await response.json()
         setOrders(next)
-        setSelectedOrder(next.find(o => o.id === selectedOrder.id) || selectedOrder)
       }
+      if (detailResponse.ok) setSelectedOrder(await detailResponse.json())
       loadStats()
-    }} />
+    }} />{toast && <div className="toast" role="status">{toast}</div>}</>
   }
 
   if (tab === 'address') {
@@ -1371,7 +1385,7 @@ export default function App() {
           <div className="product-detail-sheet" onClick={e => e.stopPropagation()}
             style={{
               background: '#fff', borderRadius: '16px 16px 0 0', maxWidth: 400, width: '100%',
-              maxHeight: '85vh', overflowY: 'auto', paddingBottom: 0
+              paddingBottom: 0
             }}>
             {/* 顶部商品信息行 */}
             <div style={{ display: 'flex', gap: 12, padding: 16, position: 'relative' }}>
@@ -1548,13 +1562,13 @@ export default function App() {
 
       {/* 上传付款凭证弹窗 */}
       {showUploadProof && (
-        <div className="checkout-overlay" style={{ zIndex: 5000 }} onClick={() => { setShowUploadProof(false); setTab('myOrders') }}>
+        <div className="checkout-overlay" style={{ zIndex: 5000 }} onClick={() => { if (!proofUploading) { setShowUploadProof(false); setTab('myOrders') } }}>
           <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 360, textAlign: 'center' }}>
             <h3 style={{ marginBottom: 12 }}>📸 上传付款截图</h3>
             <p style={{ fontSize: 13, color: '#666', lineHeight: 1.7, marginBottom: 16, textAlign: 'left' }}>
               付款后请截图支付成功页面（<b>确保付款时间和金额清晰可见</b>），上传后我们会尽快确认。
             </p>
-            <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e => setProofFile(e.target.files[0] || null)} style={{ marginBottom: 16 }} />
+            <input type="file" accept="image/png,image/jpeg,image/webp" disabled={proofUploading} onChange={e => setProofFile(e.target.files[0] || null)} style={{ marginBottom: 16 }} />
             {proofFile && <p className="proof-selected">已选择：{proofFile.name}</p>}
             <button className="btn-submit proof-confirm" disabled={!proofFile || proofUploading} onClick={async () => {
               setProofUploading(true)
@@ -1570,7 +1584,7 @@ export default function App() {
               } catch (error) { showToast(error.message || '上传失败，请重试') }
               finally { setProofUploading(false) }
             }}>{proofUploading ? '正在上传…' : '确认上传付款凭证'}</button>
-            <button className="btn-cancel" style={{ width: '100%', padding: 12 }} onClick={() => { setShowUploadProof(false); setTab('myOrders') }}>稍后上传</button>
+            <button className="btn-cancel" disabled={proofUploading} style={{ width: '100%', padding: 12 }} onClick={() => { setShowUploadProof(false); setTab('myOrders') }}>稍后上传</button>
           </div>
         </div>
       )}
@@ -1629,7 +1643,7 @@ export default function App() {
       {/* 首次进入注意事项弹窗 */}
       {showIntro && (
         <div className="checkout-overlay" style={{ zIndex: 5000 }} onClick={() => {}}>
-          <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 420, maxHeight: '85vh', overflowY: 'auto' }}>
+          <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <h3 style={{ textAlign: 'center', marginBottom: 16 }}>📋 下单须知</h3>
 
             <div style={{ fontSize: 13, lineHeight: 1.8, color: '#333' }}>
@@ -1807,7 +1821,7 @@ export default function App() {
       {/* 配送规则弹窗 */}
       {showHelp && (
         <div className="checkout-overlay" onClick={() => setShowHelp(false)}>
-          <div className="checkout-panel delivery-help-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 420, maxHeight: '85vh', overflowY: 'auto' }}>
+          <div className="checkout-panel delivery-help-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <div className="rule-dialog-heading"><h3>配送规则</h3><button type="button" aria-label="关闭配送规则" onClick={() => setShowHelp(false)}>×</button></div>
             <div className="rule-dialog-list">
               <section><h4>配送时间</h4><p>各服务点凑满门槛后安排统一配送。取货时间在配送前一天于网站公告和群里通知。</p></section>
@@ -2008,7 +2022,7 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast, onRe
             <h4>{order.status === 'pending' ? '待付款 · 上传付款凭证' : '付款凭证待确认'}</h4>
             <p>{order.status === 'pending' ? `本单应付 ${orderPaymentText(order)}。完成转账后，在这里上传付款截图。` : '截图已提交，店主确认后订单会进入拼团中。需要更换截图也可以重新上传。'}</p>
             <button type="button" className="payment-info-open" onClick={() => setShowPaymentDetails(true)}>查看收款方式与应付金额 ›</button>
-            <label className="proof-file-picker">选择付款截图<input type="file" accept="image/png,image/jpeg,image/webp" onChange={e => setProofFile(e.target.files[0] || null)} /></label>
+            <label className="proof-file-picker">选择付款截图<input type="file" accept="image/png,image/jpeg,image/webp" disabled={proofUploading} onChange={e => setProofFile(e.target.files[0] || null)} /></label>
             {proofFile && <><small className="proof-selected">已选择：{proofFile.name}</small><button className="btn-submit proof-confirm" disabled={proofUploading} onClick={async () => {
               setProofUploading(true)
               try {
