@@ -9,7 +9,7 @@ export async function onRequest(context) {
   const body = await readBody(request)
   if (!body.phone || !body.password) return json({ error: '请输入手机号和密码' }, 400)
   const phoneKey = normalizePhone(body.phone)
-  if (!phoneKey) return json({ error: '手机号格式不正确' }, 400)
+  if (!phoneKey) return json({ error: '仅支持香港手机号：请输入4至9开头的8位号码，可加+852区号' }, 400)
 
   const aliases = phoneAliases(phoneKey)
   const { results: candidates } = await env.DB.prepare(`SELECT * FROM users WHERE username = ? OR ${phoneDigitsSql} IN (${aliases.map(() => '?').join(', ')}) LIMIT 20`)

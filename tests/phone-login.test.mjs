@@ -45,10 +45,23 @@ test('phone-only signup accepts common formats and blocks a second account for t
 test('existing username accounts can sign in using their saved phone and original password', async () => {
   const { sqlite, request } = setup()
   const passwordHash = await hashPassword('OldPassword!123')
-  sqlite.prepare('INSERT INTO users (username, password_hash, phone) VALUES (?, ?, ?)').run('old_customer', passwordHash, '12345678')
-  const signedIn = await request(login, { phone: '1234 5678', password: 'OldPassword!123' })
+  sqlite.prepare('INSERT INTO users (username, password_hash, phone) VALUES (?, ?, ?)').run('old_customer', passwordHash, '61234567')
+  const signedIn = await request(login, { phone: '6123 4567', password: 'OldPassword!123' })
   assert.equal(signedIn.status, 200)
   assert.equal((await signedIn.json()).username, 'old_customer')
-  assert.equal((await request(register, { phone: '+85212345678', password: 'OtherPassword!123' })).status, 409)
+  assert.equal((await request(register, { phone: '+85261234567', password: 'OtherPassword!123' })).status, 409)
+  sqlite.close()
+})
+
+test('both signup and login reject non-Hong-Kong mobile formats without creating accounts', async () => {
+  const { sqlite, request } = setup()
+  for (const phone of ['13800138000', '+8613800138000', '+85361234567', '21234567', '1234567', '912345678', '9abcdefg', '+91234567']) {
+    for (const handler of [register, login]) {
+      const response = await request(handler, { phone, password: 'TestOnly!123' })
+      assert.equal(response.status, 400, phone)
+      assert.match((await response.json()).error, /香港手机号/)
+    }
+  }
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM users').get().count, 0)
   sqlite.close()
 })

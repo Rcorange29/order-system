@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { normalizePhone } from '../../functions/api/_phone.js'
 
 const API = '/api'
 const BOSS_WECHAT = 'jennybabi1988'
@@ -633,7 +634,7 @@ export default function App() {
       body: JSON.stringify({ phone, password })
     })
     const data = await res.json()
-    if (!res.ok) { showToast(data.error || '登录失败'); return }
+    if (!res.ok) return data.error || '登录失败'
     localStorage.setItem('token', data.token)
     localStorage.setItem('currentUser', JSON.stringify({ username: data.username, phone: data.phone }))
     setCurrentUser({ username: data.username, phone: data.phone })
@@ -646,14 +647,14 @@ export default function App() {
   }
 
   const handleRegister = async (phone, password) => {
-    if (!phone || !password) { showToast('请填写手机号和密码'); return }
+    if (!phone || !password) return '请填写手机号和密码'
     const res = await fetch(`${API}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, password })
     })
     const data = await res.json()
-    if (!res.ok) { showToast(data.error || '注册失败'); return }
+    if (!res.ok) return data.error || '注册失败'
     localStorage.setItem('token', data.token)
     localStorage.setItem('currentUser', JSON.stringify({ username: data.username, phone: data.phone }))
     setCurrentUser({ username: data.username, phone: data.phone })
@@ -1857,14 +1858,22 @@ function LoginPage({ onLogin, onRegister, onBack, t, lang }) {
   const [password, setPassword] = useState('')
   const [phone, setPhone] = useState('')
   const [error, setError] = useState('')
-  const phoneExample = lang === 'en' ? '8-digit HK / 11-digit mainland number' : lang === 'zh_HK' ? '香港8位／內地11位手機號' : '香港8位／内地11位手机号'
+  const [phoneTouched, setPhoneTouched] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const phoneExample = lang === 'en' ? '8-digit Hong Kong mobile number' : lang === 'zh_HK' ? '香港8位手機號' : '香港8位手机号'
+  const phoneError = phoneTouched && !normalizePhone(phone) ? (lang === 'en' ? 'Enter an 8-digit Hong Kong mobile number starting with 4–9. +852 is optional.' : lang === 'zh_HK' ? '僅支持香港手機號：請輸入4至9開頭的8位號碼，可加+852區號。' : '仅支持香港手机号：请输入4至9开头的8位号码，可加+852区号。') : ''
   const accountHint = lang === 'en' ? 'Your phone number is your login ID. No verification text will be sent.' : lang === 'zh_HK' ? '手機號就是登入帳號；這裡不發驗證碼，請填寫自己可使用的號碼。' : '手机号就是登录账号；这里不发验证码，请填写自己可使用的号码。'
 
-  const submit = () => {
-    if (!phone.trim() || !password) { setError(lang === 'en' ? 'Enter your phone number and password' : lang === 'zh_HK' ? '請填寫手機號和密碼' : '请填写手机号和密码'); return }
+  const submit = async () => {
+    if (submitting) return
+    setPhoneTouched(true)
     setError('')
-    if (mode === 'login') onLogin(phone, password)
-    else onRegister(phone, password)
+    if (!normalizePhone(phone)) return
+    if (!password) { setError(lang === 'en' ? 'Enter your password' : lang === 'zh_HK' ? '請填寫密碼' : '请填写密码'); return }
+    setSubmitting(true)
+    try { setError(await (mode === 'login' ? onLogin(phone, password) : onRegister(phone, password)) || '') }
+    catch { setError(lang === 'en' ? 'Connection failed. Please try again.' : lang === 'zh_HK' ? '連線失敗，請稍後重試。' : '连接失败，请稍后重试。') }
+    finally { setSubmitting(false) }
   }
 
   return (
@@ -1879,8 +1888,9 @@ function LoginPage({ onLogin, onRegister, onBack, t, lang }) {
           <div className={`login-tab ${mode === 'register' ? 'active' : ''}`} onClick={() => setMode('register')}>{t('register')}</div>
         </div>
         <div className="login-input-group">
-          <label>{t('phone')}</label>
-          <input type="tel" inputMode="tel" autoComplete="tel" placeholder={phoneExample} value={phone} onChange={e => setPhone(e.target.value)} />
+          <label htmlFor="account-phone">{t('phone')} <small>+852</small></label>
+          <input id="account-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder={phoneExample} value={phone} aria-invalid={!!phoneError} aria-describedby={phoneError ? 'account-phone-error' : undefined} onBlur={() => setPhoneTouched(true)} onChange={e => { setPhone(e.target.value); setError('') }} />
+          {phoneError && <p id="account-phone-error" className="login-form-error" role="alert">{phoneError}</p>}
         </div>
         <div className="login-input-group">
           <label>{t('password')}</label>
@@ -1888,7 +1898,7 @@ function LoginPage({ onLogin, onRegister, onBack, t, lang }) {
         </div>
         {mode === 'register' && <p className="login-phone-hint">{accountHint}</p>}
         {error && <p className="login-form-error" role="alert">{error}</p>}
-        <button className="login-btn" onClick={submit}>{mode === 'login' ? t('login') : t('register')}</button>
+        <button className="login-btn" disabled={submitting} onClick={submit}>{submitting ? (lang === 'en' ? 'Please wait…' : '请稍候…') : mode === 'login' ? t('login') : t('register')}</button>
         <div style={{ textAlign: 'center', marginTop: 16, fontSize: 13, color: '#999' }}>
           <span style={{ cursor: 'pointer', color: 'var(--market-green)' }} onClick={onBack}>{t('back')}</span>
         </div>
