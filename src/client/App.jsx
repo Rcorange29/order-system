@@ -1221,7 +1221,7 @@ export default function App() {
       {/* 下单弹窗 */}
       {showCheckout && (
         <div className="checkout-overlay" onClick={() => setShowCheckout(false)}>
-          <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+          <div className="checkout-panel checkout-form-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <h3>确认订单</h3>
             <div className="form-group">
               <label>配送方式</label>
