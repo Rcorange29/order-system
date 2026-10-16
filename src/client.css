@@ -716,6 +716,8 @@ body {
   outline: none;
 }
 .login-input-group input:focus { border-color: #ee4d2d; }
+.login-phone-hint { margin: -2px 0 12px; color: #66736a; font-size: 13px; line-height: 1.5; }
+.login-form-error { margin: 0 0 8px; color: #aa3f2a; font-size: 13px; }
 .login-btn {
   width: 100%;
   padding: 13px;

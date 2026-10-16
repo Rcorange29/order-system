@@ -107,7 +107,7 @@ export async function onRequest(context) {
     `INSERT INTO orders (order_no, user_id, customer, phone, address, status, total, delivery_fee, remark, payment_method, payment_status, delivery_point_id, coupon_discount, coupon_grant_id, payment_currency, payment_amount, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+8 hours'))`
   ).bind(
-    orderNo, String(user.id), String(body.customer || dbUser?.username || '').trim(),
+    orderNo, String(user.id), String(body.customer || dbUser?.phone || '').trim(),
     String(body.phone || dbUser?.phone || '').trim(), String(body.address || '').trim(),
     'pending', (subtotalCents - discountCents) / 100, deliveryFee, String(body.remark || ''),
     body.payment_method, 'pending', point?.id || null, discountCents / 100, coupon?.id || null, paymentCurrency, paymentAmount

@@ -17,6 +17,16 @@ function authFetch(url, options = {}) {
   return fetch(url, { ...options, headers })
 }
 
+function matchingPhone(a, b) {
+  const digits = value => String(value || '').replace(/\D/g, '')
+  const one = digits(a)
+  const two = digits(b)
+  if (!one || !two) return false
+  return one === two || (one.length === 8 && two === `852${one}`) || (two.length === 8 && one === `852${two}`)
+    || (one.length === 11 && one.startsWith('1') && two === `86${one}`)
+    || (two.length === 11 && two.startsWith('1') && one === `86${two}`)
+}
+
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('admin_token') || '')
   const [adminUser, setAdminUser] = useState(null)
@@ -348,12 +358,14 @@ function CouponManage({ coupons, claims, users, reload, showToast }) {
     </div>
     <h3>截图审核</h3>
     {claims.filter(q => q.status === 'pending').map(q => <div className="card" key={q.id}>
-      <strong>{q.username}</strong> · {q.phone || '未填写手机'} · {q.title}<p>提交时间：{q.created_at}</p>
+      <strong>{q.phone || q.username}</strong> · {q.title}<p>提交时间：{q.created_at}</p>
+      {claims.some(other => other.id !== q.id && other.campaign_id === q.campaign_id && other.status !== 'rejected' && matchingPhone(other.phone, q.phone)) && <p className="coupon-review-warning">提醒：同一手机号曾用其他账号提交此活动，请核对后再发券。</p>}
+      {claims.some(other => other.id !== q.id && other.campaign_id === q.campaign_id && other.status !== 'rejected' && other.screenshot === q.screenshot) && <p className="coupon-review-warning">提醒：这张截图曾用于其他账号，请核对后再发券。</p>}
       <img src={q.screenshot} alt="朋友圈集赞截图" style={{ display: 'block', maxWidth: 280, maxHeight: 440, objectFit: 'contain', margin: '10px 0' }} />
       <div className="announcement-actions"><button className="btn btn-primary btn-sm" onClick={() => review(q.id, 'approve')}>确认至少 10 赞并发券</button><button className="btn btn-default btn-sm" onClick={() => review(q.id, 'reject')}>未达要求，退回</button></div>
     </div>)}
     {!claims.some(q => q.status === 'pending') && <div className="card">暂无待审核截图</div>}
-    <div className="card"><label>发券给用户 </label><select value={selectedUser} onChange={e => setSelectedUser(e.target.value)}><option value="">请选择用户</option>{users.map(u => <option key={u.id} value={u.id}>{u.username} · {u.phone || '未填写手机'}</option>)}</select></div>
+    <div className="card"><label>发券给用户 </label><select value={selectedUser} onChange={e => setSelectedUser(e.target.value)}><option value="">请选择用户</option>{users.map(u => <option key={u.id} value={u.id}>{u.phone || u.username} · #{u.id}</option>)}</select></div>
     {coupons.map(c => <div className="card" key={c.id}>
       <strong>{c.title}</strong> · 满 ¥{c.min_spend} 减 ¥{c.discount_amount} <span className="tag">{c.is_published ? '已公开' : '未公开'}</span><p>{c.details || '尚未填写活动规则'}</p><p>已发给 {c.grant_count} 位用户</p>
       <div className="announcement-actions"><button className="btn btn-default btn-sm" onClick={() => edit(c)}>编辑活动</button><button className="btn btn-primary btn-sm" disabled={!selectedUser} onClick={() => grant(c.id)}>发给所选用户</button></div>
@@ -843,16 +855,16 @@ function UserManage({ users, showToast }) {
       </div>
       <div className="card">
         <div className="toolbar">
-          <input placeholder="搜索用户名或手机号" value={search} onChange={e => setSearch(e.target.value)} />
+          <input placeholder="搜索手机号或旧账号" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <table>
-          <thead><tr><th>ID</th><th>用户名</th><th>手机号</th><th>订单数</th><th>累计消费</th><th>注册时间</th><th>最后下单</th><th>操作</th></tr></thead>
+          <thead><tr><th>ID</th><th>手机号</th><th>旧账号</th><th>订单数</th><th>累计消费</th><th>注册时间</th><th>最后下单</th><th>操作</th></tr></thead>
           <tbody>
             {filtered.map(u => (
               <tr key={u.id}>
                 <td>{u.id}</td>
-                <td>{u.username}</td>
-                <td>{u.phone || '—'}</td>
+                <td>{u.phone || '—'}{users.some(other => other.id !== u.id && matchingPhone(other.phone, u.phone)) && <small className="duplicate-phone-note">旧账号号码重复</small>}</td>
+                <td>{u.username !== u.phone ? u.username : '—'}</td>
                 <td>{u.order_count || 0}</td>
         <td>¥{Number(u.total_spent || 0).toFixed(2)}</td>
                 <td>{(u.created_at || '').substring(0, 16)}</td>

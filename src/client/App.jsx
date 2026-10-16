@@ -581,7 +581,7 @@ export default function App() {
     if (deliveryType === 'pickup') {
       if (!selectedPointId) { showToast(t('selectPointFirst')); setShowPointPicker(true); return }
       const pt = deliveryPoints.find(p => p.id == selectedPointId)
-      customer = currentUser?.username || ''
+      customer = currentUser?.phone || ''
       address = `自取点：${pt?.name || ''}`
     } else {
       const addr = addresses.find(a => a.id === checkoutAddrId)
@@ -625,11 +625,11 @@ export default function App() {
     }
   }
 
-  const handleLogin = async (username, password) => {
+  const handleLogin = async (phone, password) => {
     const res = await fetch(`${API}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ phone, password })
     })
     const data = await res.json()
     if (!res.ok) { showToast(data.error || '登录失败'); return }
@@ -644,12 +644,12 @@ export default function App() {
     showToast('登录成功')
   }
 
-  const handleRegister = async (username, password, phone) => {
-    if (!username || !password) { showToast('请填写账号和密码'); return }
+  const handleRegister = async (phone, password) => {
+    if (!phone || !password) { showToast('请填写手机号和密码'); return }
     const res = await fetch(`${API}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password, phone })
+      body: JSON.stringify({ phone, password })
     })
     const data = await res.json()
     if (!res.ok) { showToast(data.error || '注册失败'); return }
@@ -712,7 +712,7 @@ export default function App() {
 
   // ========== 渲染 ==========
   if (tab === 'login') {
-    return <LoginPage t={t} onLogin={handleLogin} onRegister={handleRegister} onBack={() => setTab('my')} />
+    return <LoginPage t={t} lang={lang} onLogin={handleLogin} onRegister={handleRegister} onBack={() => setTab('my')} />
   }
 
   if (tab === 'orderDetail' && selectedOrder) {
@@ -1068,8 +1068,8 @@ export default function App() {
               <div className="my-header">
                 <div className="avatar">👤</div>
                 <div className="info">
-                  <div className="name">{currentUser.username}</div>
-                  <div className="phone">{currentUser.phone || t('noPhone')}</div>
+                  <div className="name">{currentUser.phone}</div>
+                  <div className="phone">{lang === 'en' ? 'Phone login' : lang === 'zh_HK' ? '手機號登入' : '手机号登录'}</div>
                 </div>
               </div>
               <div className="my-content">
@@ -1851,16 +1851,19 @@ function NavIcon({ name }) {
   return <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }
 
-function LoginPage({ onLogin, onRegister, onBack, t }) {
+function LoginPage({ onLogin, onRegister, onBack, t, lang }) {
   const [mode, setMode] = useState('login')
-  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [phone, setPhone] = useState('')
+  const [error, setError] = useState('')
+  const phoneExample = lang === 'en' ? '8-digit HK / 11-digit mainland number' : lang === 'zh_HK' ? '香港8位／內地11位手機號' : '香港8位／内地11位手机号'
+  const accountHint = lang === 'en' ? 'Your phone number is your login ID. No verification text will be sent.' : lang === 'zh_HK' ? '手機號就是登入帳號；這裡不發驗證碼，請填寫自己可使用的號碼。' : '手机号就是登录账号；这里不发验证码，请填写自己可使用的号码。'
 
   const submit = () => {
-    if (mode === 'login') onLogin(username, password)
-    else if (!phone || phone.length < 8) { alert(t('phone') + ' *'); return }
-    else onRegister(username, password, phone)
+    if (!phone.trim() || !password) { setError(lang === 'en' ? 'Enter your phone number and password' : lang === 'zh_HK' ? '請填寫手機號和密碼' : '请填写手机号和密码'); return }
+    setError('')
+    if (mode === 'login') onLogin(phone, password)
+    else onRegister(phone, password)
   }
 
   return (
@@ -1875,19 +1878,15 @@ function LoginPage({ onLogin, onRegister, onBack, t }) {
           <div className={`login-tab ${mode === 'register' ? 'active' : ''}`} onClick={() => setMode('register')}>{t('register')}</div>
         </div>
         <div className="login-input-group">
-          <label>{t('username')}</label>
-          <input placeholder={t('username')} value={username} onChange={e => setUsername(e.target.value)} />
+          <label>{t('phone')}</label>
+          <input type="tel" inputMode="tel" autoComplete="tel" placeholder={phoneExample} value={phone} onChange={e => setPhone(e.target.value)} />
         </div>
         <div className="login-input-group">
           <label>{t('password')}</label>
-          <input type="password" placeholder={t('password')} value={password} onChange={e => setPassword(e.target.value)} />
+          <input type="password" placeholder={t('password')} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') submit() }} />
         </div>
-        {mode === 'register' && (
-          <div className="login-input-group">
-            <label>{t('phone')} <span style={{color:'red'}}>*</span></label>
-            <input placeholder={t('phone')} value={phone} onChange={e => setPhone(e.target.value)} />
-          </div>
-        )}
+        {mode === 'register' && <p className="login-phone-hint">{accountHint}</p>}
+        {error && <p className="login-form-error" role="alert">{error}</p>}
         <button className="login-btn" onClick={submit}>{mode === 'login' ? t('login') : t('register')}</button>
         <div style={{ textAlign: 'center', marginTop: 16, fontSize: 13, color: '#999' }}>
           <span style={{ cursor: 'pointer', color: 'var(--market-green)' }} onClick={onBack}>{t('back')}</span>
@@ -2044,6 +2043,7 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast, onRe
           <h4>订单信息</h4>
           <div className="order-detail-meta">
             <div>订单编号：{displayOrderNo(order)}</div>
+            {order.delivery_point_id && <div>取货时报订单号；手机号后四位用于核对。</div>}
             <div>{t('orderStatus')}：{statusTxt[order.status] || order.status}</div>
             <div>支付方式：{paymentText[order.payment_method] || order.payment_method}</div>
             <div>支付状态：{payStatusText[order.payment_status] || order.payment_status}</div>
