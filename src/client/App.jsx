@@ -124,8 +124,6 @@ const categoryNameMap = {
   '豆类·玉米': { zh_HK:'豆類·粟米', en:'Beans & Corn' },
   '蔬菜盲盒': { zh_HK:'蔬菜盲盒', en:'Veggie Blind Box' },
   '蛋类': { zh_HK:'蛋類', en:'Eggs' },
-  '时令蔬果(限定)': { zh_HK:'時令蔬果(限定)', en:'Seasonal (Limited)' },
-  '时令蔬果（限定）': { zh_HK:'時令蔬果（限定）', en:'Seasonal (Limited)' },
   '菌菇': { zh_HK:'菌菇', en:'Mushrooms' }
 }
 
