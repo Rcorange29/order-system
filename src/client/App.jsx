@@ -932,7 +932,7 @@ export default function App() {
           )}
 
           <section className="notice-board notice-board-home" aria-label="配送公告" onClick={() => { markNoticesRead(); setTab('messages') }}>
-            <div className="notice-board-heading"><span>配送公告 {unreadNotices.length > 0 && <i className="notice-dot" aria-label="有未读公告" />}</span><small>查看全部 ›</small></div>
+            <div className="notice-board-heading"><span>配送公告 {unreadNotices.length > 0 && <span className="notice-dot" aria-label={`${unreadNotices.length}条未读公告`}>{unreadNotices.length > 99 ? '99+' : unreadNotices.length}</span>}</span><small>查看全部 ›</small></div>
             {announcements.length ? <><strong>{announcements[0].title}</strong><p>{announcements[0].content}</p></> : <p className="notice-empty">取货时间会在配送前一天公布，点此查看消息。</p>}
           </section>
 
@@ -1108,7 +1108,7 @@ export default function App() {
                 {/* 功能入口 */}
                 <div className="my-card">
                   <div className="my-menu-item" onClick={() => { markNoticesRead(); setTab('messages') }}>
-                    <span className="icon">📣</span><span className="text">配送消息 {unreadNotices.length > 0 && <i className="notice-dot" aria-label="有未读公告" />}</span><span className="arrow">›</span>
+                    <span className="icon">📣</span><span className="text">配送消息 {unreadNotices.length > 0 && <span className="notice-dot" aria-label={`${unreadNotices.length}条未读公告`}>{unreadNotices.length > 99 ? '99+' : unreadNotices.length}</span>}</span><span className="arrow">›</span>
                   </div>
                   <div className="my-menu-item" onClick={() => setTab('coupons')}>
                     <span className="icon">🎟️</span>
@@ -1833,7 +1833,7 @@ export default function App() {
           {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
         </div>
         <div className={`nav-item ${tab === 'my' || tab === 'myOrders' || tab === 'address' || tab === 'orderDetail' || tab === 'messages' ? 'active' : ''}`} onClick={() => setTab('my')}>
-          <NavIcon name="user" />{t('my')}{unreadNotices.length > 0 && <i className="nav-notice-dot" aria-label="有未读公告" />}
+          <NavIcon name="user" />{t('my')}{unreadNotices.length > 0 && <span className="nav-notice-dot" aria-label={`${unreadNotices.length}条未读公告`}>{unreadNotices.length > 99 ? '99+' : unreadNotices.length}</span>}
         </div>
       </div>
     </div>
