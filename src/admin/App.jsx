@@ -348,7 +348,7 @@ function CouponManage({ coupons, claims, users, reload, showToast }) {
   return <div>
     <div className="page-header"><h2>优惠券活动</h2></div>
     <div className="card announcement-editor">
-      <p>顾客集满 10 个赞后上传朋友圈截图。审核通过会自动给该用户发券；你也可以在下方手动发券。</p>
+      <p>任意社交平台均可参与，包括朋友圈、小红书、抖音、Facebook、Instagram、Threads、X 等。请核对单篇分享含团购链接、发布账号和至少 10 个赞；审核通过后发券。每人限领一次，跨平台也不重复发券。</p>
       <div className="form-row"><label>活动名称</label><input value={title} onChange={e => setTitle(e.target.value)} maxLength={100} placeholder="例如：新客活动" /></div>
       <div className="form-row"><label>活动说明</label><textarea value={details} onChange={e => setDetails(e.target.value)} maxLength={2000} rows={4} placeholder="写明优惠金额、门槛、有效期等" /></div>
       <div className="form-row"><label>满额（人民币）</label><input type="number" min="0.01" step="0.01" value={minSpend} onChange={e => setMinSpend(e.target.value)} /></div>
@@ -361,7 +361,7 @@ function CouponManage({ coupons, claims, users, reload, showToast }) {
       <strong>{q.phone || q.username}</strong> · {q.title}<p>提交时间：{q.created_at}</p>
       {claims.some(other => other.id !== q.id && other.campaign_id === q.campaign_id && other.status !== 'rejected' && matchingPhone(other.phone, q.phone)) && <p className="coupon-review-warning">提醒：同一手机号曾用其他账号提交此活动，请核对后再发券。</p>}
       {claims.some(other => other.id !== q.id && other.campaign_id === q.campaign_id && other.status !== 'rejected' && other.screenshot === q.screenshot) && <p className="coupon-review-warning">提醒：这张截图曾用于其他账号，请核对后再发券。</p>}
-      <img src={q.screenshot} alt="朋友圈集赞截图" style={{ display: 'block', maxWidth: 280, maxHeight: 440, objectFit: 'contain', margin: '10px 0' }} />
+      <img src={q.screenshot} alt="社交平台集赞截图" style={{ display: 'block', maxWidth: 280, maxHeight: 440, objectFit: 'contain', margin: '10px 0' }} />
       <div className="announcement-actions"><button className="btn btn-primary btn-sm" onClick={() => review(q.id, 'approve')}>确认至少 10 赞并发券</button><button className="btn btn-default btn-sm" onClick={() => review(q.id, 'reject')}>未达要求，退回</button></div>
     </div>)}
     {!claims.some(q => q.status === 'pending') && <div className="card">暂无待审核截图</div>}

@@ -158,7 +158,7 @@ CREATE TABLE IF NOT EXISTS coupon_claims (
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 INSERT OR IGNORE INTO coupon_campaigns (id, title, details, min_spend, discount_amount, is_published)
-VALUES (1, '分享团购，集赞领券', '一键复制含网站链接的宣传语，发到朋友圈。集满 10 个赞后上传截图，审核通过即可领取满 ¥15 减 ¥5 优惠券。', 15, 5, 1);
+VALUES (1, '分享团购，集赞领券', '在任意社交媒体分享团购并附网站链接，单篇集满10个赞后上传截图，审核通过领取满¥15减¥5优惠券。包括但不限于朋友圈、小红书、抖音、Facebook、Instagram、Threads、X。每人限领一次，跨平台不重复领取。', 15, 5, 1);
 INSERT OR IGNORE INTO delivery_points (name, address, fee, threshold, sort_order) VALUES
   ('日出康城站', '港铁日出康城站', 0, 1000, 1),
   ('科技大学', '香港科技大学', 0, 500, 2),

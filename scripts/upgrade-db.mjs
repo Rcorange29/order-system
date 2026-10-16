@@ -79,7 +79,8 @@ for (const [table, required] of Object.entries(columns)) {
 }
 statements.push("INSERT OR IGNORE INTO settings (key, value) VALUES ('exchange_rate', '1.2')")
 statements.push("UPDATE orders SET payment_currency = 'CNY', payment_amount = ROUND(total + COALESCE(delivery_fee, 0), 2) WHERE payment_amount IS NULL AND payment_method IN ('wechat_transfer', 'alipay_transfer')")
-statements.push("INSERT OR IGNORE INTO coupon_campaigns (id, title, details, min_spend, discount_amount, is_published) VALUES (1, '分享团购，集赞领券', '一键复制含网站链接的宣传语，发到朋友圈。集满 10 个赞后上传截图，审核通过即可领取满 ¥15 减 ¥5 优惠券。', 15, 5, 1)")
+statements.push("INSERT OR IGNORE INTO coupon_campaigns (id, title, details, min_spend, discount_amount, is_published) VALUES (1, '分享团购，集赞领券', '在任意社交媒体分享团购并附网站链接，单篇集满10个赞后上传截图，审核通过领取满¥15减¥5优惠券。包括但不限于朋友圈、小红书、抖音、Facebook、Instagram、Threads、X。每人限领一次，跨平台不重复领取。', 15, 5, 1)")
+statements.push("UPDATE coupon_campaigns SET details = REPLACE(REPLACE(details, '发到朋友圈', '发布到任意社交媒体'), '上传朋友圈截图', '上传社交平台截图') WHERE id = 1")
 statements.push('UPDATE delivery_points SET fee = 0 WHERE fee <> 0')
 statements.push("UPDATE delivery_points SET threshold = 500 WHERE name = '科技大学' AND threshold <> 500")
 // Existing product prices, images, descriptions, units and variants are merchant-owned data.

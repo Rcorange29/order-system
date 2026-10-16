@@ -871,7 +871,7 @@ export default function App() {
                 <div className="hero-message">
                   <span className="hero-kicker">{lang === 'en' ? 'SHARE & SAVE' : lang === 'zh_HK' ? '分享團購活動' : '分享团购活动'}</span>
                   <h2>{lang === 'en' ? 'Share for a coupon' : lang === 'zh_HK' ? '分享團購，領券' : '分享团购，领券'}</h2>
-                  <p>{lang === 'en' ? 'Get 10 likes, upload a screenshot and claim your coupon.' : lang === 'zh_HK' ? '朋友圈集滿 10 讚，截圖上傳審核後領券。' : '朋友圈集满 10 赞，截图上传审核后领券。'}</p>
+                  <p>{lang === 'en' ? 'Share on any social platform, get 10 likes and upload a screenshot.' : lang === 'zh_HK' ? '任意社交平台分享集滿 10 讚，截圖審核後領券。' : '任意社交平台分享集满 10 赞，截图审核后领券。'}</p>
                   <span className="hero-link">{lang === 'en' ? 'See the offer' : lang === 'zh_HK' ? '查看活動' : '查看活动'} <span aria-hidden="true">↗</span></span>
                 </div>
                 <div className="hero-visual hero-visual-coupon" aria-label={lang === 'en' ? `${activityCampaign?.discount_amount || 5} CNY off when spending ${activityCampaign?.min_spend || 15} CNY` : `满 ¥${activityCampaign?.min_spend || 15} 减 ¥${activityCampaign?.discount_amount || 5}`}>
@@ -972,7 +972,7 @@ export default function App() {
         <div className="coupon-page">
           <div className="back-btn" onClick={() => setTab('my')}>‹ 返回</div>
           <h2>分享团购 · 集赞领券</h2>
-          {couponData.campaigns.length ? couponData.campaigns.map(c => <div className="coupon-card coupon-action" key={c.id} onClick={openActivity}><strong>{c.title}</strong><p>朋友圈集满 10 个赞，领满 {fmt(c.min_spend)} 减 {fmt(c.discount_amount)} 优惠券；每人限领一次。</p><small>查看活动与上传截图 ›</small></div>) : <div className="coupon-card"><strong>活动加载中</strong></div>}
+          {couponData.campaigns.length ? couponData.campaigns.map(c => <div className="coupon-card coupon-action" key={c.id} onClick={openActivity}><strong>{c.title}</strong><p>任意社交平台分享，单篇集满 10 个赞，领满 {fmt(c.min_spend)} 减 {fmt(c.discount_amount)} 优惠券；每人限领一次。</p><small>查看活动与上传截图 ›</small></div>) : <div className="coupon-card"><strong>活动加载中</strong></div>}
           <h3>我的优惠券</h3>
           {!currentUser ? <p className="coupon-empty" onClick={() => setTab('login')}>登录后查看已发给你的优惠券 ›</p> : couponData.grants.length ? couponData.grants.map(g => <div className="coupon-card" key={g.id}><strong>满 {fmt(g.min_spend)} 减 {fmt(g.discount_amount)}</strong><p>{g.title}</p><small>{g.used_order_no ? '已使用' : '可在结算时使用'} · 领取时间：{g.granted_at}</small></div>) : <p className="coupon-empty">暂时没有收到优惠券。点击上方活动参与分享。</p>}
         </div>
@@ -1762,13 +1762,13 @@ export default function App() {
           <div className="checkout-panel activity-panel" onClick={e => e.stopPropagation()}>
             <h3>分享团购 · 集赞领券</h3>
             <p className="activity-intro">和邻居、同学一起买新鲜果菜。服务点凑满起送额后统一配送，自取免运费。</p>
-            <div className="activity-rule"><b>集满 10 个赞，领满 {fmt(activityCampaign?.min_spend || 15)} 减 {fmt(activityCampaign?.discount_amount || 5)}</b><p>复制下方宣传语发到朋友圈；集满 10 个赞后，上传朋友圈截图。后台审核通过，优惠券会发到“我的优惠券”。</p><strong className="activity-limit">每人限领一次，请勿重复注册领取。</strong></div>
-            <div className="activity-share"><small>朋友圈分享文案</small><p>{GROUP_BUY_SHARE_TEXT}</p><button onClick={() => copyText(GROUP_BUY_SHARE_TEXT, '宣传语')}>一键复制宣传语</button></div>
+            <div className="activity-rule"><b>集满 10 个赞，领满 {fmt(activityCampaign?.min_spend || 15)} 减 {fmt(activityCampaign?.discount_amount || 5)}</b><p>在任意社交媒体分享我们的团购，并附上网站链接。单篇内容集满 10 个赞后，上传能看清分享内容、发布账号和点赞数的截图。后台审核通过，优惠券会发到“我的优惠券”。</p><p>包括但不限于朋友圈、小红书、抖音、Facebook、Instagram、Threads、X，其他社交平台也可以。</p><strong className="activity-limit">每人限领一次，跨平台发布也只可领取一张；请勿重复注册领取。</strong></div>
+            <div className="activity-share"><small>社交媒体分享文案</small><p>{GROUP_BUY_SHARE_TEXT}</p><button onClick={() => copyText(GROUP_BUY_SHARE_TEXT, '宣传语')}>一键复制宣传语</button></div>
             <p className="activity-return-hint">稍后回来上传：从首页海报下方的「分享团购」入口，或「我的 → 优惠券」进入本活动。</p>
             {activityCampaign ? !currentUser ? <button className="btn-submit" style={{ width: '100%', marginTop: 16 }} onClick={() => { setReturnToActivityAfterLogin(true); setShowActivity(false); setTab('login') }}>登录后上传截图</button> : <>
               {(() => { const claim = couponData.claims.find(c => Number(c.campaign_id) === Number(activityCampaign.id)); return claim && <p className="activity-status">{claim.status === 'pending' ? '截图正在审核' : claim.status === 'approved' ? '审核通过，优惠券已发放' : `未通过：${claim.admin_note || '可以重新提交截图'}`}</p> })()}
               {!couponData.claims.some(c => Number(c.campaign_id) === Number(activityCampaign.id) && c.status !== 'rejected') && <>
-                <label className="activity-upload">{activityProofFile ? '重新选择截图' : '选择朋友圈截图'}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={claimUploading} onChange={e => { const file = e.target.files?.[0]; if (file) setActivityProofFile(file); e.target.value = '' }} /></label>
+                <label className="activity-upload">{activityProofFile ? '重新选择截图' : '选择社交平台截图'}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={claimUploading} onChange={e => { const file = e.target.files?.[0]; if (file) setActivityProofFile(file); e.target.value = '' }} /></label>
                 {activityProofFile && <><p className="activity-selected">已选择：{activityProofFile.name}</p><button type="button" className="activity-confirm-upload" disabled={claimUploading} onClick={() => submitCouponScreenshot(activityProofFile)}>{claimUploading ? '正在上传…' : '确认上传截图'}</button></>}
                 <small className="activity-upload-note">支持 PNG、JPEG、WebP；提交后可在这里查看审核状态。</small>
               </>}
