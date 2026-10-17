@@ -4,7 +4,7 @@ import ReactDOM from 'react-dom/client'
 const path = window.location.pathname
 
 async function bootstrap() {
-  if (path.startsWith('/admin')) {
+  if (window.location.hostname === 'admin.jennyfresh.com' || path.startsWith('/admin')) {
     document.title = '珍珍优质果菜 · 管理后台'
     await import('./admin.css')
     const { default: AdminApp } = await import('./admin/App.jsx')
