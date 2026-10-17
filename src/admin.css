@@ -269,3 +269,23 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .toolbar { flex-wrap: wrap; }
   .toolbar input, .toolbar select { width: 100%; }
 }
+
+/* User management reuses the existing form, table, button and modal vocabulary. */
+.user-table-scroll { overflow-x: auto; }
+.user-table-scroll table { min-width: 1120px; }
+.user-table-scroll td { overflow-wrap: break-word; max-width: 220px; }
+.user-help { font-size: 14px; line-height: 1.6; color: #53645a; margin: 10px 0; }
+.user-form-error { color: #9d2025; background: #fff1f0; padding: 12px; border-radius: 6px; margin-bottom: 14px; overflow-wrap: break-word; }
+.user-manage-modal { width: 760px; }
+.user-summary { display: flex; flex-wrap: wrap; gap: 16px; padding-bottom: 16px; }
+.user-fieldset { border: 0; min-width: 0; padding: 0; }
+.user-fieldset legend, .user-section h4 { margin-bottom: 12px; font-size: 16px; font-weight: 600; }
+.user-section { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--admin-line); }
+.user-section p { line-height: 1.6; margin-bottom: 12px; }
+.user-section > button { margin-top: 8px; }
+.user-order-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--admin-line); padding: 12px 0; }
+.user-order-row p { margin: 4px 0 0; font-size: 14px; }
+.user-manage-modal .btn { min-height: 40px; }
+.user-manage-modal .modal-close { min-width: 44px; min-height: 44px; }
+button:disabled { cursor: not-allowed; opacity: .6; }
+@media (max-width: 600px) { .user-order-row { align-items: flex-start; flex-direction: column; } }

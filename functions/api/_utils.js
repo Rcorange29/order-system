@@ -7,7 +7,7 @@ export async function getAuthUser(request, env) {
   const token = auth.slice(7)
   const stmt = env.DB.prepare('SELECT * FROM users WHERE token = ?')
   const user = await stmt.bind(token).first()
-  return user || null
+  return user && user.account_status !== 'disabled' ? user : null
 }
 
 // 解析并验证管理员
@@ -30,6 +30,7 @@ export async function hashPassword(password) {
 }
 
 export async function verifyPassword(password, stored) {
+  if (typeof stored !== 'string' || !stored.includes('$')) return false
   const [saltB64, hashB64] = stored.split('$')
   const salt = Uint8Array.from(atob(saltB64), c => c.charCodeAt(0))
   const enc = new TextEncoder()

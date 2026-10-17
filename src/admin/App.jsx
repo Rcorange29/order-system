@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import useVisualViewport from '../useVisualViewport.js'
+import UserManage from './UserManage.jsx'
 
 const API = '/api'
 const displayOrderNo = order => String(order?.public_no ?? order?.id ?? '').padStart(2, '0')
@@ -33,6 +34,7 @@ export default function App() {
   const [token, setToken] = useState(localStorage.getItem('admin_token') || '')
   const [adminUser, setAdminUser] = useState(null)
   const [page, setPage] = useState('dashboard')
+  const [orderToOpen, setOrderToOpen] = useState(null)
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [orders, setOrders] = useState([])
@@ -47,7 +49,7 @@ export default function App() {
     authFetch(`${API}/products?all=1`).then(r => r.json()).then(setProducts)
     authFetch(`${API}/categories`).then(r => r.json()).then(setCategories)
     authFetch(`${API}/admin/orders`).then(r => r.json()).then(setOrders)
-    authFetch(`${API}/admin/users`).then(r => r.json()).then(setUsers)
+    authFetch(`${API}/admin/users`).then(r => { if (!r.ok) throw new Error('无法读取用户'); return r.json() }).then(setUsers).catch(() => showToast('无法读取用户列表，请重试或重新登录'))
     authFetch(`${API}/admin/order-requests`).then(r => r.ok ? r.json() : []).then(setServiceRequests)
     authFetch(`${API}/announcements?all=1`).then(r => r.ok ? r.json() : []).then(setAnnouncements)
     authFetch(`${API}/admin/coupons`).then(r => r.ok ? r.json() : []).then(setCoupons)
@@ -105,7 +107,7 @@ export default function App() {
       <div className="sidebar">
         <div className="logo">🛒 珍珍优质果菜</div>
         {menu.map(m => (
-          <div key={m.key} className={`menu-item ${page === m.key ? 'active' : ''}`} onClick={() => setPage(m.key)}>
+          <div key={m.key} className={`menu-item ${page === m.key ? 'active' : ''}`} onClick={() => { setOrderToOpen(null); setPage(m.key) }}>
             {m.label}
           </div>
         ))}
@@ -116,10 +118,10 @@ export default function App() {
       <div className="main-content">
         {page === 'dashboard' && <Dashboard products={products} orders={orders} categories={categories} />}
         {page === 'products' && <ProductManage products={products} categories={categories} reload={reload} showToast={showToast} />}
-        {page === 'orders' && <OrderManage orders={orders} reload={reload} showToast={showToast} />}
+        {page === 'orders' && <OrderManage orders={orders} reload={reload} showToast={showToast} initialOrderId={orderToOpen} />}
         {page === 'requests' && <RequestManage requests={serviceRequests} reload={reload} showToast={showToast} />}
         {page === 'announcements' && <AnnouncementManage announcements={announcements} reload={reload} showToast={showToast} />}
-        {page === 'users' && <UserManage users={users} showToast={showToast} />}
+        {page === 'users' && <UserManage users={users} authFetch={authFetch} reload={reload} showToast={showToast} adminUser={adminUser} onSelfLogout={handleLogout} onOpenOrder={id => {setOrderToOpen(id);setPage('orders')}} />}
         {page === 'coupons' && <CouponManage coupons={coupons} claims={couponClaims} users={users} reload={reload} showToast={showToast} />}
         {page === 'categories' && <CategoryManage categories={categories} reload={reload} showToast={showToast} />}
         {page === 'settings' && <SettingsPage authFetch={authFetch} showToast={showToast} />}
@@ -630,15 +632,40 @@ function ProductManage({ products, categories, reload, showToast }) {
 }
 
 /* ========== 订单管理 ========== */
-function OrderManage({ orders, reload, showToast }) {
+function OrderManage({ orders, reload, showToast, initialOrderId }) {
   const [statusFilter, setStatusFilter] = useState('')
   const [search, setSearch] = useState('')
   const [detail, setDetail] = useState(null)
 
+  const [editingDelivery, setEditingDelivery] = useState(false)
+  const [deliveryForm, setDeliveryForm] = useState({})
+  const [deliveryBusy, setDeliveryBusy] = useState(false)
+  const [deliveryError, setDeliveryError] = useState('')
+  const requestSequence = useRef(0)
+  useEffect(() => () => { requestSequence.current++ }, [])
   const viewDetail = async (id) => {
-    const response = await authFetch(`${API}/admin/orders/${id}`)
-    if (response.ok) setDetail(await response.json())
-    else showToast('无法读取订单详情')
+    const sequence = ++requestSequence.current
+    setEditingDelivery(false); setDeliveryError('')
+    try {
+      const response = await authFetch(`${API}/admin/orders/${id}`)
+      const data = await response.json()
+      if (sequence !== requestSequence.current) return
+      if (response.ok) setDetail(data)
+      else showToast(data.error || '无法读取订单详情')
+    } catch { if (sequence === requestSequence.current) showToast('读取订单失败，请重试') }
+  }
+  useEffect(() => { if (initialOrderId) viewDetail(initialOrderId) }, [initialOrderId])
+  const saveDelivery = async e => {
+    e.preventDefault()
+    if (deliveryBusy) return
+    setDeliveryBusy(true);setDeliveryError('')
+    try {
+      const response = await authFetch(`${API}/admin/orders/${detail.id}`, {method:'PATCH',body:deliveryForm})
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || '保存失败')
+      await viewDetail(detail.id);reload();showToast('收货信息与备注已保存')
+    } catch(error) { setDeliveryError(error.message || '网络异常，请重试') }
+    finally { setDeliveryBusy(false) }
   }
 
   const updateStatus = async (id, status) => {
@@ -716,9 +743,9 @@ function OrderManage({ orders, reload, showToast }) {
       </div>
 
       {detail && (
-        <div className="modal-overlay" onClick={() => setDetail(null)}>
+        <div className="modal-overlay" onClick={() => {if (!deliveryBusy) {requestSequence.current++;setDetail(null)}}}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header"><h3>订单详情</h3><button className="modal-close" onClick={() => setDetail(null)}>×</button></div>
+            <div className="modal-header"><h3>订单详情</h3><button className="modal-close" onClick={() => {if (!deliveryBusy) {requestSequence.current++;setDetail(null)}}}>×</button></div>
             <div className="modal-body">
               <div className="form-row"><label>订单号</label><div>{displayOrderNo(detail)}</div></div>
               <div className="form-inline">
@@ -726,6 +753,13 @@ function OrderManage({ orders, reload, showToast }) {
                 <div className="form-row"><label>电话</label><div>{detail.phone}</div></div>
               </div>
               <div className="form-row"><label>地址</label><div>{detail.address}</div></div>
+              <div className="form-row"><label>备注</label><div>{detail.remark || '无'}</div></div>
+              {editingDelivery ? <form onSubmit={saveDelivery} className="user-section">
+                <h4>修改收货信息与备注</h4><p className="user-help">仅修改这笔订单，不会改变金额、收款状态、商品或自取点。</p>
+                {Object.entries({customer:'收货人',phone:'联系电话',address:'收货地址 / 自取说明',remark:'订单备注'}).map(([key,label]) => <div className="form-row" key={key}><label htmlFor={`order-edit-${key}`}>{label}</label>{['address','remark'].includes(key) ? <textarea id={`order-edit-${key}`} disabled={deliveryBusy} value={deliveryForm[key]} maxLength={key === 'remark' ? 1000 : 500} onChange={e => setDeliveryForm({...deliveryForm,[key]:e.target.value})} /> : <input id={`order-edit-${key}`} disabled={deliveryBusy} value={deliveryForm[key]} onChange={e => setDeliveryForm({...deliveryForm,[key]:e.target.value})} />}</div>)}
+                {deliveryError && <p className="user-form-error" role="alert">{deliveryError}</p>}
+                <div className="action-btns"><button className="btn btn-primary" disabled={deliveryBusy}>{deliveryBusy ? '正在保存…' : '保存收货信息与备注'}</button><button type="button" className="btn btn-default" disabled={deliveryBusy} onClick={() => setEditingDelivery(false)}>取消</button></div>
+              </form> : <button className="btn btn-default" onClick={() => {setDeliveryForm(Object.fromEntries(['customer','phone','address','remark'].map(key => [key,detail[key] || ''])));setDeliveryError('');setEditingDelivery(true)}}>修改收货信息 / 备注</button>}
               <div className="form-row"><label>商品明细</label>
                 <div className="order-detail-items">
                   {detail.items?.map(i => (
@@ -743,7 +777,7 @@ function OrderManage({ orders, reload, showToast }) {
                   {detail.payment_currency === 'HKD' && <div className="order-detail-item"><span>人民币基准</span><span>¥{(Number(detail.total) + Number(detail.delivery_fee || 0)).toFixed(2)}</span></div>}
                 </div>
               </div>
-              <div className="form-row"><label>备注</label><div>{detail.remark || '无'}</div></div>
+
               <div className="form-inline">
                 <div className="form-row"><label>支付方式</label><div>{paymentText[detail.payment_method] || detail.payment_method}</div></div>
                 <div className="form-row"><label>支付状态</label><div>{payStatusText[detail.payment_status] || detail.payment_status}</div></div>
@@ -755,7 +789,7 @@ function OrderManage({ orders, reload, showToast }) {
                 </div>
               )}
             </div>
-            <div className="modal-footer"><button className="btn btn-default" onClick={() => setDetail(null)}>关闭</button></div>
+            <div className="modal-footer"><button className="btn btn-default" onClick={() => {if (!deliveryBusy) {requestSequence.current++;setDetail(null)}}}>关闭</button></div>
           </div>
         </div>
       )}
@@ -825,79 +859,6 @@ function CategoryManage({ categories, reload, showToast }) {
             <div className="modal-footer">
               <button className="btn btn-default" onClick={() => setShowModal(false)}>取消</button>
               <button className="btn btn-primary" onClick={save}>保存</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-/* ========== 用户管理 ========== */
-function UserManage({ users, showToast }) {
-  const [search, setSearch] = useState('')
-  const [detail, setDetail] = useState(null)
-  const [userOrders, setUserOrders] = useState([])
-
-  const filtered = users.filter(u =>
-    !search || (u.username || '').includes(search) || (u.phone || '').includes(search)
-  )
-
-  const viewOrders = async (u) => {
-    setDetail(u)
-    const r = await authFetch(`${API}/admin/orders?user_id=${u.id}`)
-    if (r.ok) setUserOrders(await r.json())
-  }
-
-  return (
-    <div>
-      <div className="page-header">
-        <h2>用户管理</h2>
-        <span style={{ color: '#999', fontSize: 14 }}>共 {users.length} 位注册用户</span>
-      </div>
-      <div className="card">
-        <div className="toolbar">
-          <input placeholder="搜索手机号或旧账号" value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
-        <table>
-          <thead><tr><th>ID</th><th>手机号</th><th>旧账号</th><th>订单数</th><th>累计消费</th><th>注册时间</th><th>最后下单</th><th>操作</th></tr></thead>
-          <tbody>
-            {filtered.map(u => (
-              <tr key={u.id}>
-                <td>{u.id}</td>
-                <td>{u.phone || '—'}{users.some(other => other.id !== u.id && matchingPhone(other.phone, u.phone)) && <small className="duplicate-phone-note">旧账号号码重复</small>}</td>
-                <td>{u.username !== u.phone ? u.username : '—'}</td>
-                <td>{u.order_count || 0}</td>
-        <td>¥{Number(u.total_spent || 0).toFixed(2)}</td>
-                <td>{(u.created_at || '').substring(0, 16)}</td>
-                <td>{(u.last_order_at || '从未下单').substring(0, 16)}</td>
-                <td><button className="btn btn-default btn-sm" onClick={() => viewOrders(u)}>查看订单</button></td>
-              </tr>
-            ))}
-            {filtered.length === 0 && <tr><td colSpan={8} style={{ textAlign: 'center', color: '#999', padding: 30 }}>暂无用户</td></tr>}
-          </tbody>
-        </table>
-      </div>
-
-      {detail && (
-        <div className="modal-overlay" onClick={() => setDetail(null)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header"><h3>{detail.username} 的订单记录</h3><button className="modal-close" onClick={() => setDetail(null)}>×</button></div>
-            <div className="modal-body" style={{ maxHeight: 400, overflowY: 'auto' }}>
-              <div className="form-row"><label>手机号</label><div>{detail.phone || '未填写'}</div></div>
-              <div className="form-row"><label>订单数</label><div>{detail.order_count}</div></div>
-              <div className="form-row"><label>累计消费</label><div>¥{Number(detail.total_spent || 0).toFixed(2)}</div></div>
-              <hr style={{ margin: '16px 0' }} />
-              {userOrders.length === 0 ? <div style={{ color: '#999', textAlign: 'center' }}>暂无订单</div> :
-                userOrders.map(o => (
-                  <div key={o.id} style={{ padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
-                    <div style={{ fontWeight: 600 }}>{displayOrderNo(o)} · ¥{Number(o.total || 0).toFixed(2)}</div>
-                    <div style={{ fontSize: 13, color: '#999' }}>{(o.items || []).map(i => `${i.product?.name || '商品'}${i.variant ? `（${i.variant}）` : ''} ×${i.quantity}`).join('，').slice(0, 60)} · {(o.created_at || '').substring(0, 16)}</div>
-                  </div>
-                ))}
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-default" onClick={() => setDetail(null)}>关闭</button>
             </div>
           </div>
         </div>

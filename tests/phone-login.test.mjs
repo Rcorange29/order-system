@@ -7,7 +7,7 @@ import { hashPassword } from '../functions/api/_utils.js'
 
 function setup() {
   const sqlite = new DatabaseSync(':memory:')
-  sqlite.exec('CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, phone TEXT, token TEXT, is_admin INTEGER DEFAULT 0)')
+  sqlite.exec("CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, phone TEXT, token TEXT, is_admin INTEGER DEFAULT 0, account_status TEXT DEFAULT 'active', legacy_login_phone TEXT DEFAULT '', address_storage_key TEXT DEFAULT '')")
   const DB = {
     prepare(sql) {
       return {

@@ -333,7 +333,7 @@ export default function App() {
   // 登录后加载地址和订单
   useEffect(() => {
     if (currentUser) {
-      const addrKey = `addrs_${currentUser.username}`
+      const addrKey = `addrs_${currentUser.address_storage_key || currentUser.username}`
       const list = readStoredArray(addrKey)
       setAddresses(list)
       const def = list.find(a => a.isDefault) || list[0]
@@ -522,7 +522,7 @@ export default function App() {
 
   const saveAddresses = (list) => {
     if (!currentUser) return
-    storage.setItem(`addrs_${currentUser.username}`, JSON.stringify(list))
+    storage.setItem(`addrs_${currentUser.address_storage_key || currentUser.username}`, JSON.stringify(list))
     setAddresses(list)
   }
 
@@ -597,7 +597,7 @@ export default function App() {
     if (deliveryType === 'pickup') {
       if (!selectedPointId) { showToast(t('selectPointFirst')); setShowPointPicker(true); return }
       const pt = deliveryPoints.find(p => p.id == selectedPointId)
-      customer = currentUser?.phone || ''
+      customer = currentUser?.phone || currentUser?.username || ''
       address = `自取点：${pt?.name || ''}`
     } else {
       const addr = addresses.find(a => a.id === checkoutAddrId)
@@ -648,10 +648,14 @@ export default function App() {
       body: JSON.stringify({ phone, password })
     })
     const data = await res.json()
-    if (!res.ok) return data.error || '登录失败'
+    if (!res.ok) {
+      if (data.code === 'ACCOUNT_DISABLED') return lang === 'en' ? 'This account is disabled. Please contact the owner.' : lang === 'zh_HK' ? '帳號已停用，請聯繫老闆處理。' : '账号已停用，请联系老板处理。'
+      if (data.code === 'ACCOUNT_UPDATED') return lang === 'en' ? 'Account details changed. Please sign in again.' : lang === 'zh_HK' ? '帳號資料已更新，請重新登入。' : '账号信息已更新，请重新登录。'
+      return data.error || '登录失败'
+    }
     storage.setItem('token', data.token)
     storage.setItem('currentUser', JSON.stringify({ username: data.username, phone: data.phone }))
-    setCurrentUser({ username: data.username, phone: data.phone })
+    setCurrentUser({ username: data.username, phone: data.phone, address_storage_key: data.address_storage_key || data.username })
     if (returnToActivityAfterLogin) {
       setReturnToActivityAfterLogin(false)
       setTab('home')
@@ -671,7 +675,7 @@ export default function App() {
     if (!res.ok) return data.error || '注册失败'
     storage.setItem('token', data.token)
     storage.setItem('currentUser', JSON.stringify({ username: data.username, phone: data.phone }))
-    setCurrentUser({ username: data.username, phone: data.phone })
+    setCurrentUser({ username: data.username, phone: data.phone, address_storage_key: data.address_storage_key || data.username })
     if (returnToActivityAfterLogin) {
       setReturnToActivityAfterLogin(false)
       setTab('home')
@@ -1084,7 +1088,7 @@ export default function App() {
               <div className="my-header">
                 <div className="avatar">👤</div>
                 <div className="info">
-                  <div className="name">{currentUser.phone}</div>
+                  <div className="name">{currentUser.phone || currentUser.username}</div>
                   <div className="phone">{lang === 'en' ? 'Phone login' : lang === 'zh_HK' ? '手機號登入' : '手机号登录'}</div>
                 </div>
               </div>

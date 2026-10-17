@@ -1,4 +1,4 @@
-import { getAuthUser, json, cors } from './_utils'
+import { getAuthUser, json, cors } from './_utils.js'
 
 export async function onRequest(context) {
   const { request, env } = context
@@ -8,5 +8,5 @@ export async function onRequest(context) {
   const user = await getAuthUser(request, env)
   if (!user) return json({ error: '未登录' }, 401)
 
-  return json({ id: user.id, username: user.username, phone: user.phone })
+  return json({ id: user.id, username: user.username, phone: user.phone, address_storage_key: user.address_storage_key || user.username })
 }

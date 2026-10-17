@@ -1,4 +1,4 @@
-import { verifyPassword, generateToken, json, cors, readBody } from '../_utils'
+import { verifyPassword, generateToken, json, cors, readBody } from '../_utils.js'
 
 export async function onRequest(context) {
   const { request, env } = context
@@ -14,7 +14,7 @@ export async function onRequest(context) {
   const valid = await verifyPassword(body.password, user.password_hash)
   if (!valid) return json({ error: '账号或密码错误' }, 401)
 
-  if (!user.is_admin) return json({ error: '无管理员权限' }, 403)
+  if (!user.is_admin || user.account_status === 'disabled') return json({ error: '无管理员权限或账号已停用' }, 403)
 
   const token = generateToken()
   await env.DB.prepare('UPDATE users SET token = ? WHERE id = ?').bind(token, user.id).run()

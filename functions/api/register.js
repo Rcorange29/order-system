@@ -12,8 +12,8 @@ export async function onRequest(context) {
   if (!phoneKey) return json({ error: '仅支持香港手机号：请输入4至9开头的8位号码，可加+852区号' }, 400)
 
   const aliases = phoneAliases(phoneKey)
-  const existing = await env.DB.prepare(`SELECT id FROM users WHERE username = ? OR ${phoneDigitsSql} IN (${aliases.map(() => '?').join(', ')}) LIMIT 1`)
-    .bind(`+${phoneKey}`, ...aliases).first()
+  const existing = await env.DB.prepare(`SELECT id FROM users WHERE username = ? OR legacy_login_phone = ? OR ${phoneDigitsSql} IN (${aliases.map(() => '?').join(', ')}) LIMIT 1`)
+    .bind(`+${phoneKey}`, `+${phoneKey}`, ...aliases).first()
   if (existing) return json({ error: '该手机号已注册，请直接登录；如不是你的账号，请联系老板' }, 409)
 
   const passwordHash = await hashPassword(body.password)

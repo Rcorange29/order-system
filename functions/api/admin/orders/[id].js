@@ -1,4 +1,5 @@
 import { json, cors, readBody, getAdminUser } from '../../_utils.js'
+import { normalizeContactPhone } from '../../_contacts.js'
 
 export async function onRequest(context) {
   const { request, env } = context
@@ -14,6 +15,33 @@ export async function onRequest(context) {
       'SELECT oi.*, p.name as product_name, p.image as product_image FROM order_items oi LEFT JOIN products p ON oi.product_id = p.id WHERE oi.order_id = ?'
     ).bind(id).all()
     return json({ ...order, items: items.map(i => ({ ...i, product: { id: i.product_id, name: i.product_name, image: i.product_image } })) })
+  }
+
+  // Update delivery notes separately so an old form cannot overwrite payment/status.
+  if (request.method === 'PATCH') {
+    const admin = await getAdminUser(request, env)
+    if (!admin) return json({ error: '需要管理员权限' }, 403)
+    const order = await env.DB.prepare('SELECT * FROM orders WHERE id = ?').bind(id).first()
+    if (!order) return json({ error: 'not found' }, 404)
+    const body = await readBody(request)
+    const limits = { customer: 80, phone: 32, address: 500, remark: 1000 }
+    if (Object.keys(body).some(key => !Object.hasOwn(limits, key))) return json({ error: '这里只能修改收货人、电话、地址和备注' }, 400)
+    const fields = [], values = []
+    for (const key of Object.keys(limits)) {
+      if (!Object.hasOwn(body, key)) continue
+      if (typeof body[key] !== 'string' || body[key].length > limits[key]) return json({ error: '收货信息格式或长度无效' }, 400)
+      let value = body[key].trim()
+      if (key === 'customer' && !value) return json({ error: '收货人不能为空' }, 400)
+      if (key === 'phone' && value !== String(order.phone || '')) {
+        value = normalizeContactPhone(value)
+        if (value === null) return json({ error: '联系电话仅支持+852香港手机号或+86内地手机号' }, 400)
+      }
+      if (key === 'address' && !order.delivery_point_id && value.length < 4) return json({ error: '配送到家的地址至少填写4个字' }, 400)
+      fields.push(key + ' = ?'); values.push(value)
+    }
+    if (!fields.length) return json({ error: '没有需要保存的字段' }, 400)
+    await env.DB.prepare(`UPDATE orders SET ${fields.join(', ')}, updated_at=datetime('now', '+8 hours') WHERE id = ?`).bind(...values, id).run()
+    return json({ message: '收货信息与备注已保存' })
   }
 
   if (request.method === 'PUT') {
@@ -45,10 +73,10 @@ export async function onRequest(context) {
       'UPDATE orders SET status=?, customer=?, phone=?, address=?, remark=?, payment_status=?, updated_at=datetime(\'now\', \'+8 hours\') WHERE id=?'
     ).bind(
       nextStatus,
-      body.customer || order.customer,
-      body.phone || order.phone,
-      body.address || order.address,
-      body.remark || order.remark,
+      body.customer ?? order.customer,
+      body.phone ?? order.phone,
+      body.address ?? order.address,
+      body.remark ?? order.remark,
       nextPayment,
       id
     ).run()

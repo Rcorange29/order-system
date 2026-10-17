@@ -4,6 +4,11 @@ CREATE TABLE IF NOT EXISTS users (
   username TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   phone TEXT DEFAULT '',
+  wechat_id TEXT NOT NULL DEFAULT '',
+  whatsapp TEXT NOT NULL DEFAULT '',
+  account_status TEXT NOT NULL DEFAULT 'active' CHECK (account_status IN ('active', 'disabled')),
+  address_storage_key TEXT NOT NULL DEFAULT '',
+  legacy_login_phone TEXT NOT NULL DEFAULT '',
   token TEXT,
   is_admin INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now', '+8 hours'))
@@ -166,3 +171,15 @@ INSERT OR IGNORE INTO delivery_points (name, address, fee, threshold, sort_order
   ('宝琳站', '港铁宝琳站', 0, 1000, 4),
   ('将军澳站', '港铁将军澳站', 0, 1000, 5),
   ('调景岭站', '港铁调景岭站', 0, 1000, 6);
+
+-- Administrative user changes (field names only; never password values).
+CREATE TABLE IF NOT EXISTS admin_user_audit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  admin_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  action TEXT NOT NULL,
+  changed_fields TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours'))
+);
+CREATE INDEX IF NOT EXISTS idx_users_legacy_login_phone ON users(legacy_login_phone);
+CREATE INDEX IF NOT EXISTS idx_admin_user_audit_user ON admin_user_audit(user_id, id);
