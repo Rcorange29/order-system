@@ -8,7 +8,7 @@ const displayOrderNo = order => String(order?.public_no ?? order?.id ?? '').padS
 const formatAmount = (amount, currency) => `${currency === 'HKD' ? 'HK$' : '¥'}${Number(amount || 0).toFixed(2)}`
 const orderPaymentText = order => formatAmount(order.payment_amount ?? (Number(order.total) + Number(order.delivery_fee || 0)), order.payment_currency || 'CNY')
 const BOSS_WHATSAPP = '+85295228191'
-const GROUP_BUY_URL = 'https://order-system-bp4.pages.dev/'
+const GROUP_BUY_URL = 'https://jennyfresh.com/'
 const GROUP_BUY_SHARE_TEXT = `想买新鲜水果蔬菜的朋友，一起到珍珍优质果菜拼单吧！服务点自取免运费，凑满后统一配送，取货时间会在网站和群里通知。\n选菜链接：${GROUP_BUY_URL}`
 const statusText = { pending: '待付款', paid: '已付款', shipped: '已发货', completed: '已完成', cancelled: '已取消' }
 const paymentText = { cash_on_delivery: '货到付款（现金）', wechat_transfer: '微信转账', alipay_transfer: '支付宝转账', fps_transfer: '转数快 FPS' }

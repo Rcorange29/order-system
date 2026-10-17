@@ -15,7 +15,7 @@ const categoryRepair = process.argv.includes('--simplify-categories')
   : ''
 
 function execute(sql) {
-  const args = [wrangler, 'd1', 'execute', 'order-db', location, '--command', sql, '--json']
+  const args = [wrangler, 'd1', 'execute', 'order-db', location, `--command=${sql}`, '--json']
   if (persistTo) args.push(persistTo)
   const result = spawnSync(process.execPath, args, {
     encoding: 'utf8'
