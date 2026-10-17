@@ -69,11 +69,11 @@ export default function UserManage({ users, authFetch, reload, showToast, onOpen
         {!loading && !detail && <button className="btn btn-default" onClick={() => open({id:selected})}>重新读取</button>}
         {detail && <>
           <div className="user-summary"><span>下单 <strong>{detail.user.order_count}</strong> 笔</span><span>累计消费 <strong>{money(detail.user.total_spent)} CNY</strong></span><span>注册：{detail.user.created_at}</span></div>
-          <p className="user-help">当前保留的香港登录号：<strong>{detail.user.legacy_login_phone || detail.user.phone || '未记录，请核实老账号资料'}</strong>。它与可编辑的联系手机号分开保存。</p>
+          <p className="user-help">登录用户名：<strong>{detail.user.username}</strong>。联系方式与登录身份分开；改用户名后，请通知顾客使用新用户名重新登录。</p>
           <form onSubmit={e => {e.preventDefault();save('profile',form)}}>
             <fieldset disabled={busy} className="user-fieldset"><legend>账号和联系方式</legend>
               {fields.map(([key,label]) => <div className="form-row" key={key}><label htmlFor={`user-${key}`}>{label}</label><input id={`user-${key}`} autoComplete="off" value={form[key] || ''} readOnly={key === 'username' && detail.user.username === 'jchengat'} maxLength={key === 'username' ? 40 : key === 'wechat_id' ? 20 : 32} onChange={e => setForm({...form,[key]:e.target.value})} placeholder={key === 'wechat_id' ? '微信号，非微信昵称' : key === 'whatsapp' || key === 'phone' ? '+852 91234567 或 +86 13800138000' : '用户名'} /></div>)}
-              <p className="user-help">至少填写一项联系方式。号码和微信ID仅检查格式，不代表已验证归属。顾客暂时仍用原香港手机号登录；修改联系号码或用户名后，原登录号会保留。历史订单的收货信息需在对应订单单独修改。</p>
+              <p className="user-help">至少填写一项联系方式。号码和微信ID仅检查格式，不代表已验证归属。顾客使用用户名和密码登录，英文字母不区分大小写。修改联系方式不会更改登录用户名；修改用户名会使旧登录失效。历史订单的收货信息需在对应订单单独修改。</p>
               <button className="btn btn-primary" type="submit">{busy ? '正在保存…' : '保存账号与联系方式'}</button>
             </fieldset>
           </form>

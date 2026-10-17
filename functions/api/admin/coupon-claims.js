@@ -5,7 +5,7 @@ export async function onRequest({ request, env }) {
   const admin = await getAdminUser(request, env)
   if (!admin) return json({ error: '需要管理员权限' }, 403)
   if (request.method === 'GET') {
-    const claims = await env.DB.prepare("SELECT q.id, q.campaign_id, q.user_id, q.screenshot, q.status, q.admin_note, q.created_at, q.reviewed_at, u.username, u.phone, c.title FROM coupon_claims q JOIN users u ON u.id = q.user_id JOIN coupon_campaigns c ON c.id = q.campaign_id ORDER BY CASE q.status WHEN 'pending' THEN 0 ELSE 1 END, q.id DESC LIMIT 100").all()
+    const claims = await env.DB.prepare("SELECT q.id, q.campaign_id, q.user_id, q.screenshot, q.status, q.admin_note, q.created_at, q.reviewed_at, u.username, u.phone, u.wechat_id, u.whatsapp, c.title FROM coupon_claims q JOIN users u ON u.id = q.user_id JOIN coupon_campaigns c ON c.id = q.campaign_id ORDER BY CASE q.status WHEN 'pending' THEN 0 ELSE 1 END, q.id DESC LIMIT 100").all()
     return json(claims.results)
   }
   if (request.method !== 'PUT') return json({ error: 'Method not allowed' }, 405)

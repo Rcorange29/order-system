@@ -289,3 +289,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .user-manage-modal .modal-close { min-width: 44px; min-height: 44px; }
 button:disabled { cursor: not-allowed; opacity: .6; }
 @media (max-width: 600px) { .user-order-row { align-items: flex-start; flex-direction: column; } }
+
+.merchant-language-fields { border:1px solid var(--admin-line); border-radius:8px; padding:14px; margin:14px 0; }
+.merchant-language-fields legend { font-weight:600; padding:0 6px; }

@@ -64,19 +64,18 @@ test('user list/details require admin, return complete order totals, and never e
   sqlite.close()
 })
 
-test('profile edits accept HK/CN contacts, retain old login and address keys, and preserve all orders',async()=>{
+test('profile edits accept HK/CN contacts, require the new username, retain address keys, and preserve all orders',async()=>{
   const {sqlite,call}=setup();const before=sqlite.prepare('SELECT * FROM orders ORDER BY id').all()
   const response=await call(user,'PATCH',profile);assert.equal(response.status,200)
   const result=await response.json();assert.equal(result.user.phone,'+8613800138000');assert.equal(result.user.whatsapp,'+85261234567')
   const stored=sqlite.prepare('SELECT * FROM users WHERE id=2').get()
   assert.equal(stored.token,null);assert.equal(stored.legacy_login_phone,'+85291234567');assert.equal(stored.address_storage_key,'+85291234567');assert.equal(stored.is_admin,0)
   assert.deepEqual(sqlite.prepare('SELECT * FROM orders ORDER BY id').all(),before)
-  const signedIn=await call(login,'POST',{phone:'91234567',password});assert.equal(signedIn.status,200)
+  assert.equal((await call(login,'POST',{username:'+85291234567',password})).status,401)
+  const signedIn=await call(login,'POST',{username:'new_username',password});assert.equal(signedIn.status,200)
   const data=await signedIn.json();assert.equal(data.username,'new_username');assert.equal(data.address_storage_key,'+85291234567')
   const meData=await (await call(me,'GET',null,data.token)).json();assert.equal(meData.address_storage_key,'+85291234567')
-  assert.equal((await call(register,'POST',{phone:'91234567',password:'OtherPassword'})).status,409)
-  // Customer registration rules are intentionally unchanged until Plan A/B/C is selected.
-  assert.equal((await call(register,'POST',{phone:'+8613800138000',password:'OtherPassword'})).status,400)
+  assert.equal((await call(register,'POST',{username:'new_username',wechat_id:'new_wechat',whatsapp:'',phone:'',password:'OtherPassword'})).status,409)
   sqlite.close()
 })
 
@@ -88,20 +87,20 @@ test('password resets store only salted hashes, revoke sessions, and do not log/
   assert(await verifyPassword(newPassword,stored.password_hash));assert(!await verifyPassword(password,stored.password_hash))
   const audit=JSON.stringify(sqlite.prepare('SELECT * FROM admin_user_audit').all());assert(!audit.includes(newPassword));assert(!audit.includes(stored.password_hash))
   assert.equal((await call(me,'GET',null,'buyer-token')).status,401)
-  assert.equal((await call(login,'POST',{phone:'91234567',password})).status,401)
-  assert.equal((await call(login,'POST',{phone:'91234567',password:newPassword})).status,200)
+  assert.equal((await call(login,'POST',{username:'+85291234567',password})).status,401)
+  assert.equal((await call(login,'POST',{username:'+85291234567',password:newPassword})).status,200)
   sqlite.close()
 })
 
 test('disabling blocks both new logins and previously issued tokens; enabling requires login again',async()=>{
   const {sqlite,call}=setup()
   assert.equal((await call(user,'PATCH',{action:'status',account_status:'disabled'})).status,200)
-  assert.equal((await call(login,'POST',{phone:'91234567',password})).status,403)
+  assert.equal((await call(login,'POST',{username:'+85291234567',password})).status,403)
   sqlite.prepare("UPDATE users SET token='stale-token' WHERE id=2").run()
   assert.equal((await call(me,'GET',null,'stale-token')).status,401)
   assert.equal((await call(user,'PATCH',{action:'status',account_status:'active'})).status,200)
   assert.equal((await call(me,'GET',null,'stale-token')).status,401)
-  assert.equal((await call(login,'POST',{phone:'91234567',password})).status,200)
+  assert.equal((await call(login,'POST',{username:'+85291234567',password})).status,200)
   sqlite.close()
 })
 

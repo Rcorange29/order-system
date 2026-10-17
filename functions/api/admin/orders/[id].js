@@ -1,5 +1,5 @@
 import { json, cors, readBody, getAdminUser } from '../../_utils.js'
-import { normalizeContactPhone } from '../../_contacts.js'
+import { normalizeContactPhone, validWechatId } from '../../_contacts.js'
 
 export async function onRequest(context) {
   const { request, env } = context
@@ -24,15 +24,16 @@ export async function onRequest(context) {
     const order = await env.DB.prepare('SELECT * FROM orders WHERE id = ?').bind(id).first()
     if (!order) return json({ error: 'not found' }, 404)
     const body = await readBody(request)
-    const limits = { customer: 80, phone: 32, address: 500, remark: 1000 }
-    if (Object.keys(body).some(key => !Object.hasOwn(limits, key))) return json({ error: '这里只能修改收货人、电话、地址和备注' }, 400)
+    const limits = { customer: 80, phone: 32, contact_wechat_id: 20, contact_whatsapp: 32, address: 500, remark: 1000 }
+    if (Object.keys(body).some(key => !Object.hasOwn(limits, key))) return json({ error: '这里只能修改收货人、联系方式、地址和备注' }, 400)
     const fields = [], values = []
     for (const key of Object.keys(limits)) {
       if (!Object.hasOwn(body, key)) continue
       if (typeof body[key] !== 'string' || body[key].length > limits[key]) return json({ error: '收货信息格式或长度无效' }, 400)
       let value = body[key].trim()
       if (key === 'customer' && !value) return json({ error: '收货人不能为空' }, 400)
-      if (key === 'phone' && value !== String(order.phone || '')) {
+      if (key === 'contact_wechat_id' && !validWechatId(value)) return json({ error: '微信ID格式无效' }, 400)
+      if (['phone', 'contact_whatsapp'].includes(key) && value !== String(order[key] || '')) {
         value = normalizeContactPhone(value)
         if (value === null) return json({ error: '联系电话仅支持+852香港手机号或+86内地手机号' }, 400)
       }

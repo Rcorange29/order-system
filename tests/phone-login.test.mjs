@@ -1,67 +1,45 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { DatabaseSync } from 'node:sqlite'
+import { readFileSync } from 'node:fs'
 import { onRequest as register } from '../functions/api/register.js'
 import { onRequest as login } from '../functions/api/login.js'
-import { hashPassword } from '../functions/api/_utils.js'
+import { verifyPassword } from '../functions/api/_utils.js'
 
 function setup() {
   const sqlite = new DatabaseSync(':memory:')
-  sqlite.exec("CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, phone TEXT, token TEXT, is_admin INTEGER DEFAULT 0, account_status TEXT DEFAULT 'active', legacy_login_phone TEXT DEFAULT '', address_storage_key TEXT DEFAULT '')")
-  const DB = {
-    prepare(sql) {
-      return {
-        bind(...values) {
-          const statement = sqlite.prepare(sql)
-          return {
-            async first() { return statement.get(...values) || null },
-            async all() { return { results: statement.all(...values) } },
-            async run() { statement.run(...values); return { success: true } }
-          }
-        }
-      }
-    }
-  }
-  const request = (handler, body) => handler({
-    request: new Request('https://example.com/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
-    env: { DB }
-  })
-  return { sqlite, request }
+  sqlite.exec(readFileSync(new URL('../migrations/schema.sql', import.meta.url),'utf8'))
+  const DB = { prepare(sql) { return { bind(...values) { const stmt=sqlite.prepare(sql);return {
+    async first() { return stmt.get(...values)||null }, async all() { return {results:stmt.all(...values)} },
+    async run() { const result=stmt.run(...values); return { meta:{changes:Number(result.changes),last_row_id:Number(result.lastInsertRowid)} } }
+  } } } } }
+  const request = (handler, body) => handler({request:new Request('https://example.com/api/account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),env:{DB}})
+  return {sqlite,request}
 }
-
-test('phone-only signup accepts common formats and blocks a second account for the same number', async () => {
-  const { sqlite, request } = setup()
-  const signup = await request(register, { phone: '9123 4567', password: 'TestOnly!123' })
-  assert.equal(signup.status, 201)
-  assert.equal((await signup.json()).phone, '+85291234567')
-  const signedIn = await request(login, { phone: '+852 9123-4567', password: 'TestOnly!123' })
-  assert.equal(signedIn.status, 200)
-  assert.equal((await signedIn.json()).phone, '+85291234567')
-  assert.equal((await request(register, { phone: '+85291234567', password: 'Different!123' })).status, 409)
-  assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM users').get().count, 1)
+const profile={username:'student_01',wechat_id:'student_wx',whatsapp:'',phone:'',password:'TestOnly!123'}
+test('username signup accepts WeChat-only contact and signs in without a phone',async()=>{
+  const {sqlite,request}=setup()
+  const signup=await request(register,profile);assert.equal(signup.status,201)
+  const account=await signup.json();assert.equal(account.username,'student_01');assert.equal(account.phone,'');assert.equal(account.wechat_id,'student_wx');assert(account.id)
+  const stored=sqlite.prepare('SELECT * FROM users').get();assert(!JSON.stringify(account).includes(stored.password_hash));assert(await verifyPassword(profile.password,stored.password_hash));assert.equal(stored.is_admin,0)
+  assert.equal((await request(login,{username:'STUDENT_01',password:profile.password})).status,200)
+  assert.equal((await request(login,{username:'student_01',password:'WrongPassword'})).status,401)
+  assert.equal((await request(register,profile)).status,409)
   sqlite.close()
 })
-
-test('existing username accounts can sign in using their saved phone and original password', async () => {
-  const { sqlite, request } = setup()
-  const passwordHash = await hashPassword('OldPassword!123')
-  sqlite.prepare('INSERT INTO users (username, password_hash, phone) VALUES (?, ?, ?)').run('old_customer', passwordHash, '61234567')
-  const signedIn = await request(login, { phone: '6123 4567', password: 'OldPassword!123' })
-  assert.equal(signedIn.status, 200)
-  assert.equal((await signedIn.json()).username, 'old_customer')
-  assert.equal((await request(register, { phone: '+85261234567', password: 'OtherPassword!123' })).status, 409)
-  sqlite.close()
-})
-
-test('both signup and login reject non-Hong-Kong mobile formats without creating accounts', async () => {
-  const { sqlite, request } = setup()
-  for (const phone of ['13800138000', '+8613800138000', '+85361234567', '21234567', '1234567', '912345678', '9abcdefg', '+91234567']) {
-    for (const handler of [register, login]) {
-      const response = await request(handler, { phone, password: 'TestOnly!123' })
-      assert.equal(response.status, 400, phone)
-      assert.match((await response.json()).error, /香港手机号/)
-    }
+test('registration accepts HK and mainland contacts, normalizes numbers, and keeps contacts separate from usernames',async()=>{
+  const {sqlite,request}=setup()
+  for(const [username,phone,expected]of [['hk_user','9123 4567','+85291234567'],['cn_user','+86 13800138000','+8613800138000']]){
+    const response=await request(register,{...profile,username,wechat_id:'',phone,whatsapp:phone});assert.equal(response.status,201)
+    const account=await response.json();assert.equal(account.phone,expected);assert.equal(account.whatsapp,expected)
+    assert.equal((await request(login,{username:expected,password:profile.password})).status,401)
   }
-  assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM users').get().count, 0)
+  sqlite.close()
+})
+test('invalid usernames, contacts and passwords fail before creating an account',async()=>{
+  const {sqlite,request}=setup()
+  for(const bad of [{username:'with space'},{wechat_id:'123bad'},{wechat_id:'',phone:'',whatsapp:''},{phone:'+85361234567'},{phone:'+852912345678'},{phone:'+8612800138000'},{password:'short'},{password:'x'.repeat(129)}])assert.equal((await request(register,{...profile,...bad})).status,400,JSON.stringify(bad))
+  assert.equal((await request(login,{phone:'91234567',password:profile.password})).status,400)
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM users').get().n,0)
   sqlite.close()
 })

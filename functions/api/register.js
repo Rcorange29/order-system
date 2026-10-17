@@ -1,29 +1,24 @@
 import { hashPassword, generateToken, json, cors, readBody } from './_utils.js'
-import { normalizePhone, phoneAliases, phoneDigitsSql } from './_phone.js'
+import { validateProfile } from './_contacts.js'
+import { publicAccount } from './_account.js'
 
-export async function onRequest(context) {
-  const { request, env } = context
+export async function onRequest({ request, env }) {
   if (request.method === 'OPTIONS') return cors()
   if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
-
-  const body = await readBody(request)
-  if (!body.password) return json({ error: '请填写密码' }, 400)
-  const phoneKey = normalizePhone(body.phone)
-  if (!phoneKey) return json({ error: '仅支持香港手机号：请输入4至9开头的8位号码，可加+852区号' }, 400)
-
-  const aliases = phoneAliases(phoneKey)
-  const existing = await env.DB.prepare(`SELECT id FROM users WHERE username = ? OR legacy_login_phone = ? OR ${phoneDigitsSql} IN (${aliases.map(() => '?').join(', ')}) LIMIT 1`)
-    .bind(`+${phoneKey}`, `+${phoneKey}`, ...aliases).first()
-  if (existing) return json({ error: '该手机号已注册，请直接登录；如不是你的账号，请联系老板' }, 409)
-
+  const body = await readBody(request) || {}
+  const profile = validateProfile(body)
+  if (profile.error) return json(profile, 400)
+  if (typeof body.password !== 'string' || body.password.length < 8 || body.password.length > 128) return json({ code: 'INVALID_PASSWORD' }, 400)
+  const { username, phone, wechat_id, whatsapp } = profile.value
+  if (await env.DB.prepare('SELECT id FROM users WHERE username = ?').bind(username).first()) return json({ code: 'USERNAME_TAKEN' }, 409)
   const passwordHash = await hashPassword(body.password)
   const token = generateToken()
   try {
-    await env.DB.prepare('INSERT INTO users (username, password_hash, phone, token) VALUES (?, ?, ?, ?)')
-      .bind(`+${phoneKey}`, passwordHash, `+${phoneKey}`, token).run()
-  } catch {
-    return json({ error: '该手机号已注册，请直接登录；如不是你的账号，请联系老板' }, 409)
+    const result = await env.DB.prepare('INSERT INTO users (username, password_hash, phone, wechat_id, whatsapp, token, address_storage_key) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .bind(username, passwordHash, phone, wechat_id, whatsapp, token, username).run()
+    return json({ ...publicAccount({ id: result.meta?.last_row_id, ...profile.value }), token }, 201)
+  } catch (error) {
+    if (String(error.message).includes('UNIQUE')) return json({ code: 'USERNAME_TAKEN' }, 409)
+    throw error
   }
-
-  return json({ token, username: `+${phoneKey}`, phone: `+${phoneKey}` }, 201)
 }

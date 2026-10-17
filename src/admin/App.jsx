@@ -283,13 +283,14 @@ function AnnouncementManage({ announcements, reload, showToast }) {
   const [editing, setEditing] = useState(null)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
+  const [translations, setTranslations] = useState({})
   const [pointId, setPointId] = useState('')
   const [published, setPublished] = useState(true)
   useEffect(() => { fetch(`${API}/delivery-points`).then(r => r.json()).then(setPoints).catch(() => {}) }, [])
-  const reset = () => { setEditing(null); setTitle(''); setContent(''); setPointId(''); setPublished(true) }
-  const edit = (item) => { setEditing(item); setTitle(item.title); setContent(item.content); setPointId(item.delivery_point_id || ''); setPublished(Boolean(item.is_published)) }
+  const reset = () => { setEditing(null); setTranslations({}); setTitle(''); setContent(''); setPointId(''); setPublished(true) }
+  const edit = (item) => { setEditing(item); setTranslations(Object.fromEntries(['title_zh_hk','title_en','content_zh_hk','content_en'].map(k => [k,item[k] || '']))); setTitle(item.title); setContent(item.content); setPointId(item.delivery_point_id || ''); setPublished(Boolean(item.is_published)) }
   const save = async () => {
-    const response = await authFetch(`${API}/announcements`, { method: editing ? 'PUT' : 'POST', body: { id: editing?.id, title, content, delivery_point_id: pointId || null, is_published: published } })
+    const response = await authFetch(`${API}/announcements`, { method: editing ? 'PUT' : 'POST', body: { id: editing?.id, title, content, ...translations, delivery_point_id: pointId || null, is_published: published } })
     const data = await response.json()
     showToast(response.ok ? '公告已保存' : data.error || '保存失败')
     if (response.ok) { reset(); reload() }
@@ -304,9 +305,14 @@ function AnnouncementManage({ announcements, reload, showToast }) {
     <div className="page-header"><h2>配送公告</h2></div>
     <div className="card announcement-editor">
       <p>配送前一天，在这里发布取货时间；顾客会在所选服务点首页看到。群通知仍由你自行发送。</p>
-      <div className="form-row"><label>标题</label><input value={title} onChange={e => setTitle(e.target.value)} maxLength={100} placeholder="例如：周五科技大学取货安排" /></div>
+      <div className="form-row"><label>标题 · 简体（必填）</label><input value={title} onChange={e => setTitle(e.target.value)} maxLength={100} placeholder="例如：周五科技大学取货安排" /></div>
       <div className="form-row"><label>服务点</label><select value={pointId} onChange={e => setPointId(e.target.value)}><option value="">所有服务点</option>{points.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
-      <div className="form-row"><label>公告内容</label><textarea value={content} onChange={e => setContent(e.target.value)} maxLength={2000} placeholder="写明日期、时间、地点和取货提醒" rows={4} /></div>
+      <div className="form-row"><label>正文 · 简体（必填）</label><textarea value={content} onChange={e => setContent(e.target.value)} maxLength={2000} placeholder="写明日期、时间、地点和取货提醒" rows={4} /></div>
+      <p>繁體及 English 可留空；顾客未有对应语言版本时会看到简体原文，不会自动翻译。</p>
+      {[['zh_hk','繁體'],['en','English']].map(([code,label]) => <fieldset key={code} className="merchant-language-fields"><legend>{label}（选填）</legend>
+        <div className="form-row"><label>标题 · {label}</label><input value={translations[`title_${code}`] || ''} maxLength={100} onChange={e => setTranslations(prev => ({...prev,[`title_${code}`]:e.target.value}))} /></div>
+        <div className="form-row"><label>正文 · {label}</label><textarea value={translations[`content_${code}`] || ''} rows={4} maxLength={2000} onChange={e => setTranslations(prev => ({...prev,[`content_${code}`]:e.target.value}))} /></div>
+      </fieldset>)}
       <label className="publish-toggle"><input type="checkbox" checked={published} onChange={e => setPublished(e.target.checked)} /> 立即在网站显示</label>
       <div className="announcement-actions"><button className="btn btn-primary" onClick={save}>{editing ? '保存修改' : '发布公告'}</button>{editing && <button className="btn btn-default" onClick={reset}>取消编辑</button>}</div>
     </div>
@@ -323,14 +329,15 @@ function CouponManage({ coupons, claims, users, reload, showToast }) {
   const [editing, setEditing] = useState(null)
   const [title, setTitle] = useState('')
   const [details, setDetails] = useState('')
+  const [translations, setTranslations] = useState({})
   const [minSpend, setMinSpend] = useState('15')
   const [discount, setDiscount] = useState('5')
   const [published, setPublished] = useState(false)
   const [selectedUser, setSelectedUser] = useState('')
-  const reset = () => { setEditing(null); setTitle(''); setDetails(''); setMinSpend('15'); setDiscount('5'); setPublished(false) }
-  const edit = c => { setEditing(c); setTitle(c.title); setDetails(c.details); setMinSpend(String(c.min_spend)); setDiscount(String(c.discount_amount)); setPublished(Boolean(c.is_published)) }
+  const reset = () => { setEditing(null); setTranslations({}); setTitle(''); setDetails(''); setMinSpend('15'); setDiscount('5'); setPublished(false) }
+  const edit = c => { setEditing(c); setTranslations(Object.fromEntries(['title_zh_hk','title_en','details_zh_hk','details_en'].map(k => [k,c[k] || '']))); setTitle(c.title); setDetails(c.details); setMinSpend(String(c.min_spend)); setDiscount(String(c.discount_amount)); setPublished(Boolean(c.is_published)) }
   const save = async () => {
-    const r = await authFetch(`${API}/admin/coupons`, { method: editing ? 'PUT' : 'POST', body: { id: editing?.id, title, details, min_spend: Number(minSpend), discount_amount: Number(discount), is_published: published } })
+    const r = await authFetch(`${API}/admin/coupons`, { method: editing ? 'PUT' : 'POST', body: { id: editing?.id, title, details, ...translations, min_spend: Number(minSpend), discount_amount: Number(discount), is_published: published } })
     const data = await r.json()
     showToast(r.ok ? '活动已保存' : data.error || '保存失败')
     if (r.ok) { reset(); reload() }
@@ -353,8 +360,13 @@ function CouponManage({ coupons, claims, users, reload, showToast }) {
     <div className="page-header"><h2>优惠券活动</h2></div>
     <div className="card announcement-editor">
       <p>任意社交平台均可参与，包括朋友圈、小红书、抖音、Facebook、Instagram、Threads、X 等。请核对单篇分享含团购链接、发布账号和至少 10 个赞；审核通过后发券。每人限领一次，跨平台也不重复发券。</p>
-      <div className="form-row"><label>活动名称</label><input value={title} onChange={e => setTitle(e.target.value)} maxLength={100} placeholder="例如：新客活动" /></div>
-      <div className="form-row"><label>活动说明</label><textarea value={details} onChange={e => setDetails(e.target.value)} maxLength={2000} rows={4} placeholder="写明优惠金额、门槛、有效期等" /></div>
+      <div className="form-row"><label>活动名称 · 简体</label><input value={title} onChange={e => setTitle(e.target.value)} maxLength={100} placeholder="例如：新客活动" /></div>
+      <div className="form-row"><label>活动说明 · 简体</label><textarea value={details} onChange={e => setDetails(e.target.value)} maxLength={2000} rows={4} placeholder="写明优惠金额、门槛、有效期等" /></div>
+      <p>繁體及 English 可留空；空白时显示简体原文，不会自动翻译旧内容。</p>
+      {[['zh_hk','繁體'],['en','English']].map(([code,label]) => <fieldset key={code} className="merchant-language-fields"><legend>{label}（选填）</legend>
+        <div className="form-row"><label>活动名称 · {label}</label><input value={translations[`title_${code}`] || ''} maxLength={100} onChange={e => setTranslations(prev => ({...prev,[`title_${code}`]:e.target.value}))} /></div>
+        <div className="form-row"><label>活动说明 · {label}</label><textarea value={translations[`details_${code}`] || ''} rows={4} maxLength={2000} onChange={e => setTranslations(prev => ({...prev,[`details_${code}`]:e.target.value}))} /></div>
+      </fieldset>)}
       <div className="form-row"><label>满额（人民币）</label><input type="number" min="0.01" step="0.01" value={minSpend} onChange={e => setMinSpend(e.target.value)} /></div>
       <div className="form-row"><label>减额（人民币）</label><input type="number" min="0.01" step="0.01" value={discount} onChange={e => setDiscount(e.target.value)} /></div>
       <label className="publish-toggle"><input type="checkbox" checked={published} onChange={e => setPublished(e.target.checked)} /> 在顾客页面公开活动</label>
@@ -362,14 +374,14 @@ function CouponManage({ coupons, claims, users, reload, showToast }) {
     </div>
     <h3>截图审核</h3>
     {claims.filter(q => q.status === 'pending').map(q => <div className="card" key={q.id}>
-      <strong>{q.phone || q.username}</strong> · {q.title}<p>提交时间：{q.created_at}</p>
-      {claims.some(other => other.id !== q.id && other.campaign_id === q.campaign_id && other.status !== 'rejected' && matchingPhone(other.phone, q.phone)) && <p className="coupon-review-warning">提醒：同一手机号曾用其他账号提交此活动，请核对后再发券。</p>}
+      <strong>{q.username}</strong> · {q.title}<p>微信 ID：{q.wechat_id || '—'} · WhatsApp：{q.whatsapp || '—'} · 手机号：{q.phone || '—'}</p><p>提交时间：{q.created_at}</p>
+      {claims.some(other => other.id !== q.id && other.campaign_id === q.campaign_id && other.status !== 'rejected' && ((other.wechat_id && q.wechat_id && other.wechat_id.toLowerCase() === q.wechat_id.toLowerCase()) || [other.phone,other.whatsapp].some(a => [q.phone,q.whatsapp].some(b => matchingPhone(a,b))))) && <p className="coupon-review-warning">提醒：相同联系方式曾用其他账号提交此活动，请核对后再发券。</p>}
       {claims.some(other => other.id !== q.id && other.campaign_id === q.campaign_id && other.status !== 'rejected' && other.screenshot === q.screenshot) && <p className="coupon-review-warning">提醒：这张截图曾用于其他账号，请核对后再发券。</p>}
       <img src={q.screenshot} alt="社交平台集赞截图" style={{ display: 'block', maxWidth: 280, maxHeight: 440, objectFit: 'contain', margin: '10px 0' }} />
       <div className="announcement-actions"><button className="btn btn-primary btn-sm" onClick={() => review(q.id, 'approve')}>确认至少 10 赞并发券</button><button className="btn btn-default btn-sm" onClick={() => review(q.id, 'reject')}>未达要求，退回</button></div>
     </div>)}
     {!claims.some(q => q.status === 'pending') && <div className="card">暂无待审核截图</div>}
-    <div className="card"><label>发券给用户 </label><select value={selectedUser} onChange={e => setSelectedUser(e.target.value)}><option value="">请选择用户</option>{users.map(u => <option key={u.id} value={u.id}>{u.phone || u.username} · #{u.id}</option>)}</select></div>
+    <div className="card"><label>发券给用户 </label><select value={selectedUser} onChange={e => setSelectedUser(e.target.value)}><option value="">请选择用户</option>{users.map(u => <option key={u.id} value={u.id}>{u.username} · #{u.id}</option>)}</select></div>
     {coupons.map(c => <div className="card" key={c.id}>
       <strong>{c.title}</strong> · 满 ¥{c.min_spend} 减 ¥{c.discount_amount} <span className="tag">{c.is_published ? '已公开' : '未公开'}</span><p>{c.details || '尚未填写活动规则'}</p><p>已发给 {c.grant_count} 位用户</p>
       <div className="announcement-actions"><button className="btn btn-default btn-sm" onClick={() => edit(c)}>编辑活动</button><button className="btn btn-primary btn-sm" disabled={!selectedUser} onClick={() => grant(c.id)}>发给所选用户</button></div>
@@ -750,16 +762,17 @@ function OrderManage({ orders, reload, showToast, initialOrderId }) {
               <div className="form-row"><label>订单号</label><div>{displayOrderNo(detail)}</div></div>
               <div className="form-inline">
                 <div className="form-row"><label>收货人</label><div>{detail.customer}</div></div>
-                <div className="form-row"><label>电话</label><div>{detail.phone}</div></div>
+                <div className="form-row"><label>电话</label><div>{detail.phone || '—'}</div></div>
               </div>
               <div className="form-row"><label>地址</label><div>{detail.address}</div></div>
               <div className="form-row"><label>备注</label><div>{detail.remark || '无'}</div></div>
+              {(detail.contact_wechat_id || detail.contact_whatsapp) && <div className="user-help">微信 ID：{detail.contact_wechat_id || '—'} · WhatsApp：{detail.contact_whatsapp || '—'}</div>}
               {editingDelivery ? <form onSubmit={saveDelivery} className="user-section">
                 <h4>修改收货信息与备注</h4><p className="user-help">仅修改这笔订单，不会改变金额、收款状态、商品或自取点。</p>
-                {Object.entries({customer:'收货人',phone:'联系电话',address:'收货地址 / 自取说明',remark:'订单备注'}).map(([key,label]) => <div className="form-row" key={key}><label htmlFor={`order-edit-${key}`}>{label}</label>{['address','remark'].includes(key) ? <textarea id={`order-edit-${key}`} disabled={deliveryBusy} value={deliveryForm[key]} maxLength={key === 'remark' ? 1000 : 500} onChange={e => setDeliveryForm({...deliveryForm,[key]:e.target.value})} /> : <input id={`order-edit-${key}`} disabled={deliveryBusy} value={deliveryForm[key]} onChange={e => setDeliveryForm({...deliveryForm,[key]:e.target.value})} />}</div>)}
+                {Object.entries({customer:'收货人',phone:'联系电话',contact_wechat_id:'微信 ID',contact_whatsapp:'WhatsApp',address:'收货地址 / 自取说明',remark:'订单备注'}).map(([key,label]) => <div className="form-row" key={key}><label htmlFor={`order-edit-${key}`}>{label}</label>{['address','remark'].includes(key) ? <textarea id={`order-edit-${key}`} disabled={deliveryBusy} value={deliveryForm[key]} maxLength={key === 'remark' ? 1000 : 500} onChange={e => setDeliveryForm({...deliveryForm,[key]:e.target.value})} /> : <input id={`order-edit-${key}`} disabled={deliveryBusy} value={deliveryForm[key]} onChange={e => setDeliveryForm({...deliveryForm,[key]:e.target.value})} />}</div>)}
                 {deliveryError && <p className="user-form-error" role="alert">{deliveryError}</p>}
                 <div className="action-btns"><button className="btn btn-primary" disabled={deliveryBusy}>{deliveryBusy ? '正在保存…' : '保存收货信息与备注'}</button><button type="button" className="btn btn-default" disabled={deliveryBusy} onClick={() => setEditingDelivery(false)}>取消</button></div>
-              </form> : <button className="btn btn-default" onClick={() => {setDeliveryForm(Object.fromEntries(['customer','phone','address','remark'].map(key => [key,detail[key] || ''])));setDeliveryError('');setEditingDelivery(true)}}>修改收货信息 / 备注</button>}
+              </form> : <button className="btn btn-default" onClick={() => {setDeliveryForm(Object.fromEntries(['customer','phone','contact_wechat_id','contact_whatsapp','address','remark'].map(key => [key,detail[key] || ''])));setDeliveryError('');setEditingDelivery(true)}}>修改收货信息 / 备注</button>}
               <div className="form-row"><label>商品明细</label>
                 <div className="order-detail-items">
                   {detail.items?.map(i => (

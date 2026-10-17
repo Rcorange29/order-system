@@ -64,7 +64,9 @@ CREATE TABLE IF NOT EXISTS orders (
   payment_amount REAL,
   payment_screenshot TEXT,
   created_at TEXT DEFAULT (datetime('now', '+8 hours')),
-  updated_at TEXT DEFAULT (datetime('now', '+8 hours'))
+  updated_at TEXT DEFAULT (datetime('now', '+8 hours')),
+  contact_wechat_id TEXT NOT NULL DEFAULT '',
+  contact_whatsapp TEXT NOT NULL DEFAULT ''
 );
 
 -- Customer-facing serial numbers; keeps numbering stable when an order is deleted.
@@ -125,6 +127,10 @@ CREATE TABLE IF NOT EXISTS announcements (
   content TEXT NOT NULL,
   is_published INTEGER NOT NULL DEFAULT 1,
   created_at TEXT DEFAULT (datetime('now', '+8 hours')),
+  title_zh_hk TEXT,
+  title_en TEXT,
+  content_zh_hk TEXT,
+  content_en TEXT,
   FOREIGN KEY (delivery_point_id) REFERENCES delivery_points(id)
 );
 CREATE TABLE IF NOT EXISTS coupon_campaigns (
@@ -134,7 +140,11 @@ CREATE TABLE IF NOT EXISTS coupon_campaigns (
   min_spend REAL NOT NULL DEFAULT 0,
   discount_amount REAL NOT NULL DEFAULT 0,
   is_published INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT DEFAULT (datetime('now', '+8 hours'))
+  created_at TEXT DEFAULT (datetime('now', '+8 hours')),
+  title_zh_hk TEXT,
+  title_en TEXT,
+  details_zh_hk TEXT,
+  details_en TEXT
 );
 CREATE TABLE IF NOT EXISTS coupon_grants (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

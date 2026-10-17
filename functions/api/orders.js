@@ -1,3 +1,4 @@
+import { normalizeContactPhone } from './_contacts.js'
 import { getAuthUser, json, cors, readBody } from './_utils.js'
 
 const MAX_ITEMS = 100
@@ -21,7 +22,7 @@ export async function onRequest(context) {
 
   if (request.method === 'GET') {
     const { results } = await env.DB.prepare(
-      'SELECT o.id, o.order_no, n.number as public_no, o.user_id, o.customer, o.phone, o.address, o.status, o.total, o.delivery_fee, o.remark, o.payment_method, o.payment_status, o.payment_currency, o.payment_amount, o.payment_screenshot, o.delivery_point_id, o.created_at, o.updated_at, p.name as delivery_point_name FROM orders o LEFT JOIN order_numbers n ON n.order_id = o.id LEFT JOIN delivery_points p ON o.delivery_point_id = p.id WHERE o.user_id = ? ORDER BY o.id DESC'
+      'SELECT o.id, o.order_no, n.number as public_no, o.user_id, o.customer, o.phone, o.contact_wechat_id, o.contact_whatsapp, o.address, o.status, o.total, o.delivery_fee, o.remark, o.payment_method, o.payment_status, o.payment_currency, o.payment_amount, o.payment_screenshot, o.delivery_point_id, o.created_at, o.updated_at, p.name as delivery_point_name FROM orders o LEFT JOIN order_numbers n ON n.order_id = o.id LEFT JOIN delivery_points p ON o.delivery_point_id = p.id WHERE o.user_id = ? ORDER BY o.id DESC'
     ).bind(String(user.id)).all()
     const orders = []
     for (const order of results) {
@@ -51,9 +52,10 @@ export async function onRequest(context) {
     point = await env.DB.prepare('SELECT * FROM delivery_points WHERE id = ? AND is_active = 1')
       .bind(body.delivery_point_id || null).first()
     if (!point) return json({ error: '请选择有效的自取点' }, 400)
-  } else if (!String(body.address || '').trim() || !String(body.phone || '').trim()) {
-    return json({ error: '请填写配送地址和电话' }, 400)
+  } else if (!String(body.address || '').trim()) {
+    return json({ error: '请填写配送地址', code: 'ADDRESS_REQUIRED' }, 400)
   }
+  if (body.phone && normalizeContactPhone(body.phone) === null) return json({ code: 'INVALID_PHONE' }, 400)
 
   const items = []
   let subtotalCents = 0
@@ -94,7 +96,8 @@ export async function onRequest(context) {
     if (!validMoney(Number(coupon.discount_amount)) || discountCents >= subtotalCents) return json({ error: '优惠券配置有误' }, 500)
   }
 
-  const dbUser = await env.DB.prepare('SELECT username, phone FROM users WHERE id = ?').bind(user.id).first()
+  const dbUser = await env.DB.prepare('SELECT username, phone, wechat_id, whatsapp FROM users WHERE id = ?').bind(user.id).first()
+  if (!body.phone && !dbUser?.phone && !dbUser?.wechat_id && !dbUser?.whatsapp) return json({ code: 'CONTACT_REQUIRED' }, 400)
   const rateRow = paymentCurrency === 'HKD' ? await env.DB.prepare("SELECT value FROM settings WHERE key = 'exchange_rate'").first() : null
   const exchangeRate = Number(rateRow?.value || 1.2)
   if (!Number.isFinite(exchangeRate) || exchangeRate <= 0 || exchangeRate > 100) return json({ error: '汇率设置无效' }, 500)
@@ -104,13 +107,13 @@ export async function onRequest(context) {
   if (body.expected_payment_amount !== undefined && cents(Number(body.expected_payment_amount)) !== cents(paymentAmount)) return json({ error: '汇率或金额已更新，请刷新页面后重新确认金额' }, 409)
   const orderNo = 'ZZ' + crypto.randomUUID().replace(/-/g, '').slice(0, 16).toUpperCase()
   const statements = [env.DB.prepare(
-    `INSERT INTO orders (order_no, user_id, customer, phone, address, status, total, delivery_fee, remark, payment_method, payment_status, delivery_point_id, coupon_discount, coupon_grant_id, payment_currency, payment_amount, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+8 hours'))`
+    `INSERT INTO orders (order_no, user_id, customer, phone, address, status, total, delivery_fee, remark, payment_method, payment_status, delivery_point_id, coupon_discount, coupon_grant_id, payment_currency, payment_amount, contact_wechat_id, contact_whatsapp, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+8 hours'))`
   ).bind(
-    orderNo, String(user.id), String(body.customer || dbUser?.phone || '').trim(),
-    String(body.phone || dbUser?.phone || '').trim(), String(body.address || '').trim(),
+    orderNo, String(user.id), String(body.customer || dbUser?.username || '').trim(),
+    normalizeContactPhone(body.phone || dbUser?.phone || '') || '', String(body.address || '').trim(),
     'pending', (subtotalCents - discountCents) / 100, deliveryFee, String(body.remark || ''),
-    body.payment_method, 'pending', point?.id || null, discountCents / 100, coupon?.id || null, paymentCurrency, paymentAmount
+    body.payment_method, 'pending', point?.id || null, discountCents / 100, coupon?.id || null, paymentCurrency, paymentAmount, dbUser?.wechat_id || '', dbUser?.whatsapp || ''
   )]
   for (const item of items) {
     statements.push(env.DB.prepare(

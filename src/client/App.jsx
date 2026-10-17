@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { normalizePhone } from '../../functions/api/_phone.js'
+import { normalizeContactPhone, validateProfile } from '../../functions/api/_contacts.js'
+import { translate, localizedContent, apiError } from './i18n.js'
 import useVisualViewport from '../useVisualViewport.js'
 import { storage, readStoredArray } from '../storage.js'
 
@@ -10,18 +11,6 @@ const formatAmount = (amount, currency) => `${currency === 'HKD' ? 'HK$' : '¥'}
 const orderPaymentText = order => formatAmount(order.payment_amount ?? (Number(order.total) + Number(order.delivery_fee || 0)), order.payment_currency || 'CNY')
 const BOSS_WHATSAPP = '+85295228191'
 const GROUP_BUY_URL = 'https://jennyfresh.com/'
-const GROUP_BUY_SHARE_TEXT = `想买新鲜水果蔬菜的朋友，一起到珍珍优质果菜拼单吧！服务点自取免运费，凑满后统一配送，取货时间会在网站和群里通知。\n选菜链接：${GROUP_BUY_URL}`
-const statusText = { pending: '待付款', paid: '已付款', shipped: '已发货', completed: '已完成', cancelled: '已取消' }
-const paymentText = { cash_on_delivery: '货到付款（现金）', wechat_transfer: '微信转账', alipay_transfer: '支付宝转账', fps_transfer: '转数快 FPS' }
-const payStatusText = { pending: '待支付', paid: '已支付', confirmed: '已确认收款', refunded: '已退款' }
-
-// ========== 多语言 ==========
-const langPack = {
-  zh_CN: { home:'首页',category:'分类',cart:'购物车',my:'我的',search:'搜索商品',welcome:'珍珍优质果菜',slogan:'新鲜果菜 · 自取免运费 · 凑满统一配送',groupBuy:'服务点凑单 满 ¥1000 统一配送',groupBuySlogan:'大家一起拼 越买越划算',hot:'热门推荐',pickPoint:'选择自取点',freeShipping:'满额免运费 · 该点统一配送',freeFee:'免运费',deliveryHome:'配送到家',deliveryHomeFee:'运费¥30',checkout:'确认订单',goodsAmount:'商品金额',shipping:'运费',submit:'提交订单',cancel:'取消',myOrders:'我的订单',viewAll:'查看全部 ›',address:'收货地址',contact:'联系客服',help:'配送规则 / 帮助',favorites:'我的收藏',logout:'退出登录',clickLogin:'点击登录',loginHint:'登录后查看订单和地址',login:'登录',register:'注册',back:'返回上一页',username:'账号',password:'密码',phone:'手机号',addToCart:'加入购物车',checkOut:'去结算',emptyCart:'购物车是空的',favoriteEmpty:'还没有收藏商品',groupRemain:'还差',buyExtra:'顺手买一件',groupProgress:'当前拼单进度',groupFull:'该自取点满 ¥1000，大家都免运费',introTitle:'下单前必读',introBtn:'我已知晓，开始购物',next:'下一步',gotIt:'我知道了',step1Title:'① 选自取点',step1Desc:'点左上角📍选你就近的自提点',step2Title:'② 逛商品加购物车',step2Desc:'点商品看详情，点+号加购',step3Title:'③ 凑单满额',step3Desc:'自取免运费，大家凑够¥1000后统一配送',step4Title:'④ 去结算',step4Desc:'选支付方式，扫码付款等配送',deliveryRule:'配送规则：自取免运费，大家凑满统一配送',details:'详情 ›',groupBuyBanner:'服务点凑单',youGet:'已达起送门槛，请留意配送公告',need:'起送',totalConfirmed:'已确认订单总额',ordersConfirmed:'笔订单已确认',all:'全部',emptySearch:'没有找到相关商品',emptyCat:'暂无商品',reached:'✓ 已达门槛，请留意公告',searchResult:'搜索"{kw}"的结果',feeTitle:'运费说明：',feeEach:'· 自取订单始终免运费，待该点凑满起送额后统一配送',feeFree:'· 该自取点已付款订单满 ¥1000 后统一配送',feeNoRefund:'· 未满门槛先等待；已付款订单可申请加费单独配送或退款',feePerOrder:'自取免运费 · 满 ¥1000 统一配送',ustFee:'自取免运费 · 满 ¥500 统一配送',ustBenefit2:'🎓 科技大学自取点满¥500统一配送，自取免运费',feeHint:'满额免运费 · 该点统一配送',confirmOrder:'确认订单',needPay:'待付款',paid:'已付款',selectPointFirst:'请先选择自取点',tagHot:'爆款',tagNew:'新品',noPhone:'未绑定手机号',comingSoon:'敬请期待',statusPending:'待付款',statusPaid:'已付款',statusShipped:'已发货',statusCompleted:'已完成',statusCancelled:'已取消',orderAll:'全部订单',orderPending:'待付款',orderGroup:'拼团中',orderShipping:'待收货',orderDone:'已完成',coupons:'优惠券',refundAfterSale:'退款售后',orderPcs:'件',orderTotal:'合计',noOrders:'暂无订单',orderNo:'订单号',orderStatus:'订单状态',clear:'清空' },
-  zh_HK: { home:'首頁',category:'分類',cart:'購物車',my:'我的',search:'搜尋商品',welcome:'珍珍優質果菜',slogan:'新鮮果菜 · 自取免運費 · 湊滿統一配送',groupBuy:'服務點湊單 滿 ¥1000 統一配送',groupBuySlogan:'大家一起拼 越買越划算',hot:'熱門推薦',pickPoint:'選擇自取點',freeShipping:'滿額免運費 · 該點統一配送',freeFee:'免運費',deliveryHome:'配送到家',deliveryHomeFee:'運費¥30',checkout:'確認訂單',goodsAmount:'商品金額',shipping:'運費',submit:'提交訂單',cancel:'取消',myOrders:'我的訂單',viewAll:'查看全部 ›',address:'收貨地址',contact:'聯繫客服',help:'配送規則 / 幫助',favorites:'我的收藏',logout:'退出登錄',clickLogin:'點擊登錄',loginHint:'登錄後查看訂單和地址',login:'登錄',register:'註冊',back:'返回上一頁',username:'賬號',password:'密碼',phone:'手機號',addToCart:'加入購物車',checkOut:'去結算',emptyCart:'購物車是空的',favoriteEmpty:'還沒有收藏商品',groupRemain:'還差',buyExtra:'順手買一件',groupProgress:'當前拼單進度',groupFull:'該自取點滿 ¥1000，大家都免運費',introTitle:'下單前必讀',introBtn:'我已知曉，開始購物',next:'下一步',gotIt:'我知道了',step1Title:'① 選自取點',step1Desc:'點左上角📍選你就近的自提點',step2Title:'② 逛商品加購物車',step2Desc:'點商品看詳情，點+號加購',step3Title:'③ 湊單滿額',step3Desc:'自取免運費，大家湊夠¥1000後統一配送',step4Title:'④ 去結算',step4Desc:'選支付方式，掃碼付款等配送',deliveryRule:'配送規則：自取免運費，大家湊滿統一配送',details:'詳情 ›',groupBuyBanner:'服務點湊單',youGet:'已達起送門檻，請留意配送公告',need:'起送',totalConfirmed:'已確認訂單總額',ordersConfirmed:'筆訂單已確認',all:'全部',emptySearch:'沒有找到相關商品',emptyCat:'暫無商品',reached:'✓ 已達門檻，請留意公告',searchResult:'搜索"{kw}"的結果',feeTitle:'運費說明：',feeEach:'· 自取訂單一律免運費，待該點湊滿起送額後統一配送',feeFree:'· 該自取點已付款訂單滿 ¥1000 後統一配送',feeNoRefund:'· 未滿門檻先等待；已付款訂單可申請加費單獨配送或退款',feePerOrder:'自取免運費 · 滿 ¥1000 統一配送',ustFee:'自取免運費 · 滿 ¥500 統一配送',ustBenefit2:'🎓 科技大學自取點滿¥500統一配送，自取免運費',feeHint:'滿額免運費 · 該點統一配送',confirmOrder:'確認訂單',needPay:'待付款',paid:'已付款',selectPointFirst:'請先選擇自取點',tagHot:'爆款',tagNew:'新品',noPhone:'未綁定手機號',comingSoon:'敬請期待',statusPending:'待付款',statusPaid:'已付款',statusShipped:'已發貨',statusCompleted:'已完成',statusCancelled:'已取消',orderAll:'全部訂單',orderPending:'待付款',orderGroup:'拼團中',orderShipping:'待收貨',orderDone:'已完成',coupons:'優惠券',refundAfterSale:'退款售後',orderPcs:'件',orderTotal:'合計',noOrders:'暫無訂單',orderNo:'訂單號',orderStatus:'訂單狀態',clear:'清空' },
-  en: { home:'Home',category:'Categories',cart:'Cart',my:'My Account',search:'Search products',welcome:'Zhenzhen Fresh',slogan:'Fresh produce · Free pickup · Group delivery',groupBuy:'Group delivery at ¥1000',groupBuySlogan:'Group together to save more',hot:'Popular Picks',pickPoint:'Pickup Point',freeShipping:'Free shipping at ¥1000',freeFee:'Free shipping',deliveryHome:'Home Delivery',deliveryHomeFee:'¥30',checkout:'Confirm Order',goodsAmount:'Subtotal',shipping:'Shipping',submit:'Place Order',cancel:'Cancel',myOrders:'My Orders',viewAll:'View all ›',address:'Address',contact:'Contact Us',help:'Delivery Info / Help',favorites:'Favorites',logout:'Log Out',clickLogin:'Tap to Login',loginHint:'Login to see orders',login:'Login',register:'Register',back:'Back',username:'Username',password:'Password',phone:'Phone',addToCart:'Add to Cart',checkOut:'Checkout',emptyCart:'Your cart is empty',favoriteEmpty:'No favorites yet',groupRemain:'Need',buyExtra:'Add one more',groupProgress:'Group progress',groupFull:'This point hits ¥1000 — free shipping!',introTitle:'Please Read First',introBtn:'Got it, shop now',next:'Next',gotIt:'Got it',step1Title:'1. Pick your point',step1Desc:'Tap 📍 top-left to choose',step2Title:'2. Browse & add',step2Desc:'Tap product to see, tap + to add',step3Title:'3. Group buy',step3Desc:'Pickup is free; group delivery starts at ¥1000',step4Title:'4. Checkout',step4Desc:'Choose payment, scan QR, wait',deliveryRule:'Free pickup; group ships when threshold reached',details:'Details ›',groupBuyBanner:'Group Buy Today',youGet:'Threshold reached; watch announcements',need:'to go',totalConfirmed:'Confirmed total',ordersConfirmed:'orders',all:'All',emptySearch:'No products found',emptyCat:'No products',reached:'✓ Threshold reached; watch notices',searchResult:'Results for "{kw}"',feeTitle:'Shipping info:',feeEach:'· Pickup is always free; orders ship together after the point reaches its threshold',feeFree:'· Deliver together when paid orders at this point reach ¥1000',feeNoRefund:'· If waiting, paid orders may request home delivery or a refund',feePerOrder:'Free pickup · group delivery at ¥1000',ustFee:'Free pickup · group delivery at ¥500',ustBenefit2:'🎓 UST pickup: free; group delivery at ¥500',feeHint:'Pickup is free; delivery follows group threshold',confirmOrder:'Confirm Order',needPay:'Pending',paid:'Paid',selectPointFirst:'Please select a pickup point',tagHot:'Hot',tagNew:'New',noPhone:'No phone linked',comingSoon:'Coming soon',statusPending:'To Pay',statusPaid:'Paid',statusShipped:'Shipped',statusCompleted:'Completed',statusCancelled:'Cancelled',orderAll:'All Orders',orderPending:'To Pay',orderGroup:'Group Buy',orderShipping:'To Receive',orderDone:'Completed',coupons:'Coupons',refundAfterSale:'Refund & After-sales',orderPcs:'items',orderTotal:'Total',noOrders:'No orders',orderNo:'Order No.',orderStatus:'Order Status',clear:'Clear' }
-}
-
 // ========== 商品名三语映射 ==========
 const productNameMap = {
   '桑葚': { zh_HK:'桑椹', en:'Mulberry' },
@@ -43,7 +32,7 @@ const productNameMap = {
   '螺丝椒': { zh_HK:'螺絲椒', en:'Screw Chilli' },
   '角瓜': { zh_HK:'角瓜', en:'Zucchini' },
   '芋头': { zh_HK:'芋頭', en:'Taro' },
-  '贝贝南瓜': { zh_HK:'贝贝南瓜', en:'Butterball Pumpkin' },
+  '贝贝南瓜': { zh_HK:'貝貝南瓜', en:'Butterball Pumpkin' },
   '辣椒': { zh_HK:'辣椒', en:'Chilli' },
   '大丁苦瓜': { zh_HK:'大丁苦瓜', en:'Bitter Melon' },
   '粉葛': { zh_HK:'粉葛', en:'Kudzu Root' },
@@ -155,8 +144,8 @@ function authFetch(url, options = {}) {
   return fetch(url, { ...options, headers })
 }
 
-async function uploadProofFile(file, orderId) {
-  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return '请选择 PNG、JPEG 或 WebP 图片'
+async function uploadProofFile(file, orderId, t) {
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return t('copy001')
   const original = await new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve(reader.result)
@@ -167,7 +156,7 @@ async function uploadProofFile(file, orderId) {
   if (file.size > 1024 * 1024) {
     screenshot = await new Promise((resolve, reject) => {
       const image = new Image()
-      image.onerror = () => reject(new Error('无法读取截图，请换一张图片'))
+      image.onerror = () => reject(new Error(t('copy002')))
       image.onload = () => {
         const canvas = document.createElement('canvas')
         const scale = Math.min(1, 1600 / Math.max(image.width, image.height))
@@ -178,7 +167,7 @@ async function uploadProofFile(file, orderId) {
           const compressed = canvas.toDataURL('image/jpeg', quality)
           if (compressed.length < 1300000) return resolve(compressed)
         }
-        reject(new Error('截图过大，请裁剪后重试'))
+        reject(new Error(t('copy003')))
       }
       image.src = original
     })
@@ -190,7 +179,7 @@ async function uploadProofFile(file, orderId) {
   })
   if (response.ok) return null
   const data = await response.json().catch(() => ({}))
-  return data.error || '上传失败，请重试'
+  return apiError(t, data)
 }
 
 export default function App() {
@@ -206,6 +195,7 @@ export default function App() {
   const [cart, setCart] = useState({})
   const [showCart, setShowCart] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
+  const [orderSubmitting, setOrderSubmitting] = useState(false)
   const [orders, setOrders] = useState([])
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [addresses, setAddresses] = useState([])
@@ -258,7 +248,9 @@ export default function App() {
   const [showOnboard, setShowOnboard] = useState(false)
   const [onboardStep, setOnboardStep] = useState(0)
 
-  const t = (key) => (langPack[lang] || langPack.zh_CN)[key] || key
+  const t = (key, values) => translate(lang, key, values)
+  const content = (record, field) => localizedContent(record, field, lang)
+  const shareText = t('shareCopy', { url: GROUP_BUY_URL })
   const fmt = (rmbPrice) => {
     const n = Number(rmbPrice) || 0
     if (currency === 'HKD') return 'HK$' + (n * exchangeRate).toFixed(2)
@@ -287,10 +279,12 @@ export default function App() {
   }
   const unitText = (p) => {
     const raw = String(p?.unit || '').trim()
-    if (raw && raw !== '/斤') return raw.startsWith('/') ? raw : `/${raw}`
     const legacy = String(p?.description || '').trim()
-    if (/^\/[\u4e00-\u9fff\d]+$/.test(legacy)) return legacy
-    return raw
+    const unit = raw && raw !== '/斤' ? (raw.startsWith('/') ? raw : '/' + raw)
+      : /^\/[\u4e00-\u9fff\d]+$/.test(legacy) ? legacy : raw
+    const key = 'unit:' + unit
+    const translated = t(key)
+    return translated === key ? unit : translated
   }
   const hasVariants = (p) => {
     try { return p.variants && JSON.parse(p.variants).length > 0 } catch(e) { return false }
@@ -300,12 +294,16 @@ export default function App() {
     if (hasVariants(p)) { setSelectedProduct(p); setSelectedVariant(null); return }
     addToCart(p.id)
   }
-  const statusTxt = { pending: t('statusPending'), awaiting_confirmation: lang === 'en' ? 'To Confirm' : lang === 'zh_HK' ? '待確認' : '待确认', paid: t('statusPaid'), shipped: t('statusShipped'), completed: t('statusCompleted'), cancelled: t('statusCancelled') }
+  const statusTxt = { pending: t('statusPending'), awaiting_confirmation: t('inline0'), paid: t('statusPaid'), shipped: t('statusShipped'), completed: t('statusCompleted'), cancelled: t('statusCancelled') }
 
   const switchLang = (l) => {
     setLang(l)
+    document.documentElement.lang = l === 'zh_HK' ? 'zh-HK' : l === 'en' ? 'en' : 'zh-CN'
+    document.title = translate(l, 'welcome')
     storage.setItem('lang', l)
   }
+
+  useEffect(() => { document.documentElement.lang = lang === 'zh_HK' ? 'zh-HK' : lang === 'en' ? 'en' : 'zh-CN'; document.title = t('welcome') }, [lang])
 
   // 首次进入显示新手指引 + 注意事项
   useEffect(() => {
@@ -376,7 +374,7 @@ export default function App() {
     setCouponLoading(true)
     setCouponError(false)
     return authFetch(`${API}/coupons`)
-      .then(r => { if (!r.ok) throw new Error('无法读取优惠券'); return r.json() })
+      .then(r => { if (!r.ok) throw new Error(t('copy005')); return r.json() })
       .then(data => { setCouponData(data); setCouponLoading(false) })
       .catch(() => { setCouponError(true); setCouponLoading(false) })
   }
@@ -436,7 +434,7 @@ export default function App() {
   const copyText = async (text, label) => {
     try {
       await navigator.clipboard.writeText(text)
-      showToast(`${label || text} 已复制`)
+      showToast(t('copy006', { '0': label || text }))
     } catch (e) {
       const ta = document.createElement('textarea')
       ta.value = text
@@ -444,7 +442,7 @@ export default function App() {
       ta.select()
       document.execCommand('copy')
       document.body.removeChild(ta)
-      showToast(`${label || text} 已复制`)
+      showToast(t('copy006', { '0': label || text }))
     }
   }
 
@@ -457,7 +455,7 @@ export default function App() {
   }
 
   const closeActivity = () => {
-    if (claimUploading) { showToast('正在上传截图，请稍候'); return }
+    if (claimUploading) { showToast(t('copy007')); return }
     setShowActivity(false)
     const url = new URL(window.location.href)
     url.searchParams.delete('activity')
@@ -468,15 +466,15 @@ export default function App() {
 
   const submitCouponScreenshot = async (file) => {
     if (!file || !activityCampaign || claimUploading) return
-    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) { showToast('请上传图片截图'); return }
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) { showToast(t('copy008')); return }
     setClaimUploading(true)
     try {
       const screenshot = await new Promise((resolve, reject) => {
         const reader = new FileReader()
-        reader.onerror = () => reject(new Error('无法读取截图'))
+        reader.onerror = () => reject(new Error(t('copy009')))
         reader.onload = () => {
           const img = new Image()
-          img.onerror = () => reject(new Error('截图格式无效'))
+          img.onerror = () => reject(new Error(t('copy010')))
           img.onload = () => {
             const canvas = document.createElement('canvas')
             const scale = Math.min(1, 1400 / Math.max(img.width, img.height))
@@ -485,7 +483,7 @@ export default function App() {
             canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
             let data = canvas.toDataURL('image/jpeg', 0.75)
             if (data.length > 1300000) data = canvas.toDataURL('image/jpeg', 0.5)
-            if (data.length > 1300000) return reject(new Error('截图过大，请裁剪后重试'))
+            if (data.length > 1300000) return reject(new Error(t('copy003')))
             resolve(data)
           }
           img.src = reader.result
@@ -494,10 +492,10 @@ export default function App() {
       })
       const response = await authFetch(`${API}/coupons`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ campaign_id: activityCampaign.id, screenshot }) })
       const result = await response.json()
-      if (!response.ok) throw new Error(result.error || '上传失败')
+      if (!response.ok) throw new Error(apiError(t, result))
       setActivityProofFile(null)
       await loadCoupons()
-      showToast('截图已提交，请等待后台审核')
+      showToast(t('copy012'))
     } catch (error) { showToast(error.message) }
     finally { setClaimUploading(false) }
   }
@@ -508,7 +506,7 @@ export default function App() {
       storage.setItem('favorites', JSON.stringify(next))
       return next
     })
-    showToast(favorites.includes(id) ? '已取消收藏' : '已收藏')
+    showToast(favorites.includes(id) ? t('copy013') : t('copy014'))
   }
 
   const saveSearchHistory = (kw) => {
@@ -528,14 +526,14 @@ export default function App() {
 
   const filteredProducts = products.filter(p => {
     if (activeCategory && p.category_id !== activeCategory) return false
-    if (search && !p.name.includes(search)) return false
+    if (search && ![p.name, pn(p.name)].some(name => String(name || '').toLowerCase().includes(search.toLowerCase()))) return false
     return true
   })
 
   const addToCart = (id, variantLabel, variantPrice) => {
     const key = variantLabel ? `${id}::${variantLabel}` : String(id)
     setCart(prev => ({ ...prev, [key]: Math.min((prev[key] || 0) + 1, 99) }))
-    showToast('已加入购物车')
+    showToast(t('copy015'))
   }
 
   const cartCount = Object.values(cart).reduce((a, b) => a + b, 0)
@@ -583,7 +581,7 @@ export default function App() {
 
   const requireLogin = () => {
     if (!currentUser) {
-      showToast('请先登录')
+      showToast(t('copy016'))
       setTab('login')
       return false
     }
@@ -591,21 +589,24 @@ export default function App() {
   }
 
   const submitOrder = async () => {
+    if (orderSubmitting) return
     if (!requireLogin()) return
-    if (cartItems.length === 0) { showToast('请先选择商品'); return }
+    if (cartItems.length === 0) { showToast(t('copy017')); return }
     let customer = '', phone = '', address = ''
     if (deliveryType === 'pickup') {
       if (!selectedPointId) { showToast(t('selectPointFirst')); setShowPointPicker(true); return }
       const pt = deliveryPoints.find(p => p.id == selectedPointId)
-      customer = currentUser?.phone || currentUser?.username || ''
-      address = `自取点：${pt?.name || ''}`
+      customer = currentUser?.username || ''
+      address = pt?.name || ''
     } else {
       const addr = addresses.find(a => a.id === checkoutAddrId)
-      if (!addr) { showToast('请选择收货地址'); return }
+      if (!addr) { showToast(t('copy018')); return }
       customer = addr.name
       phone = addr.phone
       address = addr.detail
     }
+    setOrderSubmitting(true)
+    try {
     const res = await authFetch(`${API}/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -623,7 +624,7 @@ export default function App() {
     })
     if (res.ok) {
       const data = await res.json()
-      showToast('下单成功！')
+      showToast(t('copy019'))
       setCart({})
       setShowCheckout(false)
       setRemark('')
@@ -637,51 +638,50 @@ export default function App() {
       setShowPaymentQR(true)
     } else {
       const data = await res.json().catch(() => ({}))
-      showToast(data.error || '下单失败')
+      showToast(apiError(t, data))
     }
+    } catch { showToast(t('connectionFailed')) }
+    finally { setOrderSubmitting(false) }
   }
 
-  const handleLogin = async (phone, password) => {
+  const handleLogin = async (username, password) => {
     const res = await fetch(`${API}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, password })
+      body: JSON.stringify({ username, password })
     })
     const data = await res.json()
-    if (!res.ok) {
-      if (data.code === 'ACCOUNT_DISABLED') return lang === 'en' ? 'This account is disabled. Please contact the owner.' : lang === 'zh_HK' ? '帳號已停用，請聯繫老闆處理。' : '账号已停用，请联系老板处理。'
-      if (data.code === 'ACCOUNT_UPDATED') return lang === 'en' ? 'Account details changed. Please sign in again.' : lang === 'zh_HK' ? '帳號資料已更新，請重新登入。' : '账号信息已更新，请重新登录。'
-      return data.error || '登录失败'
-    }
+    if (!res.ok) return t(data.code || 'loginFailed')
     storage.setItem('token', data.token)
-    storage.setItem('currentUser', JSON.stringify({ username: data.username, phone: data.phone }))
-    setCurrentUser({ username: data.username, phone: data.phone, address_storage_key: data.address_storage_key || data.username })
+    const { token, ...account } = data
+    storage.setItem('currentUser', JSON.stringify(account))
+    setCurrentUser(account)
     if (returnToActivityAfterLogin) {
       setReturnToActivityAfterLogin(false)
       setTab('home')
       openActivity()
     } else setTab('my')
-    showToast('登录成功')
+    showToast(t('copy021'))
   }
 
-  const handleRegister = async (phone, password) => {
-    if (!phone || !password) return '请填写手机号和密码'
+  const handleRegister = async (profile, password) => {
     const res = await fetch(`${API}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, password })
+      body: JSON.stringify({ ...profile, password })
     })
     const data = await res.json()
-    if (!res.ok) return data.error || '注册失败'
+    if (!res.ok) return t(data.code || 'registerFailed')
     storage.setItem('token', data.token)
-    storage.setItem('currentUser', JSON.stringify({ username: data.username, phone: data.phone }))
-    setCurrentUser({ username: data.username, phone: data.phone, address_storage_key: data.address_storage_key || data.username })
+    const { token, ...account } = data
+    storage.setItem('currentUser', JSON.stringify(account))
+    setCurrentUser(account)
     if (returnToActivityAfterLogin) {
       setReturnToActivityAfterLogin(false)
       setTab('home')
       openActivity()
     } else setTab('my')
-    showToast('注册成功')
+    showToast(t('copy022'))
   }
 
   const logout = () => {
@@ -690,7 +690,7 @@ export default function App() {
     setCurrentUser(null)
     setCart({})
     setTab('home')
-    showToast('已退出登录')
+    showToast(t('copy023'))
   }
 
   const saveAddress = (addr) => {
@@ -708,19 +708,19 @@ export default function App() {
     saveAddresses(list)
     setEditingAddr(null)
     setTab('address')
-    showToast('地址已保存')
+    showToast(t('copy024'))
   }
 
   const deleteAddress = (id) => {
     const list = addresses.filter(a => a.id !== id)
     saveAddresses(list)
     if (selectedAddrId === id) setSelectedAddrId(list[0]?.id || null)
-    showToast('已删除')
+    showToast(t('copy025'))
   }
 
   const openCheckout = () => {
     if (!requireLogin()) return
-    if (cartCount === 0) { showToast('购物车是空的'); return }
+    if (cartCount === 0) { showToast(t('copy026')); return }
     const def = addresses.find(a => a.isDefault) || addresses[0]
     setCheckoutAddrId(def?.id || null)
     setPaymentCurrency(currency || 'CNY')
@@ -750,6 +750,7 @@ export default function App() {
   if (tab === 'address') {
     return (
       <AddressPage
+        t={t}
         addresses={addresses}
         selectedId={selectedAddrId}
         onSelect={setSelectedAddrId}
@@ -762,15 +763,15 @@ export default function App() {
   }
 
   if (tab === 'addrEdit') {
-    return <AddressEditPage addr={editingAddr} onSave={saveAddress} onBack={() => setTab('address')} />
+    return <AddressEditPage t={t} addr={editingAddr} onSave={saveAddress} onBack={() => setTab('address')} />
   }
 
   if (tab === 'favorites') {
     const favProducts = products.filter(p => favorites.includes(p.id))
     return (
       <div>
-        <div className="back-btn" onClick={() => setTab('my')}>‹ 返回</div>
-        <h3 style={{ fontSize: 18, padding: '0 16px 12px' }}>❤️ 我的收藏</h3>
+        <div className="back-btn" onClick={() => setTab('my')}>{t('copy027')}</div>
+        <h3 style={{ fontSize: 18, padding: '0 16px 12px' }}>{t('copy028')}</h3>
         <div className="product-grid" style={{ padding: '0 12px 80px' }}>
           {favProducts.map(p => (
             <div className="product-card" key={p.id} onClick={() => { setTab('home'); setSelectedProduct(p); setSelectedVariant(null) }}>
@@ -786,12 +787,12 @@ export default function App() {
                 <div className="name">{pn(p.name)}</div>
                 <div className="bottom-row">
                   <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}</small></div>
-                  <button className={`add-btn ${hasVariants(p) ? 'variant-add-btn' : ''}`} aria-label={`${hasVariants(p) ? '选择规格' : '加入购物车'}：${pn(p.name)}`} onClick={(e) => { e.stopPropagation(); setTab('home'); quickAdd(p) }}>{hasVariants(p) ? '选规格' : '+'}</button>
+                  <button className={`add-btn ${hasVariants(p) ? 'variant-add-btn' : ''}`} aria-label={`${hasVariants(p) ? t('copy029') : t('copy030')}：${pn(p.name)}`} onClick={(e) => { e.stopPropagation(); setTab('home'); quickAdd(p) }}>{hasVariants(p) ? t('copy031') : '+'}</button>
                 </div>
               </div>
             </div>
           ))}
-          {favProducts.length === 0 && <div className="empty-state" style={{gridColumn: '1/-1'}}><div className="icon">💔</div>还没有收藏商品</div>}
+          {favProducts.length === 0 && <div className="empty-state" style={{gridColumn: '1/-1'}}><div className="icon">💔</div>{t('copy032')}</div>}
         </div>
       </div>
     )
@@ -814,7 +815,7 @@ export default function App() {
             {Object.entries({ zh_CN:'简', zh_HK:'繁', en:'EN' }).map(([k,v]) => (
               <span key={k} onClick={() => switchLang(k)} className={`header-option ${lang === k ? 'active' : ''}`}>{v}</span>
             ))}
-            <span className="display-currency-label">{lang === 'en' ? 'View prices' : lang === 'zh_HK' ? '看價幣種' : '看价币种'}</span>
+            <span className="display-currency-label">{t('inline1')}</span>
             <span onClick={() => {
               const c = currency === 'HKD' ? 'CNY' : 'HKD'
               setCurrency(c); storage.setItem('currency', c)
@@ -827,23 +828,23 @@ export default function App() {
         )}
         {(tab === 'category' || search) && (
         <>
-        <div className="category-search-label">{lang === 'en' ? 'Find a product' : '找商品'}</div>
+        <div className="category-search-label">{t('inline2')}</div>
         <form className="search-box" role="search" onSubmit={e => { e.preventDefault(); setSearch(searchInput.trim()); if (searchInput.trim()) saveSearchHistory(searchInput.trim()); setActiveCategory(null); setTab('category') }}>
           <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg>
           <input
             aria-label={t('search')}
-            placeholder={lang === 'en' ? 'Search fruit, vegetables…' : lang === 'zh_HK' ? '搜尋商品，例如番茄、蘋果' : '搜索商品，例如番茄、苹果'}
+            placeholder={t('inline3')}
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
           />
           {searchInput && (
-            <button type="button" className="search-clear" onClick={() => { setSearchInput(''); setSearch('') }}>{lang === 'en' ? 'Clear' : '清除'}</button>
+            <button type="button" className="search-clear" onClick={() => { setSearchInput(''); setSearch('') }}>{t('inline4')}</button>
           )}
-          <button type="submit" className="search-submit">{lang === 'en' ? 'Search' : lang === 'zh_HK' ? '搜尋' : '搜索'}</button>
+          <button type="submit" className="search-submit">{t('inline5')}</button>
         </form>
         {searchHistory.length > 0 && !searchInput && (
           <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-            <span style={{ fontSize: 12, opacity: 0.8 }}>热门:</span>
+            <span style={{ fontSize: 12, opacity: 0.8 }}>{t('copy033')}</span>
             {searchHistory.map(h => (
               <span key={h} style={{ fontSize: 12, background: 'rgba(255,255,255,0.25)', padding: '2px 8px', borderRadius: 10, cursor: 'pointer' }}
                 onClick={() => { setSearchInput(h); setSearch(h); saveSearchHistory(h) }}>
@@ -860,19 +861,19 @@ export default function App() {
         <>
           <div className="banner">
             <div className={`hero-poster hero-poster-${bannerIdx}`} role="button" tabIndex={0}
-              aria-label={bannerIdx === 0 ? '查看服务点凑单规则' : bannerIdx === 1 ? '了解珍珍优质果菜' : '打开分享团购活动'}
+              aria-label={bannerIdx === 0 ? t('copy034') : bannerIdx === 1 ? t('copy035') : t('copy036')}
               onPointerDown={() => setBannerPaused(true)} onFocus={() => setBannerPaused(true)}
               onClick={() => { if (bannerIdx === 0) setShowHelp(true); else if (bannerIdx === 1) setShowBrand(true); else openActivity() }}
               onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (bannerIdx === 0) setShowHelp(true); else if (bannerIdx === 1) setShowBrand(true); else openActivity() } }}>
               {bannerIdx === 0 && <>
                 <div className="hero-message">
-                  <span className="hero-kicker">{lang === 'en' ? 'GROUP PICKUP' : lang === 'zh_HK' ? '服務點湊單' : '服务点凑单'}</span>
-                  <h2>{lang === 'en' ? 'Free pickup' : lang === 'zh_HK' ? '自取免運費' : '自取免运费'}</h2>
-                  <p>{lang === 'en' ? 'Orders at the same point add up for one delivery.' : lang === 'zh_HK' ? '同一服務點大家一起湊滿，統一配送。' : '同一服务点大家一起凑满，统一配送。'}</p>
-                  <span className="hero-link">{lang === 'en' ? 'Delivery rules' : lang === 'zh_HK' ? '看配送規則' : '看配送规则'} <span aria-hidden="true">↗</span></span>
+                  <span className="hero-kicker">{t('inline6')}</span>
+                  <h2>{t('inline7')}</h2>
+                  <p>{t('inline8')}</p>
+                  <span className="hero-link">{t('inline9')} <span aria-hidden="true">↗</span></span>
                 </div>
-                <div className="hero-visual hero-visual-threshold" aria-label={lang === 'en' ? `This point delivers from ¥${effectiveThreshold} CNY` : `本站点合计满 ¥${effectiveThreshold} CNY 配送`}>
-                  <span>{lang === 'en' ? 'THIS POINT' : lang === 'zh_HK' ? '本站點合計滿' : '本站点合计满'}</span>
+                <div className="hero-visual hero-visual-threshold" aria-label={t('inline10', { '0': effectiveThreshold })}>
+                  <span>{t('inline11')}</span>
                   <strong>¥{effectiveThreshold}</strong>
                   <small>CNY</small>
                   <i aria-hidden="true" />
@@ -882,27 +883,27 @@ export default function App() {
                 <div className="hero-message">
                   <span className="hero-kicker">ZHENZHEN FRESH</span>
                   <h2>{t('welcome')}</h2>
-                  <p>{lang === 'en' ? 'Fruit, vegetables and daily favourites in one place.' : lang === 'zh_HK' ? '水果、蔬菜、日常食材，一站挑選。' : '水果、蔬菜、日常食材，一站挑选。'}</p>
-                  <span className="hero-link">{lang === 'en' ? 'About us' : lang === 'zh_HK' ? '認識珍珍' : '认识珍珍'} <span aria-hidden="true">↗</span></span>
+                  <p>{t('inline12')}</p>
+                  <span className="hero-link">{t('inline13')} <span aria-hidden="true">↗</span></span>
                 </div>
                 <div className="hero-visual hero-visual-produce" aria-hidden="true"><img src="/images/market-hero.jpg" alt="" /></div>
               </>}
               {bannerIdx === 2 && <>
                 <div className="hero-message">
-                  <span className="hero-kicker">{lang === 'en' ? 'SHARE & SAVE' : lang === 'zh_HK' ? '分享團購活動' : '分享团购活动'}</span>
-                  <h2>{lang === 'en' ? 'Share for a coupon' : lang === 'zh_HK' ? '分享團購，領券' : '分享团购，领券'}</h2>
-                  <p>{lang === 'en' ? 'Share on any social platform, get 10 likes and upload a screenshot.' : lang === 'zh_HK' ? '任意社交平台分享集滿 10 讚，截圖審核後領券。' : '任意社交平台分享集满 10 赞，截图审核后领券。'}</p>
-                  <span className="hero-link">{lang === 'en' ? 'See the offer' : lang === 'zh_HK' ? '查看活動' : '查看活动'} <span aria-hidden="true">↗</span></span>
+                  <span className="hero-kicker">{t('inline14')}</span>
+                  <h2>{t('inline15')}</h2>
+                  <p>{t('inline16')}</p>
+                  <span className="hero-link">{t('inline17')} <span aria-hidden="true">↗</span></span>
                 </div>
-                <div className="hero-visual hero-visual-coupon" aria-label={lang === 'en' ? `${activityCampaign?.discount_amount || 5} CNY off when spending ${activityCampaign?.min_spend || 15} CNY` : `满 ¥${activityCampaign?.min_spend || 15} 减 ¥${activityCampaign?.discount_amount || 5}`}>
-                  <span>{lang === 'en' ? 'COUPON' : lang === 'zh_HK' ? '分享獎勵' : '分享奖励'}</span>
+                <div className="hero-visual hero-visual-coupon" aria-label={lang === 'en' ? `${activityCampaign?.discount_amount || 5} CNY off when spending ${activityCampaign?.min_spend || 15} CNY` : t('copy037', { '0': activityCampaign?.min_spend || 15, '1': activityCampaign?.discount_amount || 5 })}>
+                  <span>{t('inline18')}</span>
                   <strong><small>¥</small>{activityCampaign?.discount_amount || 5}</strong>
-                  <em>{lang === 'en' ? `on ¥${activityCampaign?.min_spend || 15}+` : `满 ¥${activityCampaign?.min_spend || 15} 可用`}</em>
+                  <em>{t('inline19', { '0': activityCampaign?.min_spend || 15 })}</em>
                 </div>
               </>}
             </div>
-            <div className="hero-tabs" aria-label={lang === 'en' ? 'Poster selection' : '切换海报'}>
-              {(lang === 'en' ? ['Free pickup', 'Fresh produce', 'Coupon offer'] : lang === 'zh_HK' ? ['自取免運', '珍珍果菜', '分享領券'] : ['自取免运', '珍珍果菜', '分享领券']).map((label, index) => (
+            <div className="hero-tabs" aria-label={t('inline20')}>
+              {[t('posterPickup'), t('posterProduce'), t('posterCoupon')].map((label, index) => (
                 <button type="button" key={label} className={bannerIdx === index ? 'active' : ''} aria-pressed={bannerIdx === index} onClick={() => { setBannerPaused(true); setBannerIdx(index) }}>{label}</button>
               ))}
             </div>
@@ -910,8 +911,8 @@ export default function App() {
 
           {unpaidOrders.length > 0 && (
             <div className="unpaid-home-reminder">
-              <div><strong>有 {unpaidOrders.length} 笔订单待付款</strong><p>已经转账？上传付款截图后，店主才能确认订单。</p></div>
-              <button type="button" onClick={() => { if (unpaidOrders.length === 1) { setSelectedOrder(unpaidOrders[0]); setTab('orderDetail') } else { setOrderFilter('pending'); setTab('myOrders') } }}>去付款／上传凭证 ›</button>
+              <div><strong>{t('unpaidCount', { count: unpaidOrders.length })}</strong><p>{t('copy038')}</p></div>
+              <button type="button" onClick={() => { if (unpaidOrders.length === 1) { setSelectedOrder(unpaidOrders[0]); setTab('orderDetail') } else { setOrderFilter('pending'); setTab('myOrders') } }}>{t('copy039')}</button>
             </div>
           )}
 
@@ -923,7 +924,7 @@ export default function App() {
           </div>
 
           <div className="activity-strip" onClick={openActivity} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') openActivity() }}>
-            <span>分享团购 · 集满 10 赞领 {fmt(activityCampaign?.discount_amount || 5)} 优惠券</span><span>参加／上传截图 ›</span>
+            <span>{t('shareStrip', { amount: fmt(activityCampaign?.discount_amount || 5) })}</span><span>{t('copy040')}</span>
           </div>
 
           {/* 凑单进度条 */}
@@ -944,16 +945,16 @@ export default function App() {
                 />
               </div>
               <div className="group-buy-footer">
-                <span>本站点大家的已确认订单：<b style={{ color: 'var(--market-green)' }}>{fmt(stats.confirmed_total)}</b> / {fmt(effectiveThreshold)}</span>
+                <span>{t('copy041')}<b style={{ color: 'var(--market-green)' }}>{fmt(stats.confirmed_total)}</b> / {fmt(effectiveThreshold)}</span>
                 <span>{stats.confirmed_count} {t('ordersConfirmed')}</span>
               </div>
-              <p className="group-buy-explain">大家一起凑够起送额就能统一配送，你无需一个人买满。分享给朋友，帮大家早点收菜。</p>
+              <p className="group-buy-explain">{t('copy042')}</p>
             </div>
           )}
 
-          <section className="notice-board notice-board-home" aria-label="配送公告" onClick={() => { markNoticesRead(); setTab('messages') }}>
-            <div className="notice-board-heading"><span>配送公告 {unreadNotices.length > 0 && <span className="notice-dot" aria-label={`${unreadNotices.length}条未读公告`}>{unreadNotices.length > 99 ? '99+' : unreadNotices.length}</span>}</span><small>查看全部 ›</small></div>
-            {announcements.length ? <><strong>{announcements[0].title}</strong><p>{announcements[0].content}</p></> : <p className="notice-empty">取货时间会在配送前一天公布，点此查看消息。</p>}
+          <section className="notice-board notice-board-home" aria-label={t('copy043')} onClick={() => { markNoticesRead(); setTab('messages') }}>
+            <div className="notice-board-heading"><span>{t('copy043')} {unreadNotices.length > 0 && <span className="notice-dot" aria-label={t('copy044', { '0': unreadNotices.length })}>{unreadNotices.length > 99 ? '99+' : unreadNotices.length}</span>}</span><small>{t('copy045')}</small></div>
+            {announcements.length ? <><strong>{content(announcements[0], 'title')}</strong><p>{content(announcements[0], 'content')}</p></> : <p className="notice-empty">{t('copy046')}</p>}
           </section>
 
           <div className="product-list">
@@ -964,7 +965,7 @@ export default function App() {
                   <div className="emoji">
                     {p.image ? <img src={p.image} alt={p.name} /> : <span className="product-no-image">{pn(p.name).replace(/^\[[^\]]+\]/, '').slice(0, 2)}</span>}
                     {(p.is_hot || p.is_new) && <div className="promo-tag">{p.is_hot ? t('tagHot') : t('tagNew')}</div>}
-                    {p.is_active === false && <div className="promo-tag" style={{background:'#999'}}>{t('offShelf') || '已下架'}</div>}
+                    {p.is_active === false && <div className="promo-tag" style={{background:'#999'}}>{t('offShelf') || t('copy047')}</div>}
                     <span onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id) }} className="fav-btn">
                       {favorites.includes(p.id) ? '❤️' : '🤍'}
                     </span>
@@ -976,36 +977,36 @@ export default function App() {
                     </div>
                     <div className="bottom-row">
                       <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}</small></div>
-                      {p.is_active !== false && <button className={`add-btn ${hasVariants(p) ? 'variant-add-btn' : ''}`} aria-label={`${hasVariants(p) ? '选择规格' : '加入购物车'}：${pn(p.name)}`} onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>{hasVariants(p) ? '选规格' : '+'}</button>}
+                      {p.is_active !== false && <button className={`add-btn ${hasVariants(p) ? 'variant-add-btn' : ''}`} aria-label={`${hasVariants(p) ? t('copy029') : t('copy030')}：${pn(p.name)}`} onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>{hasVariants(p) ? t('copy031') : '+'}</button>}
                     </div>
                   </div>
                 </div>
               ))}
             </div>
             {(search ? filteredProducts : featuredProducts).length === 0 && <div className="empty-state"><div className="icon">🔍</div>{t('emptySearch')}</div>}
-            {!search && <button className="browse-all-button" onClick={() => { setTab('category'); window.scrollTo(0, 0) }}>到分类看全部商品 ›</button>}
+            {!search && <button className="browse-all-button" onClick={() => { setTab('category'); window.scrollTo(0, 0) }}>{t('copy048')}</button>}
           </div>
         </>
       )}
 
       {tab === 'coupons' && (
         <div className="coupon-page">
-          <div className="back-btn" onClick={() => setTab('my')}>‹ 返回</div>
-          <h2>分享团购 · 集赞领券</h2>
-          {couponData.campaigns.length ? couponData.campaigns.map(c => <div className="coupon-card coupon-action" key={c.id} onClick={openActivity}><strong>{c.title}</strong><p>任意社交平台分享，单篇集满 10 个赞，领满 {fmt(c.min_spend)} 减 {fmt(c.discount_amount)} 优惠券；每人限领一次。</p><small>查看活动与上传截图 ›</small></div>) : <div className="coupon-card"><strong>活动加载中</strong></div>}
-          <h3>我的优惠券</h3>
-          {!currentUser ? <p className="coupon-empty" onClick={() => setTab('login')}>登录后查看已发给你的优惠券 ›</p> : couponData.grants.length ? couponData.grants.map(g => <div className="coupon-card" key={g.id}><strong>满 {fmt(g.min_spend)} 减 {fmt(g.discount_amount)}</strong><p>{g.title}</p><small>{g.used_order_no ? '已使用' : '可在结算时使用'} · 领取时间：{g.granted_at}</small></div>) : <p className="coupon-empty">暂时没有收到优惠券。点击上方活动参与分享。</p>}
+          <div className="back-btn" onClick={() => setTab('my')}>{t('copy027')}</div>
+          <h2>{t('copy049')}</h2>
+          {couponData.campaigns.length ? couponData.campaigns.map(c => <div className="coupon-card coupon-action" key={c.id} onClick={openActivity}><strong>{content(c, 'title')}</strong><p>{t('campaignSummary', { min: fmt(c.min_spend), discount: fmt(c.discount_amount) })}</p><small>{t('copy050')}</small></div>) : <div className="coupon-card"><strong>{t('copy051')}</strong></div>}
+          <h3>{t('copy052')}</h3>
+          {!currentUser ? <p className="coupon-empty" onClick={() => setTab('login')}>{t('copy053')}</p> : couponData.grants.length ? couponData.grants.map(g => <div className="coupon-card" key={g.id}><strong>{t('couponValue', { min: fmt(g.min_spend), discount: fmt(g.discount_amount) })}</strong><p>{content(g, 'title')}</p><small>{g.used_order_no ? t('copy054') : t('copy055')} {t('copy056')}{g.granted_at}</small></div>) : <p className="coupon-empty">{t('copy057')}</p>}
         </div>
       )}
 
       {tab === 'messages' && (
         <div className="messages-page">
-          <div className="back-btn" onClick={() => setTab('my')}>‹ 返回</div>
-          <h2>配送消息</h2>
-          <p className="messages-intro">配送前一天，我们会在这里和群里公布取货时间。</p>
+          <div className="back-btn" onClick={() => setTab('my')}>{t('copy027')}</div>
+          <h2>{t('copy058')}</h2>
+          <p className="messages-intro">{t('copy059')}</p>
           {announcements.length ? announcements.map(notice => <article className="message-card" key={notice.id}>
-            <time>{notice.created_at?.slice(0, 16)}</time><h3>{notice.title}</h3><p>{notice.content}</p>
-          </article>) : <p className="messages-empty">目前没有新公告，请留意之后的通知。</p>}
+            <time>{notice.created_at?.slice(0, 16)}</time><h3>{content(notice, 'title')}</h3><p>{content(notice, 'content')}</p>
+          </article>) : <p className="messages-empty">{t('copy060')}</p>}
         </div>
       )}
 
@@ -1022,14 +1023,14 @@ export default function App() {
             ))}
           </div>
           <div className="cat-main">
-            {search && <div className="category-search-result">{lang === 'en' ? `${filteredProducts.length} results for “${search}”` : lang === 'zh_HK' ? `找到 ${filteredProducts.length} 款「${search}」商品` : `找到 ${filteredProducts.length} 款“${search}”商品`} <button type="button" onClick={() => { setSearch(''); setSearchInput('') }}>{lang === 'en' ? 'Show all' : lang === 'zh_HK' ? '顯示全部' : '显示全部'}</button></div>}
+            {search && <div className="category-search-result">{t('inline21', { '0': filteredProducts.length, '1': search })} <button type="button" onClick={() => { setSearch(''); setSearchInput('') }}>{t('inline22')}</button></div>}
             <div className="product-grid">
               {filteredProducts.map(p => (
                 <div className="product-card" key={p.id} onClick={() => { setSelectedProduct(p); setSelectedVariant(null) }} style={p.is_active === false ? { opacity: 0.5, filter: 'grayscale(1)' } : {}}>
                   <div className="emoji">
                     {p.image ? <img src={p.image} alt={p.name} /> : <span className="product-no-image">{pn(p.name).replace(/^\[[^\]]+\]/, '').slice(0, 2)}</span>}
                     {(p.is_hot || p.is_new) && <div className="promo-tag">{p.is_hot ? t('tagHot') : t('tagNew')}</div>}
-                    {p.is_active === false && <div className="promo-tag" style={{background:'#999'}}>{t('offShelf') || '已下架'}</div>}
+                    {p.is_active === false && <div className="promo-tag" style={{background:'#999'}}>{t('offShelf') || t('copy047')}</div>}
                     <span onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id) }} className="fav-btn">
                       {favorites.includes(p.id) ? '❤️' : '🤍'}
                     </span>
@@ -1041,7 +1042,7 @@ export default function App() {
                     </div>
                     <div className="bottom-row">
                       <div className="price-stack"><div className="price">{priceText(p)}</div><small className="product-unit">{unitText(p)}</small></div>
-                      {p.is_active !== false && <button className={`add-btn ${hasVariants(p) ? 'variant-add-btn' : ''}`} aria-label={`${hasVariants(p) ? '选择规格' : '加入购物车'}：${pn(p.name)}`} onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>{hasVariants(p) ? '选规格' : '+'}</button>}
+                      {p.is_active !== false && <button className={`add-btn ${hasVariants(p) ? 'variant-add-btn' : ''}`} aria-label={`${hasVariants(p) ? t('copy029') : t('copy030')}：${pn(p.name)}`} onClick={(e) => { e.stopPropagation(); quickAdd(p) }}>{hasVariants(p) ? t('copy031') : '+'}</button>}
                     </div>
                   </div>
                 </div>
@@ -1054,7 +1055,7 @@ export default function App() {
 
       {tab === 'myOrders' && (
         <div>
-          <div className="back-btn" onClick={() => setTab('my')}>‹ 返回</div>
+          <div className="back-btn" onClick={() => setTab('my')}>{t('copy027')}</div>
           <div style={{ padding: '0 12px 20px' }}>
             <h3 style={{ fontSize: 18, marginBottom: 12, paddingLeft: 4 }}>{t('myOrders')}</h3>
             <div className="order-filter-tabs">
@@ -1073,7 +1074,7 @@ export default function App() {
                   </div>
                   <div className="order-goods">{o.items?.map(i => `${pn(i.product?.name)}${i.variant ? `（${i.variant}）` : ''} x${i.quantity}`).join('，')}</div>
                   <div className="order-total">{t('orderTotal')}：<span>{orderPaymentText(o)} · {o.payment_currency || 'CNY'}</span></div>
-                  {o.status === 'pending' && o.payment_status === 'pending' && o.payment_method !== 'cash_on_delivery' && <button type="button" className="order-upload-link" onClick={e => { e.stopPropagation(); setSelectedOrder(o); setTab('orderDetail') }}>付款或上传付款凭证 ›</button>}
+                  {o.status === 'pending' && o.payment_status === 'pending' && o.payment_method !== 'cash_on_delivery' && <button type="button" className="order-upload-link" onClick={e => { e.stopPropagation(); setSelectedOrder(o); setTab('orderDetail') }}>{t('copy061')}</button>}
                 </div>
               ))
             })()}
@@ -1088,8 +1089,8 @@ export default function App() {
               <div className="my-header">
                 <div className="avatar">👤</div>
                 <div className="info">
-                  <div className="name">{currentUser.phone || currentUser.username}</div>
-                  <div className="phone">{lang === 'en' ? 'Phone login' : lang === 'zh_HK' ? '手機號登入' : '手机号登录'}</div>
+                  <div className="name">{currentUser.username}</div>
+                  <div className="phone">{t('usernameLogin')}</div>{currentUser.wechat_id && <div className="phone">{t('wechatId')}: {currentUser.wechat_id}</div>}{currentUser.whatsapp && <div className="phone">WhatsApp: {currentUser.whatsapp}</div>}{currentUser.phone && <div className="phone">{t('phone')}: {currentUser.phone}</div>}
                 </div>
               </div>
               <div className="my-content">
@@ -1128,7 +1129,7 @@ export default function App() {
                 {/* 功能入口 */}
                 <div className="my-card">
                   <div className="my-menu-item" onClick={() => { markNoticesRead(); setTab('messages') }}>
-                    <span className="icon">📣</span><span className="text">配送消息 {unreadNotices.length > 0 && <span className="notice-dot" aria-label={`${unreadNotices.length}条未读公告`}>{unreadNotices.length > 99 ? '99+' : unreadNotices.length}</span>}</span><span className="arrow">›</span>
+                    <span className="icon">📣</span><span className="text">{t('copy058')} {unreadNotices.length > 0 && <span className="notice-dot" aria-label={t('copy044', { '0': unreadNotices.length })}>{unreadNotices.length > 99 ? '99+' : unreadNotices.length}</span>}</span><span className="arrow">›</span>
                   </div>
                   <div className="my-menu-item" onClick={() => setTab('coupons')}>
                     <span className="icon">🎟️</span>
@@ -1184,11 +1185,11 @@ export default function App() {
         <div className="cart-overlay" onClick={() => setShowCart(false)}>
           <div className="cart-panel" onClick={e => e.stopPropagation()}>
             <div className="cart-header">
-              <h3>购物车 ({cartCount})</h3>
-              <span className="clear" onClick={() => setCart({})}>清空</span>
+              <h3>{t('copy062')}{cartCount})</h3>
+              <span className="clear" onClick={() => setCart({})}>{t('copy063')}</span>
             </div>
             <div className="cart-items">
-              {cartItems.length === 0 && <div className="empty-state"><div className="icon">🛒</div>购物车是空的</div>}
+              {cartItems.length === 0 && <div className="empty-state"><div className="icon">🛒</div>{t('copy026')}</div>}
               {cartItems.map(item => {
                 const itemKey = item.variantLabel ? `${item.product.id}::${item.variantLabel}` : String(item.product.id)
                 return (
@@ -1214,7 +1215,7 @@ export default function App() {
                   {t('buyExtra')}
                 </div>
                 <div className="cart-recommend-progress">
-                  本站点大家已确认 <b>{fmt(stats.confirmed_total || 0)}</b> / <b>{fmt(effectiveThreshold)}</b>，还差 <b>{fmt(effectiveThreshold - (stats.confirmed_total || 0))}</b> 统一配送。你无需个人买满，分享给朋友帮大家早日收菜。
+                  {t('cartGroupProgress', { total: fmt(stats.confirmed_total || 0), threshold: fmt(effectiveThreshold), remaining: fmt(effectiveThreshold - (stats.confirmed_total || 0)) })}
                 </div>
                 <div className="cart-recommend-list">
                   {products.filter(p => p.price <= 20 && !cart[p.id]).slice(0, 5).map(p => (
@@ -1229,8 +1230,8 @@ export default function App() {
               </div>
             )}
             <div className="cart-footer">
-              <div className="cart-total">合计：<span>{fmt(cartTotal)}</span></div>
-              <button className="checkout-btn" disabled={cartCount === 0} onClick={openCheckout}>去结算</button>
+              <div className="cart-total">{t('copy064')}<span>{fmt(cartTotal)}</span></div>
+              <button className="checkout-btn" disabled={cartCount === 0} onClick={openCheckout}>{t('copy065')}</button>
             </div>
           </div>
         </div>
@@ -1240,45 +1241,38 @@ export default function App() {
       {showCheckout && (
         <div className="checkout-overlay" onClick={() => setShowCheckout(false)}>
           <div className="checkout-panel checkout-form-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
-            <h3>确认订单</h3>
+            <h3>{t('copy066')}</h3>
             <div className="form-group">
-              <label>配送方式</label>
+              <label>{t('copy067')}</label>
               <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                 <div onClick={() => setDeliveryType('pickup')} style={{
                   flex: 1, padding: 10, textAlign: 'center', borderRadius: 8, cursor: 'pointer',
                   border: deliveryType === 'pickup' ? '2px solid var(--market-green)' : '1px solid #eee',
                   background: deliveryType === 'pickup' ? 'var(--market-green-soft)' : '#fff', fontSize: 14
-                }}>
-                  🛍️ 到自取点
-                  <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
-                    自取免运费，凑满门槛后统一配送
-                  </div>
+                }}> {t('copy068')} <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}> {t('copy069')} </div>
                 </div>
                 <div onClick={() => setDeliveryType('delivery')} style={{
                   flex: 1, padding: 10, textAlign: 'center', borderRadius: 8, cursor: 'pointer',
                   border: deliveryType === 'delivery' ? '2px solid var(--market-green)' : '1px solid #eee',
                   background: deliveryType === 'delivery' ? 'var(--market-green-soft)' : '#fff', fontSize: 14
-                }}>
-                  🏠 配送到家
-                  <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>运费 {fmt(30)}</div>
+                }}> {t('copy070')} <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>{t('copy071')} {fmt(30)}</div>
                 </div>
               </div>
             </div>
             {deliveryType === 'pickup' && (
             <div className="form-group">
-              <label>自取点</label>
+              <label>{t('copy072')}</label>
               <div style={{ padding: 10, background: '#f9f9f9', borderRadius: 8, fontSize: 14, marginBottom: 10 }}>
-                📍 <b>{dn(deliveryPoints.find(p => p.id == selectedPointId)?.name) || '未选择'}</b>
-                <span style={{ color: 'var(--market-green)', cursor: 'pointer', marginLeft: 10, fontSize: 13 }} onClick={() => setShowPointPicker(true)}>切换</span>
+                📍 <b>{dn(deliveryPoints.find(p => p.id == selectedPointId)?.name) || t('copy073')}</b>
+                <span style={{ color: 'var(--market-green)', cursor: 'pointer', marginLeft: 10, fontSize: 13 }} onClick={() => setShowPointPicker(true)}>{t('copy074')}</span>
               </div>
             </div>
             )}
             {deliveryType === 'delivery' && (
             <div className="form-group">
-              <label>收货地址</label>
+              <label>{t('copy075')}</label>
               {addresses.length === 0 ? (
-                <div style={{ padding: 12, background: '#f9f9f9', borderRadius: 8, fontSize: 13, color: '#999' }}>
-                  暂无地址，<span style={{ color: 'var(--market-green)', cursor: 'pointer' }} onClick={() => { setShowCheckout(false); setTab('address'); setEditingAddr(null); setTab('addrEdit') }}>去添加</span>
+                <div style={{ padding: 12, background: '#f9f9f9', borderRadius: 8, fontSize: 13, color: '#999' }}> {t('copy076')}<span style={{ color: 'var(--market-green)', cursor: 'pointer' }} onClick={() => { setShowCheckout(false); setTab('address'); setEditingAddr(null); setTab('addrEdit') }}>{t('copy077')}</span>
                 </div>
               ) : (
                 <div style={{ maxHeight: 160, overflowY: 'auto' }}>
@@ -1304,30 +1298,30 @@ export default function App() {
             </div>
             )}
             <div className="form-group">
-              <label>备注</label>
-              <input value={remark} onChange={e => setRemark(e.target.value)} placeholder="备注" />
+              <label>{t('copy078')}</label>
+              <input value={remark} onChange={e => setRemark(e.target.value)} placeholder={t('copy078')} />
             </div>
             <div className="form-group">
-              <label>优惠券</label>
-              {couponLoading ? <div className="checkout-coupon-empty">正在查看优惠券…</div>
-                : couponError ? <div className="checkout-coupon-empty">暂时无法读取优惠券 <button type="button" onClick={loadCoupons}>重试</button></div>
+              <label>{t('copy079')}</label>
+              {couponLoading ? <div className="checkout-coupon-empty">{t('copy080')}</div>
+                : couponError ? <div className="checkout-coupon-empty">{t('copy081')} <button type="button" onClick={loadCoupons}>{t('copy082')}</button></div>
                   : couponData.grants.some(g => !g.used_order_no && cartTotal >= Number(g.min_spend)) ? <select value={selectedCoupon ? selectedCouponId : ''} onChange={e => setSelectedCouponId(e.target.value)} style={{ width: '100%', padding: 10, border: '1px solid #ddd', background: '#fff' }}>
-                    <option value="">不使用优惠券</option>
-                    {couponData.grants.filter(g => !g.used_order_no && cartTotal >= Number(g.min_spend)).map(g => <option key={g.id} value={g.id}>满 {fmt(g.min_spend)} 减 {fmt(g.discount_amount)}</option>)}
-                  </select> : <div className="checkout-coupon-empty">无优惠券可用</div>}
-              {!couponLoading && !couponError && couponData.grants.some(g => !g.used_order_no && cartTotal < Number(g.min_spend)) && <small style={{ color: '#777' }}>已有优惠券，商品金额达到使用门槛后可选</small>}
-              {!couponLoading && !couponError && !couponData.grants.some(g => !g.used_order_no && cartTotal >= Number(g.min_spend)) && <button type="button" className="checkout-activity-link" onClick={openActivity}>参加分享活动，领取满 {fmt(activityCampaign?.min_spend || 15)} 减 {fmt(activityCampaign?.discount_amount || 5)} 优惠券 ›</button>}
+                    <option value="">{t('copy083')}</option>
+                    {couponData.grants.filter(g => !g.used_order_no && cartTotal >= Number(g.min_spend)).map(g => <option key={g.id} value={g.id}>{t('couponValue', { min: fmt(g.min_spend), discount: fmt(g.discount_amount) })}</option>)}
+                  </select> : <div className="checkout-coupon-empty">{t('copy084')}</div>}
+              {!couponLoading && !couponError && couponData.grants.some(g => !g.used_order_no && cartTotal < Number(g.min_spend)) && <small style={{ color: '#777' }}>{t('copy085')}</small>}
+              {!couponLoading && !couponError && !couponData.grants.some(g => !g.used_order_no && cartTotal >= Number(g.min_spend)) && <button type="button" className="checkout-activity-link" onClick={openActivity}>{t('joinCoupon', { min: fmt(activityCampaign?.min_spend || 15), discount: fmt(activityCampaign?.discount_amount || 5) })}</button>}
             </div>
             <div className="form-group">
-              <label>选择付款币种 · 实际转账金额</label>
+              <label>{t('copy086')}</label>
               <div className="payment-currency-choices">
-                <button type="button" className={paymentCurrency === 'CNY' ? 'selected' : ''} onClick={() => { setPaymentCurrency('CNY'); setPaymentMethod('wechat_transfer') }}><span>付人民币 CNY</span><strong>¥{checkoutCnyTotal.toFixed(2)}</strong></button>
-                <button type="button" className={paymentCurrency === 'HKD' ? 'selected' : ''} onClick={() => { setPaymentCurrency('HKD'); setPaymentMethod('fps_transfer') }}><span>付港币 HKD</span><strong>HK${(Math.round(checkoutCnyTotal * exchangeRate * 100) / 100).toFixed(2)}</strong></button>
+                <button type="button" className={paymentCurrency === 'CNY' ? 'selected' : ''} onClick={() => { setPaymentCurrency('CNY'); setPaymentMethod('wechat_transfer') }}><span>{t('copy087')}</span><strong>¥{checkoutCnyTotal.toFixed(2)}</strong></button>
+                <button type="button" className={paymentCurrency === 'HKD' ? 'selected' : ''} onClick={() => { setPaymentCurrency('HKD'); setPaymentMethod('fps_transfer') }}><span>{t('copy088')}</span><strong>HK${(Math.round(checkoutCnyTotal * exchangeRate * 100) / 100).toFixed(2)}</strong></button>
               </div>
-              <small className="payment-currency-hint">请选你实际转账的币种。商品页的 HKD/CNY 只用于看价格。</small>
+              <small className="payment-currency-hint">{t('copy089')}</small>
             </div>
             <div className="form-group">
-              <label>支付方式</label>
+              <label>{t('copy090')}</label>
               <div style={{ display: 'flex', gap: 6 }}>
                 {paymentCurrency === 'CNY' && <div onClick={() => setPaymentMethod('wechat_transfer')} style={{
                   flex: 1, padding: '8px 4px', textAlign: 'center', borderRadius: 8, cursor: 'pointer',
@@ -1335,7 +1329,7 @@ export default function App() {
                   background: paymentMethod === 'wechat_transfer' ? 'var(--market-green-soft)' : '#fff'
                 }}>
                   <div style={{ fontSize: 18 }}>💚</div>
-                  <div style={{ fontSize: 11, marginTop: 2 }}>微信</div>
+                  <div style={{ fontSize: 11, marginTop: 2 }}>{t('copy091')}</div>
                 </div>}
                 {paymentCurrency === 'CNY' && <div onClick={() => setPaymentMethod('alipay_transfer')} style={{
                   flex: 1, padding: '8px 4px', textAlign: 'center', borderRadius: 8, cursor: 'pointer',
@@ -1343,7 +1337,7 @@ export default function App() {
                   background: paymentMethod === 'alipay_transfer' ? 'var(--market-green-soft)' : '#fff'
                 }}>
                   <div style={{ fontSize: 18 }}>💙</div>
-                  <div style={{ fontSize: 11, marginTop: 2 }}>支付宝</div>
+                  <div style={{ fontSize: 11, marginTop: 2 }}>{t('copy092')}</div>
                 </div>}
                 {paymentCurrency === 'HKD' && <div onClick={() => setPaymentMethod('fps_transfer')} style={{
                   flex: 1, padding: '8px 4px', textAlign: 'center', borderRadius: 8, cursor: 'pointer',
@@ -1351,32 +1345,32 @@ export default function App() {
                   background: paymentMethod === 'fps_transfer' ? 'var(--market-green-soft)' : '#fff'
                 }}>
                   <div style={{ fontSize: 18 }}>💱</div>
-                  <div style={{ fontSize: 11, marginTop: 2 }}>转数快</div>
+                  <div style={{ fontSize: 11, marginTop: 2 }}>{t('copy093')}</div>
                 </div>}
               </div>
             </div>
             <div style={{ marginBottom: 8, fontSize: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
-                <span style={{ color: '#666' }}>商品金额</span>
+                <span style={{ color: '#666' }}>{t('copy094')}</span>
                 <span>{formatAmount(paymentCurrency === 'HKD' ? cartTotal * exchangeRate : cartTotal, paymentCurrency)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
-                <span style={{ color: '#666' }}>运费</span>
+                <span style={{ color: '#666' }}>{t('copy071')}</span>
                 <span style={{ color: effectiveFee ? 'var(--market-accent)' : 'var(--market-green)', fontWeight: 600 }}>
                   {effectiveFee ? formatAmount(paymentCurrency === 'HKD' ? effectiveFee * exchangeRate : effectiveFee, paymentCurrency) : t('freeFee')}
                 </span>
               </div>
-              {couponDiscount > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: 'var(--market-green)' }}><span>优惠券</span><span>−{formatAmount(paymentCurrency === 'HKD' ? couponDiscount * exchangeRate : couponDiscount, paymentCurrency)}</span></div>}
+              {couponDiscount > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: 'var(--market-green)' }}><span>{t('copy079')}</span><span>−{formatAmount(paymentCurrency === 'HKD' ? couponDiscount * exchangeRate : couponDiscount, paymentCurrency)}</span></div>}
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0 4px', borderTop: '1px solid #eee', marginTop: 4 }}>
-                <span>应付 · {paymentCurrency}</span>
+                <span>{t('copy095')} {paymentCurrency}</span>
                 <span style={{ color: 'var(--market-accent)', fontWeight: 'bold', fontSize: 18 }}>
                   {formatAmount(checkoutPayAmount, paymentCurrency)}
                 </span>
               </div>
             </div>
             <div className="form-actions">
-              <button className="btn-cancel" onClick={() => setShowCheckout(false)}>取消</button>
-              <button className="btn-submit" onClick={submitOrder}>提交订单</button>
+              <button className="btn-cancel" onClick={() => setShowCheckout(false)}>{t('copy096')}</button>
+              <button className="btn-submit" disabled={orderSubmitting} onClick={submitOrder}>{t('copy097')}</button>
             </div>
           </div>
         </div>
@@ -1421,11 +1415,10 @@ export default function App() {
                   {/* 规格选择 */}
                   {variants.length > 0 && (
                     <div style={{ padding: '0 16px', borderTop: '8px solid #f7f7f7' }}>
-                      <div style={{ fontSize: 14, color: '#333', fontWeight: 600, padding: '12px 0 8px' }}>规格</div>
+                      <div style={{ fontSize: 14, color: '#333', fontWeight: 600, padding: '12px 0 8px' }}>{t('copy098')}</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingBottom: 12 }}>
                         <div className="variant-choice" onClick={() => setSelectedVariant(-1)}
-                          style={{ padding: '8px 16px', borderRadius: 20, cursor: 'pointer', border: selectedVariant === -1 ? '2px solid var(--market-green)' : '1px solid #ddd', background: selectedVariant === -1 ? 'var(--market-green-soft)' : '#fff', fontSize: 14, fontWeight: selectedVariant === -1 ? 600 : 400 }}>
-                          基础规格 {unitText(selectedProduct)} <span style={{ color: 'var(--market-accent)' }}>{fmt(selectedProduct.price)}</span>
+                          style={{ padding: '8px 16px', borderRadius: 20, cursor: 'pointer', border: selectedVariant === -1 ? '2px solid var(--market-green)' : '1px solid #ddd', background: selectedVariant === -1 ? 'var(--market-green-soft)' : '#fff', fontSize: 14, fontWeight: selectedVariant === -1 ? 600 : 400 }}> {t('copy099')} {unitText(selectedProduct)} <span style={{ color: 'var(--market-accent)' }}>{fmt(selectedProduct.price)}</span>
                         </div>
                         {variants.map((v, i) => {
                           const isSel = selectedVariant === i
@@ -1457,7 +1450,7 @@ export default function App() {
                     {selectedProduct.is_active !== false ? (
                       <button className="btn-submit" style={{ width: '100%', background: 'var(--market-green)', opacity: (variants.length > 0 && selectedVariant === null) ? 0.5 : 1 }}
                         onClick={() => {
-                          if (variants.length > 0 && selectedVariant === null) { showToast('请先选择规格'); return }
+                          if (variants.length > 0 && selectedVariant === null) { showToast(t('copy100')); return }
                           if (variants.length > 0 && selectedVariant >= 0) {
                             const v = variants[selectedVariant]
                             addToCart(selectedProduct.id, v.label, Number(v.price))
@@ -1465,9 +1458,9 @@ export default function App() {
                             addToCart(selectedProduct.id)
                           }
                           setSelectedProduct(null); setSelectedVariant(null)
-                        }}>添加到购物车</button>
+                        }}>{t('copy101')}</button>
                     ) : (
-                      <div style={{ width: '100%', textAlign: 'center', padding: '14px', background: '#f0f0f0', color: '#999', borderRadius: 8, fontWeight: 600 }}>已下架，暂不可购买</div>
+                      <div style={{ width: '100%', textAlign: 'center', padding: '14px', background: '#f0f0f0', color: '#999', borderRadius: 8, fontWeight: 600 }}>{t('copy102')}</div>
                     )}
                   </div>
                 </>
@@ -1509,24 +1502,24 @@ export default function App() {
       {showPaymentQR && (
         <div className="checkout-overlay" onClick={() => setShowPaymentQR(false)}>
           <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 340, textAlign: 'center' }}>
-            <h3>{paymentMethod === 'wechat_transfer' ? '微信扫码付款' : paymentMethod === 'alipay_transfer' ? '支付宝扫码付款' : '转数快 FPS 扫码付款'}</h3>
-            <div style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>订单号：{paidOrderNo}</div>
-            <div className="payment-due">订单应付 {formatAmount(paidOrderAmount, paidOrderCurrency)}<small>{paidOrderCurrency === 'HKD' ? '已选择港币付款 · 使用 FPS' : `已选择人民币付款 · 使用${paymentMethod === 'wechat_transfer' ? '微信' : '支付宝'}`}</small></div>
+            <h3>{paymentMethod === 'wechat_transfer' ? t('copy103') : paymentMethod === 'alipay_transfer' ? t('copy104') : t('copy105')}</h3>
+            <div style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>{t('copy106')}{paidOrderNo}</div>
+            <div className="payment-due">{t('copy107')} {formatAmount(paidOrderAmount, paidOrderCurrency)}<small>{paidOrderCurrency === 'HKD' ? t('copy108') : t('copy109', { '0': paymentMethod === 'wechat_transfer' ? t('copy091') : t('copy092') })}</small></div>
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
               {paymentMethod === 'fps_transfer' ? (
                 <div style={{ width: 220, height: 220, margin: '0 auto', background: '#f9f0ff', border: '2px solid #722ed1', borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                   <div style={{ fontSize: 44 }}>💱</div>
                   <div style={{ fontSize: 22, fontWeight: 800, marginTop: 10, color: '#722ed1' }}>95480721</div>
-                  <div style={{ fontSize: 12, color: '#666', marginTop: 6 }}>FPS 转数快收款手机号</div>
+                  <div style={{ fontSize: 12, color: '#666', marginTop: 6 }}>{t('copy110')}</div>
                 </div>
               ) : (
                 <div style={{ position: 'relative', display: 'inline-block' }}>
-                  <img src={paymentMethod === 'wechat_transfer' ? '/images/pay/wechat.jpg' : '/images/pay/alipay.jpg'} alt="收款码" style={{ width: 220, borderRadius: 12, border: `2px solid ${paymentMethod === 'wechat_transfer' ? '#07c160' : '#1677ff'}`, display: 'block' }} />
-                  <div style={{ position: 'absolute', left: 8, bottom: 8, background: 'rgba(0,0,0,0.55)', color: '#fff', fontSize: 11, padding: '3px 8px', borderRadius: 10 }}>长按图片可保存</div>
+                  <img src={paymentMethod === 'wechat_transfer' ? '/images/pay/wechat.jpg' : '/images/pay/alipay.jpg'} alt={t('copy111')} style={{ width: 220, borderRadius: 12, border: `2px solid ${paymentMethod === 'wechat_transfer' ? '#07c160' : '#1677ff'}`, display: 'block' }} />
+                  <div style={{ position: 'absolute', left: 8, bottom: 8, background: 'rgba(0,0,0,0.55)', color: '#fff', fontSize: 11, padding: '3px 8px', borderRadius: 10 }}>{t('copy112')}</div>
                 </div>
               )}
               <div style={{ fontSize: 14, marginTop: 10, fontWeight: 600, color: paymentMethod === 'wechat_transfer' ? '#07c160' : paymentMethod === 'alipay_transfer' ? '#1677ff' : '#722ed1' }}>
-                {paymentMethod === 'wechat_transfer' ? '微信收款码' : paymentMethod === 'alipay_transfer' ? '支付宝收款码' : '转数快 FPS'}
+                {paymentMethod === 'wechat_transfer' ? t('copy113') : paymentMethod === 'alipay_transfer' ? t('copy114') : t('copy115')}
               </div>
             </div>
 
@@ -1537,28 +1530,28 @@ export default function App() {
                   href={paymentMethod === 'wechat_transfer' ? '/images/pay/wechat.jpg' : '/images/pay/alipay.jpg'}
                   download={paymentMethod === 'wechat_transfer' ? 'wechat-pay.jpg' : 'alipay-pay.jpg'}
                   style={{ fontSize: 13, padding: '8px 14px', borderRadius: 20, border: `1px solid ${paymentMethod === 'wechat_transfer' ? '#07c160' : '#1677ff'}`, color: paymentMethod === 'wechat_transfer' ? '#07c160' : '#1677ff', background: '#fff', textDecoration: 'none', cursor: 'pointer' }}
-                >⬇ 保存收款码</a>
+                >{t('copy116')}</a>
               )}
               {paymentMethod === 'wechat_transfer' && (
-                <a href="weixin://" style={{ fontSize: 13, padding: '8px 14px', borderRadius: 20, border: '1px solid #07c160', color: '#fff', background: '#07c160', textDecoration: 'none', cursor: 'pointer' }}>打开微信</a>
+                <a href="weixin://" style={{ fontSize: 13, padding: '8px 14px', borderRadius: 20, border: '1px solid #07c160', color: '#fff', background: '#07c160', textDecoration: 'none', cursor: 'pointer' }}>{t('copy117')}</a>
               )}
               {paymentMethod === 'alipay_transfer' && (
-                <a href="alipay://" style={{ fontSize: 13, padding: '8px 14px', borderRadius: 20, border: '1px solid #1677ff', color: '#fff', background: '#1677ff', textDecoration: 'none', cursor: 'pointer' }}>打开支付宝</a>
+                <a href="alipay://" style={{ fontSize: 13, padding: '8px 14px', borderRadius: 20, border: '1px solid #1677ff', color: '#fff', background: '#1677ff', textDecoration: 'none', cursor: 'pointer' }}>{t('copy118')}</a>
               )}
               {paymentMethod === 'fps_transfer' && (
-                <button onClick={() => copyText('95480721', 'FPS手机号')} style={{ fontSize: 13, padding: '8px 14px', borderRadius: 20, border: '1px solid #722ed1', color: '#fff', background: '#722ed1', cursor: 'pointer' }}>📋 复制手机号</button>
+                <button onClick={() => copyText('95480721', t('copy119'))} style={{ fontSize: 13, padding: '8px 14px', borderRadius: 20, border: '1px solid #722ed1', color: '#fff', background: '#722ed1', cursor: 'pointer' }}>{t('copy120')}</button>
               )}
             </div>
 
             <div style={{ background: '#fff8e1', padding: 10, borderRadius: 8, fontSize: 12, color: '#f57c00', marginBottom: 16, textAlign: 'left', lineHeight: 1.7 }}>
-              {paymentMethod === 'wechat_transfer' && <>📌 操作：点「保存收款码」→ 点「打开微信」→ 右上角 + → 扫一扫 → 相册选刚保存的图付款。<br />转账时备注订单号，付款后点击「我已付款」上传截图。</>}
-              {paymentMethod === 'alipay_transfer' && <>📌 操作：点「保存收款码」→ 点「打开支付宝」→ 扫一扫 → 相册选刚保存的图付款。<br />转账时备注订单号，付款后点击「我已付款」上传截图。</>}
-              {paymentMethod === 'fps_transfer' && <>📌 操作：转数快 FPS 转账到 <b>95480721</b>，备注订单号，付款后上传截图。</>}
-              <br />二维码扫不了？请联系老板，微信：<b>{BOSS_WECHAT}</b>。
+              {paymentMethod === 'wechat_transfer' && <>{t('copy121')}<br />{t('copy122')}</>}
+              {paymentMethod === 'alipay_transfer' && <>{t('copy123')}<br />{t('copy122')}</>}
+              {paymentMethod === 'fps_transfer' && <>{t('copy124')} <b>95480721</b>{t('copy125')}</>}
+              <br />{t('copy126')}<b>{BOSS_WECHAT}</b>。
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn-cancel" style={{ flex: 1 }} onClick={() => { setShowPaymentQR(false); setTab('myOrders') }}>稍后支付</button>
-              <button className="btn-submit" style={{ flex: 1 }} onClick={() => { setShowPaymentQR(false); setShowUploadProof(true) }}>我已付款</button>
+              <button className="btn-cancel" style={{ flex: 1 }} onClick={() => { setShowPaymentQR(false); setTab('myOrders') }}>{t('copy127')}</button>
+              <button className="btn-submit" style={{ flex: 1 }} onClick={() => { setShowPaymentQR(false); setShowUploadProof(true) }}>{t('copy128')}</button>
             </div>
           </div>
         </div>
@@ -1568,27 +1561,27 @@ export default function App() {
       {showUploadProof && (
         <div className="checkout-overlay" style={{ zIndex: 5000 }} onClick={() => { if (!proofUploading) { setShowUploadProof(false); setTab('myOrders') } }}>
           <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 360, textAlign: 'center' }}>
-            <h3 style={{ marginBottom: 12 }}>📸 上传付款截图</h3>
+            <h3 style={{ marginBottom: 12 }}>{t('copy129')}</h3>
             <p style={{ fontSize: 13, color: '#666', lineHeight: 1.7, marginBottom: 16, textAlign: 'left' }}>
-              付款后请截图支付成功页面（<b>确保付款时间和金额清晰可见</b>），上传后我们会尽快确认。
+              {t('proofInstructions')}
             </p>
-            <input type="file" accept="image/png,image/jpeg,image/webp" disabled={proofUploading} onChange={e => setProofFile(e.target.files[0] || null)} style={{ marginBottom: 16 }} />
-            {proofFile && <p className="proof-selected">已选择：{proofFile.name}</p>}
+            <label className="proof-file-picker">{t('copy236')}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={proofUploading} onChange={e => setProofFile(e.target.files[0] || null)} /></label>
+            {proofFile && <p className="proof-selected">{t('copy130')}{proofFile.name}</p>}
             <button className="btn-submit proof-confirm" disabled={!proofFile || proofUploading} onClick={async () => {
               setProofUploading(true)
               try {
-                const error = await uploadProofFile(proofFile, lastOrderId)
+                const error = await uploadProofFile(proofFile, lastOrderId, t)
                 if (error) showToast(error)
                 else {
-                  showToast('凭证已保存，等待店主确认')
+                  showToast(t('copy131'))
                   setProofFile(null); setShowUploadProof(false); setTab('myOrders'); setOrderFilter('awaiting_confirmation')
                   const response = await authFetch(`${API}/orders`)
                   if (response.ok) setOrders(await response.json())
                 }
-              } catch (error) { showToast(error.message || '上传失败，请重试') }
+              } catch (error) { showToast(error.message || t('copy004')) }
               finally { setProofUploading(false) }
-            }}>{proofUploading ? '正在上传…' : '确认上传付款凭证'}</button>
-            <button className="btn-cancel" disabled={proofUploading} style={{ width: '100%', padding: 12 }} onClick={() => { setShowUploadProof(false); setTab('myOrders') }}>稍后上传</button>
+            }}>{proofUploading ? t('copy132') : t('copy133')}</button>
+            <button className="btn-cancel" disabled={proofUploading} style={{ width: '100%', padding: 12 }} onClick={() => { setShowUploadProof(false); setTab('myOrders') }}>{t('copy134')}</button>
           </div>
         </div>
       )}
@@ -1598,8 +1591,8 @@ export default function App() {
       {!currency && (
         <div className="checkout-overlay" style={{ zIndex: 6000 }}>
           <div className="checkout-panel" style={{ maxWidth: 380, textAlign: 'center', padding: 24 }}>
-            <h3 style={{ marginBottom: 16 }}>请选择看价币种</h3>
-            <p style={{ fontSize: 13, color: '#777', marginBottom: 20 }}>下单时可以另选实际付款币种</p>
+            <h3 style={{ marginBottom: 16 }}>{t('copy135')}</h3>
+            <p style={{ fontSize: 13, color: '#777', marginBottom: 20 }}>{t('copy136')}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <button onClick={() => { setCurrency('HKD'); storage.setItem('currency', 'HKD'); setShowOnboard(true) }}
                 style={{ padding: 16, borderRadius: 12, border: '2px solid var(--market-green)', background: 'var(--market-green-soft)', color: 'var(--market-accent)', fontSize: 18, fontWeight: 700, cursor: 'pointer' }}>
@@ -1630,7 +1623,7 @@ export default function App() {
             <div style={{ display: 'flex', gap: 10 }}>
               {onboardStep > 0 && (
                 <button className="btn-cancel" style={{ flex: 1, padding: 12, borderRadius: 8, border: 'none', cursor: 'pointer' }}
-                  onClick={() => setOnboardStep(s => s - 1)}>上一步</button>
+                  onClick={() => setOnboardStep(s => s - 1)}>{t('copy137')}</button>
               )}
               <button className="btn-submit" style={{ flex: 2, padding: 12, borderRadius: 8, border: 'none', cursor: 'pointer' }}
                 onClick={() => {
@@ -1648,39 +1641,27 @@ export default function App() {
       {showIntro && (
         <div className="checkout-overlay" style={{ zIndex: 5000 }} onClick={() => {}}>
           <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
-            <h3 style={{ textAlign: 'center', marginBottom: 16 }}>📋 下单须知</h3>
+            <h3 style={{ textAlign: 'center', marginBottom: 16 }}>{t('copy138')}</h3>
 
             <div style={{ fontSize: 13, lineHeight: 1.8, color: '#333' }}>
               <div style={{ background: '#e3f2fd', padding: 12, borderRadius: 8, marginBottom: 10 }}>
-                <b>🚚 配送时间</b><br />
-                · 配送前一天在网站公告和群里通知取货时间<br />
-                · 配送通知会在对应微信群/WhatsApp群及本网站同步，下单后请及时加群或关注发货通知
-              </div>
+                <b>{t('copy139')}</b><br /> {t('copy140')}<br /> {t('copy141')} </div>
 
               <div style={{ background: '#e8f5e9', padding: 12, borderRadius: 8, marginBottom: 10 }}>
-                <b>💰 运费</b><br />
-                · 自取始终免运费；当前服务点凑满 {fmt(effectiveThreshold)} 后统一配送，其他服务点按各自门槛配送<br />
-                · 配送到家运费 {fmt(30)}<br />
-                · 已付款待发货的自取订单可申请加 {fmt(30)} 单独配送，或取消并申请退款
+                <b>{t('copy142')}</b><br />
+                {t('introPickup', { threshold: fmt(effectiveThreshold) })}<br /> {t('copy143')} {fmt(30)}<br />
+                {t('introUpgrade', { fee: fmt(30) })}
               </div>
 
               <div style={{ background: '#fff8e1', padding: 12, borderRadius: 8, marginBottom: 10 }}>
-                <b>📍 自取点</b><br />
-                日出康城站 / 科技大学 / 坑口站 / 宝琳站 / 将军澳站 / 调景岭站
-              </div>
+                <b>{t('copy144')}</b><br /> {t('copy145')} </div>
 
               <div style={{ background: '#fce4ec', padding: 12, borderRadius: 8, marginBottom: 10 }}>
-                <b>💳 付款</b><br />
-                提交订单后弹出收款码，截图或保存后用微信/支付宝/转数快转账即可。人工确认可能延迟，付款成功即可放心。
-              </div>
+                <b>{t('copy146')}</b><br /> {t('copy147')} </div>
 
               <div style={{ background: '#f3e5f5', padding: 12, borderRadius: 8, marginBottom: 10 }}>
-                <b>📞 联系</b><br />
-                · 老板微信：jennybabi1988<br />
-                · WhatsApp：+852 95228191<br />
-                · 科大学生加菜神微信进群：ustshucaizhishen<br />
-                · 技术问题联系微信：ustshucaizhishen
-              </div>
+                <b>{t('copy148')}</b><br /> {t('copy149')}<br />
+                · WhatsApp：+852 95228191<br /> {t('copy150')}<br /> {t('copy151')} </div>
             </div>
 
             <button
@@ -1690,9 +1671,7 @@ export default function App() {
                 storage.setItem('intro_read', '1')
                 setShowIntro(false)
               }}
-            >
-              我已知晓，开始购物
-            </button>
+            > {t('copy152')} </button>
           </div>
         </div>
       )}
@@ -1702,21 +1681,17 @@ export default function App() {
         <div className="checkout-overlay" style={{ zIndex: 5000 }} onClick={() => setUstBenefit(false)}>
           <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 380, textAlign: 'center' }}>
             <div style={{ fontSize: 50, marginBottom: 12 }}>🎓</div>
-            <h3 style={{ color: 'var(--market-green)', marginBottom: 8 }}>恭喜你，科大学生福利</h3>
+            <h3 style={{ color: 'var(--market-green)', marginBottom: 8 }}>{t('copy153')}</h3>
             <div style={{ fontSize: 14, color: '#333', lineHeight: 1.8, marginBottom: 16 }}>
               <div style={{ background: '#e8f5e9', padding: 12, borderRadius: 8, marginBottom: 8 }}>
-                🎓 <b>自取免运费</b><br/>
-                科大服务点自取免运费，满 {fmt(500)} 统一配送
+                🎓 <b>{t('copy154')}</b><br/>
+                {t('ustPickup', { threshold: fmt(500) })}
               </div>
               <div style={{ background: '#e3f2fd', padding: 12, borderRadius: 8 }}>
-                🎯 <b>科大专属起送门槛 {fmt(500)}</b><br/>
-                该点已付款待配送订单满 {fmt(500)} 后统一配送<br/>
-                取货时间请留意网站公告和群通知
-              </div>
+                🎯 <b>{t('ustThreshold', { threshold: fmt(500) })}</b><br/>
+                {t('ustDelivery', { threshold: fmt(500) })}<br/> {t('copy155')} </div>
             </div>
-            <button className="btn-submit" style={{ width: '100%' }} onClick={() => setUstBenefit(false)}>
-              知道了，开始购物
-            </button>
+            <button className="btn-submit" style={{ width: '100%' }} onClick={() => setUstBenefit(false)}> {t('copy156')} </button>
           </div>
         </div>
       )}
@@ -1725,42 +1700,42 @@ export default function App() {
       {showContact && (
         <div className="checkout-overlay" onClick={() => setShowContact(false)}>
           <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 380, textAlign: 'center' }}>
-            <h3>💬 联系客服</h3>
-            <div style={{ fontSize: 13, color: '#666', marginBottom: 16 }}>有问题直接加微信 / WhatsApp 联系我们，点账号可一键复制</div>
+            <h3>{t('copy157')}</h3>
+            <div style={{ fontSize: 13, color: '#666', marginBottom: 16 }}>{t('copy158')}</div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16, textAlign: 'left' }}>
               <div style={{ border: '1px solid #e8f5e9', background: '#f6fff8', borderRadius: 10, padding: 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--market-green)' }}>🎓 UST科大学生 · 菜神</div>
-                <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>加微信进群 / 咨询订单</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--market-green)' }}>{t('copy159')}</div>
+                <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{t('copy160')}</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: '#222' }}>ustshucaizhishen</div>
-                  <button onClick={() => copyText('ustshucaizhishen', '微信号')} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #3cb043', color: 'var(--market-green)', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>复制</button>
+                  <button onClick={() => copyText('ustshucaizhishen', t('copy161'))} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #3cb043', color: 'var(--market-green)', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>{t('copy162')}</button>
                 </div>
               </div>
 
               <div style={{ border: '1px solid #e8f5e9', background: '#f6fff8', borderRadius: 10, padding: 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--market-green)' }}>🏠 小区居民 · 老板</div>
-                <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>加微信咨询订单 / 售后</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--market-green)' }}>{t('copy163')}</div>
+                <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{t('copy164')}</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: '#222' }}>{BOSS_WECHAT}</div>
-                  <button onClick={() => copyText(BOSS_WECHAT, '微信号')} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #3cb043', color: 'var(--market-green)', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>复制</button>
+                  <button onClick={() => copyText(BOSS_WECHAT, t('copy161'))} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #3cb043', color: 'var(--market-green)', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>{t('copy162')}</button>
                 </div>
               </div>
 
               <div style={{ border: '1px solid #e6f4ff', background: '#f4faff', borderRadius: 10, padding: 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#128c7e' }}>💬 WhatsApp 客服</div>
-                <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>海外 / 非微信用户首选</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#128c7e' }}>{t('copy165')}</div>
+                <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{t('copy166')}</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: '#222' }}>{BOSS_WHATSAPP}</div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={() => copyText(BOSS_WHATSAPP, 'WhatsApp号')} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #128c7e', color: '#128c7e', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>复制</button>
-                    <a href="https://wa.me/85295228191" target="_blank" rel="noreferrer" style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #128c7e', color: '#fff', background: '#128c7e', borderRadius: 14, cursor: 'pointer', textDecoration: 'none' }}>打开</a>
+                    <button onClick={() => copyText(BOSS_WHATSAPP, t('copy167'))} style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #128c7e', color: '#128c7e', background: '#fff', borderRadius: 14, cursor: 'pointer' }}>{t('copy162')}</button>
+                    <a href="https://wa.me/85295228191" target="_blank" rel="noreferrer" style={{ fontSize: 12, padding: '4px 10px', border: '1px solid #128c7e', color: '#fff', background: '#128c7e', borderRadius: 14, cursor: 'pointer', textDecoration: 'none' }}>{t('copy168')}</a>
                   </div>
                 </div>
               </div>
             </div>
 
-            <button className="btn-submit" style={{ width: '100%' }} onClick={() => setShowContact(false)}>我知道了</button>
+            <button className="btn-submit" style={{ width: '100%' }} onClick={() => setShowContact(false)}>{t('copy169')}</button>
           </div>
         </div>
       )}
@@ -1768,11 +1743,11 @@ export default function App() {
       {showRefund && (
         <div className="checkout-overlay" onClick={() => setShowRefund(false)}>
           <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
-            <h3>退款售后</h3>
-            <p style={{ lineHeight: 1.7, color: '#555', margin: '12px 0' }}>如需退款或售后帮助，请联系老板。已付款待配送的自取订单，也可在订单详情提交退款申请。</p>
-            <div className="after-sale-contact"><span>老板微信</span><strong>{BOSS_WECHAT}</strong><button onClick={() => copyText(BOSS_WECHAT, '微信号')}>复制</button></div>
-            <div className="after-sale-contact"><span>WhatsApp</span><strong>{BOSS_WHATSAPP}</strong><a href="https://wa.me/85295228191" target="_blank" rel="noreferrer">联系</a></div>
-            <button className="btn-submit" style={{ width: '100%', marginTop: 16 }} onClick={() => setShowRefund(false)}>我知道了</button>
+            <h3>{t('copy170')}</h3>
+            <p style={{ lineHeight: 1.7, color: '#555', margin: '12px 0' }}>{t('copy171')}</p>
+            <div className="after-sale-contact"><span>{t('copy172')}</span><strong>{BOSS_WECHAT}</strong><button onClick={() => copyText(BOSS_WECHAT, t('copy161'))}>{t('copy162')}</button></div>
+            <div className="after-sale-contact"><span>WhatsApp</span><strong>{BOSS_WHATSAPP}</strong><a href="https://wa.me/85295228191" target="_blank" rel="noreferrer">{t('copy173')}</a></div>
+            <button className="btn-submit" style={{ width: '100%', marginTop: 16 }} onClick={() => setShowRefund(false)}>{t('copy169')}</button>
           </div>
         </div>
       )}
@@ -1780,20 +1755,21 @@ export default function App() {
       {showActivity && (
         <div className="checkout-overlay" onClick={closeActivity}>
           <div className="checkout-panel activity-panel" onClick={e => e.stopPropagation()}>
-            <h3>分享团购 · 集赞领券</h3>
-            <p className="activity-intro">和邻居、同学一起买新鲜果菜。服务点凑满起送额后统一配送，自取免运费。</p>
-            <div className="activity-rule"><b>集满 10 个赞，领满 {fmt(activityCampaign?.min_spend || 15)} 减 {fmt(activityCampaign?.discount_amount || 5)}</b><p>在任意社交媒体分享我们的团购，并附上网站链接。单篇内容集满 10 个赞后，上传能看清分享内容、发布账号和点赞数的截图。后台审核通过，优惠券会发到“我的优惠券”。</p><p>包括但不限于朋友圈、小红书、抖音、Facebook、Instagram、Threads、X，其他社交平台也可以。</p><strong className="activity-limit">每人限领一次，跨平台发布也只可领取一张；请勿重复注册领取。</strong></div>
-            <div className="activity-share"><small>社交媒体分享文案</small><p>{GROUP_BUY_SHARE_TEXT}</p><button onClick={() => copyText(GROUP_BUY_SHARE_TEXT, '宣传语')}>一键复制宣传语</button></div>
-            <p className="activity-return-hint">稍后回来上传：从首页海报下方的「分享团购」入口，或「我的 → 优惠券」进入本活动。</p>
-            {activityCampaign ? !currentUser ? <button className="btn-submit" style={{ width: '100%', marginTop: 16 }} onClick={() => { setReturnToActivityAfterLogin(true); setShowActivity(false); setTab('login') }}>登录后上传截图</button> : <>
-              {(() => { const claim = couponData.claims.find(c => Number(c.campaign_id) === Number(activityCampaign.id)); return claim && <p className="activity-status">{claim.status === 'pending' ? '截图正在审核' : claim.status === 'approved' ? '审核通过，优惠券已发放' : `未通过：${claim.admin_note || '可以重新提交截图'}`}</p> })()}
+            <h3>{t('copy049')}</h3>
+            {activityCampaign && content(activityCampaign, 'details') && <p className="activity-merchant-details">{content(activityCampaign, 'details')}</p>}
+            <p className="activity-intro">{t('copy174')}</p>
+            <div className="activity-rule"><b>{t('likesCoupon', { min: fmt(activityCampaign?.min_spend || 15), discount: fmt(activityCampaign?.discount_amount || 5) })}</b><p>{t('copy175')}</p><p>{t('copy176')}</p><strong className="activity-limit">{t('copy177')}</strong></div>
+            <div className="activity-share"><small>{t('copy178')}</small><p>{shareText}</p><button onClick={() => copyText(shareText, t('copy179'))}>{t('copy180')}</button></div>
+            <p className="activity-return-hint">{t('copy181')}</p>
+            {activityCampaign ? !currentUser ? <button className="btn-submit" style={{ width: '100%', marginTop: 16 }} onClick={() => { setReturnToActivityAfterLogin(true); setShowActivity(false); setTab('login') }}>{t('copy182')}</button> : <>
+              {(() => { const claim = couponData.claims.find(c => Number(c.campaign_id) === Number(activityCampaign.id)); return claim && <p className="activity-status">{claim.status === 'pending' ? t('copy183') : claim.status === 'approved' ? t('copy184') : t('copy185', { '0': claim.admin_note || t('copy186') })}</p> })()}
               {!couponData.claims.some(c => Number(c.campaign_id) === Number(activityCampaign.id) && c.status !== 'rejected') && <>
-                <label className="activity-upload">{activityProofFile ? '重新选择截图' : '选择社交平台截图'}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={claimUploading} onChange={e => { const file = e.target.files?.[0]; if (file) setActivityProofFile(file); e.target.value = '' }} /></label>
-                {activityProofFile && <><p className="activity-selected">已选择：{activityProofFile.name}</p><button type="button" className="activity-confirm-upload" disabled={claimUploading} onClick={() => submitCouponScreenshot(activityProofFile)}>{claimUploading ? '正在上传…' : '确认上传截图'}</button></>}
-                <small className="activity-upload-note">支持 PNG、JPEG、WebP；提交后可在这里查看审核状态。</small>
+                <label className="activity-upload">{activityProofFile ? t('copy187') : t('copy188')}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={claimUploading} onChange={e => { const file = e.target.files?.[0]; if (file) setActivityProofFile(file); e.target.value = '' }} /></label>
+                {activityProofFile && <><p className="activity-selected">{t('copy130')}{activityProofFile.name}</p><button type="button" className="activity-confirm-upload" disabled={claimUploading} onClick={() => submitCouponScreenshot(activityProofFile)}>{claimUploading ? t('copy132') : t('copy189')}</button></>}
+                <small className="activity-upload-note">{t('copy190')}</small>
               </>}
-            </> : <p className="activity-status">活动加载中…</p>}
-            <button className="btn-cancel" style={{ width: '100%', marginTop: 10 }} onClick={closeActivity}>关闭活动</button>
+            </> : <p className="activity-status">{t('copy191')}</p>}
+            <button className="btn-cancel" style={{ width: '100%', marginTop: 10 }} onClick={closeActivity}>{t('copy192')}</button>
           </div>
         </div>
       )}
@@ -1801,10 +1777,10 @@ export default function App() {
       {showActivityReturnGuide && (
         <div className="checkout-overlay" onClick={() => setShowActivityReturnGuide(false)}>
           <div className="checkout-panel activity-guide-panel" onClick={e => e.stopPropagation()}>
-            <h3>下次怎么回来上传？</h3>
-            <p>打开首页海报下方的「分享团购」入口，或者到「我的 → 优惠券 → 分享团购活动」，就能重新找到截图上传处。</p>
-            {activityProofFile && <p className="activity-guide-warning">你选的截图尚未提交；离开网站后需要重新选择，再点「确认上传截图」。</p>}
-            <button type="button" className="btn-submit" onClick={() => setShowActivityReturnGuide(false)}>知道了</button>
+            <h3>{t('copy193')}</h3>
+            <p>{t('copy194')}</p>
+            {activityProofFile && <p className="activity-guide-warning">{t('copy195')}</p>}
+            <button type="button" className="btn-submit" onClick={() => setShowActivityReturnGuide(false)}>{t('copy196')}</button>
           </div>
         </div>
       )}
@@ -1813,11 +1789,11 @@ export default function App() {
         <div className="checkout-overlay" onClick={() => setShowBrand(false)}>
           <div className="checkout-panel brand-panel" onClick={e => e.stopPropagation()}>
             <span className="brand-eyebrow">ZHENZHEN FRESH</span>
-            <h3>认识珍珍优质果菜</h3>
-            <div className="brand-store-count"><strong>9</strong><span>家香港门店</span></div>
-            <p>珍珍优质果菜在香港设有 9 家门店，分布于不同地区。线上可以挑选水果、蔬菜和日常食材，选择方便的服务点自取；大家凑满起送额后统一配送，自取免运费。</p>
-            <button type="button" className="btn-submit" onClick={() => { setShowBrand(false); setTab('category'); window.scrollTo(0, 0) }}>去挑选果菜</button>
-            <button type="button" className="brand-close" onClick={() => setShowBrand(false)}>关闭</button>
+            <h3>{t('copy197')}</h3>
+            <div className="brand-store-count"><strong>9</strong><span>{t('copy198')}</span></div>
+            <p>{t('copy199')}</p>
+            <button type="button" className="btn-submit" onClick={() => { setShowBrand(false); setTab('category'); window.scrollTo(0, 0) }}>{t('copy200')}</button>
+            <button type="button" className="brand-close" onClick={() => setShowBrand(false)}>{t('copy201')}</button>
           </div>
         </div>
       )}
@@ -1826,14 +1802,14 @@ export default function App() {
       {showHelp && (
         <div className="checkout-overlay" onClick={() => setShowHelp(false)}>
           <div className="checkout-panel delivery-help-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
-            <div className="rule-dialog-heading"><h3>配送规则</h3><button type="button" aria-label="关闭配送规则" onClick={() => setShowHelp(false)}>×</button></div>
+            <div className="rule-dialog-heading"><h3>{t('copy202')}</h3><button type="button" aria-label={t('copy203')} onClick={() => setShowHelp(false)}>×</button></div>
             <div className="rule-dialog-list">
-              <section><h4>配送时间</h4><p>各服务点凑满门槛后安排统一配送。取货时间在配送前一天于网站公告和群里通知。</p></section>
-              <section><h4>运费规则</h4><p>自取订单始终免运费；未满额则等待凑单。该自取点已付款待配送订单满 {fmt(effectiveThreshold)} 即起送统一配送。单独送到家：{fmt(30)}。</p></section>
-              <section><h4>自取点</h4><p>科技大学满 {fmt(500)} 起送；其他服务点满 {fmt(1000)} 起送。</p></section>
-              <section><h4>有问题？</h4><p>UST 学生加菜神微信，小区居民加老板微信。</p></section>
+              <section><h4>{t('copy204')}</h4><p>{t('copy205')}</p></section>
+              <section><h4>{t('copy206')}</h4><p>{t('deliveryFeeRule', { threshold: fmt(effectiveThreshold), fee: fmt(30) })}</p></section>
+              <section><h4>{t('copy072')}</h4><p>{t('pointThresholds', { ust: fmt(500), other: fmt(1000) })}</p></section>
+              <section><h4>{t('copy207')}</h4><p>{t('copy208')}</p></section>
             </div>
-            <button type="button" className="rule-close-btn" onClick={() => setShowHelp(false)}>关闭</button>
+            <button type="button" className="rule-close-btn" onClick={() => setShowHelp(false)}>{t('copy201')}</button>
           </div>
         </div>
       )}
@@ -1853,7 +1829,7 @@ export default function App() {
           {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
         </div>
         <div className={`nav-item ${tab === 'my' || tab === 'myOrders' || tab === 'address' || tab === 'orderDetail' || tab === 'messages' ? 'active' : ''}`} onClick={() => setTab('my')}>
-          <NavIcon name="user" />{t('my')}{unreadNotices.length > 0 && <span className="nav-notice-dot" aria-label={`${unreadNotices.length}条未读公告`}>{unreadNotices.length > 99 ? '99+' : unreadNotices.length}</span>}
+          <NavIcon name="user" />{t('my')}{unreadNotices.length > 0 && <span className="nav-notice-dot" aria-label={t('copy044', { '0': unreadNotices.length })}>{unreadNotices.length > 99 ? '99+' : unreadNotices.length}</span>}
         </div>
       </div>
     </div>
@@ -1871,114 +1847,105 @@ function NavIcon({ name }) {
   return <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }
 
-function LoginPage({ onLogin, onRegister, onBack, t, lang }) {
+function LoginPage({ onLogin, onRegister, onBack, t }) {
   const [mode, setMode] = useState('login')
+  const [profile, setProfile] = useState({ username: '', wechat_id: '', whatsapp: '', phone: '' })
   const [password, setPassword] = useState('')
-  const [phone, setPhone] = useState('')
+  const [confirmation, setConfirmation] = useState('')
   const [error, setError] = useState('')
-  const [phoneTouched, setPhoneTouched] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const phoneExample = lang === 'en' ? '8-digit Hong Kong mobile number' : lang === 'zh_HK' ? '香港8位手機號' : '香港8位手机号'
-  const phoneError = phoneTouched && !normalizePhone(phone) ? (lang === 'en' ? 'Enter an 8-digit Hong Kong mobile number starting with 4–9. +852 is optional.' : lang === 'zh_HK' ? '僅支持香港手機號：請輸入4至9開頭的8位號碼，可加+852區號。' : '仅支持香港手机号：请输入4至9开头的8位号码，可加+852区号。') : ''
-  const accountHint = lang === 'en' ? 'Your phone number is your login ID. No verification text will be sent.' : lang === 'zh_HK' ? '手機號就是登入帳號；這裡不發驗證碼，請填寫自己可使用的號碼。' : '手机号就是登录账号；这里不发验证码，请填写自己可使用的号码。'
-
-  const submit = async () => {
+  const [forgot, setForgot] = useState(false)
+  const update = (key, value) => { setProfile(prev => ({ ...prev, [key]: value })); setError('') }
+  const submit = async e => {
+    e.preventDefault()
     if (submitting) return
-    setPhoneTouched(true)
     setError('')
-    if (!normalizePhone(phone)) return
-    if (!password) { setError(lang === 'en' ? 'Enter your password' : lang === 'zh_HK' ? '請填寫密碼' : '请填写密码'); return }
+    if (!profile.username.trim() || !password) return setError(t('CREDENTIALS_REQUIRED'))
+    if (mode === 'register') {
+      const result = validateProfile(profile)
+      if (result.error) return setError(t(result.code))
+      if (password.length < 8 || password.length > 128) return setError(t('INVALID_PASSWORD'))
+      if (password !== confirmation) return setError(t('PASSWORD_MISMATCH'))
+    }
     setSubmitting(true)
-    try { setError(await (mode === 'login' ? onLogin(phone, password) : onRegister(phone, password)) || '') }
-    catch { setError(lang === 'en' ? 'Connection failed. Please try again.' : lang === 'zh_HK' ? '連線失敗，請稍後重試。' : '连接失败，请稍后重试。') }
+    try { setError(await (mode === 'login' ? onLogin(profile.username.trim(), password) : onRegister(profile, password)) || '') }
+    catch { setError(t('connectionFailed')) }
     finally { setSubmitting(false) }
   }
-
-  return (
-    <div className="login-page">
-      <div className="login-logo">
-        <div className="icon">🛒</div>
-        <h2>{t('welcome')}</h2>
-      </div>
-      <div className="login-box">
-        <div className="login-tabs">
-          <div className={`login-tab ${mode === 'login' ? 'active' : ''}`} onClick={() => setMode('login')}>{t('login')}</div>
-          <div className={`login-tab ${mode === 'register' ? 'active' : ''}`} onClick={() => setMode('register')}>{t('register')}</div>
-        </div>
-        <div className="login-input-group">
-          <label htmlFor="account-phone">{t('phone')} <small>+852</small></label>
-          <input id="account-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder={phoneExample} value={phone} aria-invalid={!!phoneError} aria-describedby={phoneError ? 'account-phone-error' : undefined} onBlur={() => setPhoneTouched(true)} onChange={e => { setPhone(e.target.value); setError('') }} />
-          {phoneError && <p id="account-phone-error" className="login-form-error" role="alert">{phoneError}</p>}
-        </div>
-        <div className="login-input-group">
-          <label>{t('password')}</label>
-          <input type="password" placeholder={t('password')} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') submit() }} />
-        </div>
-        {mode === 'register' && <p className="login-phone-hint">{accountHint}</p>}
-        {error && <p className="login-form-error" role="alert">{error}</p>}
-        <button className="login-btn" disabled={submitting} onClick={submit}>{submitting ? (lang === 'en' ? 'Please wait…' : '请稍候…') : mode === 'login' ? t('login') : t('register')}</button>
-        <div style={{ textAlign: 'center', marginTop: 16, fontSize: 13, color: '#999' }}>
-          <span style={{ cursor: 'pointer', color: 'var(--market-green)' }} onClick={onBack}>{t('back')}</span>
-        </div>
-      </div>
-    </div>
-  )
+  return <div className="login-page">
+    <div className="login-logo"><div className="icon">🛒</div><h2>{t('welcome')}</h2></div>
+    <form className="login-box" onSubmit={submit}>
+      <div className="login-tabs">{['login','register'].map(value => <button type="button" key={value} className={`login-tab ${mode === value ? 'active' : ''}`} onClick={() => { setMode(value); setError(''); setPassword(''); setConfirmation('') }}>{t(value)}</button>)}</div>
+      <div className="login-input-group"><label htmlFor="account-username">{t('username')}</label><input id="account-username" autoComplete="username" required maxLength={40} value={profile.username} onChange={e => update('username',e.target.value)} placeholder={t('usernameHint')} /></div>
+      <div className="login-input-group"><label htmlFor="account-password">{t('password')}</label><input id="account-password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required maxLength={128} value={password} onChange={e => setPassword(e.target.value)} placeholder={t('password')} /></div>
+      {mode === 'register' && <>
+        <div className="login-input-group"><label htmlFor="account-confirmation">{t('confirmPassword')}</label><input id="account-confirmation" type="password" autoComplete="new-password" required maxLength={128} value={confirmation} onChange={e => setConfirmation(e.target.value)} /></div>
+        <p className="login-phone-hint">{t('contactHint')}</p>
+        {[['wechat_id','wechatId','wechatHint'],['whatsapp','WhatsApp','phoneHint'],['phone','phone','phoneHint']].map(([key,label,hint]) => <div className="login-input-group" key={key}><label htmlFor={`account-${key}`}>{t(label)} <small>{t(key === 'wechat_id' ? 'preferredContact' : 'optional')}</small></label><input id={`account-${key}`} type={key === 'wechat_id' ? 'text' : 'tel'} maxLength={key === 'wechat_id' ? 20 : 24} value={profile[key]} onChange={e => update(key,e.target.value)} placeholder={t(hint)} /></div>)}
+        <p className="login-phone-hint">{t('noSmsHint')}</p>
+      </>}
+      {error && <p className="login-form-error" role="alert">{error}</p>}
+      <button className="login-btn" disabled={submitting}>{submitting ? t('pleaseWait') : t(mode)}</button>
+      {mode === 'login' && <button type="button" className="account-text-button" onClick={() => setForgot(true)}>{t('forgotPassword')}</button>}
+      <button type="button" className="account-text-button" onClick={onBack}>{t('back')}</button>
+    </form>
+    {forgot && <div className="checkout-overlay" onClick={() => setForgot(false)}><div className="checkout-panel" onClick={e => e.stopPropagation()}><h3>{t('forgotPassword')}</h3><p>{t('resetHelp')}</p><p>{t('bossWechat')}: {BOSS_WECHAT}</p><p>WhatsApp: +852 95228191</p><a href="https://wa.me/85295228191" target="_blank" rel="noreferrer">{t('contactOwner')}</a><button type="button" className="btn-submit proof-confirm" onClick={() => setForgot(false)}>{t('gotIt')}</button></div></div>}
+  </div>
 }
 
 /* ========== 地址管理页 ========== */
-function AddressPage({ addresses, selectedId, onSelect, onEdit, onAdd, onDelete, onBack }) {
+function AddressPage({ t, addresses, selectedId, onSelect, onEdit, onAdd, onDelete, onBack }) {
   return (
     <div>
-      <div className="back-btn" onClick={onBack}>‹ 返回</div>
-      <h3 style={{ fontSize: 18, padding: '0 16px 12px' }}>收货地址</h3>
+      <div className="back-btn" onClick={onBack}>{t('copy027')}</div>
+      <h3 style={{ fontSize: 18, padding: '0 16px 12px' }}>{t('copy075')}</h3>
       <div className="addr-list" style={{ paddingBottom: 80 }}>
-        {addresses.length === 0 && <div className="empty-state"><div className="icon">📍</div>暂无收货地址</div>}
+        {addresses.length === 0 && <div className="empty-state"><div className="icon">📍</div>{t('copy209')}</div>}
         {addresses.map(a => (
           <div className="addr-card" key={a.id} onClick={() => onSelect(a.id)}>
             <div className={`radio ${selectedId === a.id ? 'selected' : ''}`} />
             <div className="addr-info">
-              <div className="name-row">{a.name} <span className="phone">{a.phone}</span> {a.isDefault && <span style={{ background: 'var(--market-green)', color: '#fff', fontSize: 10, padding: '1px 6px', borderRadius: 4, marginLeft: 8 }}>默认</span>}</div>
+              <div className="name-row">{a.name} <span className="phone">{a.phone}</span> {a.isDefault && <span style={{ background: 'var(--market-green)', color: '#fff', fontSize: 10, padding: '1px 6px', borderRadius: 4, marginLeft: 8 }}>{t('copy210')}</span>}</div>
               <div className="detail">{a.detail}</div>
               <div className="addr-actions">
-                <span onClick={e => { e.stopPropagation(); onEdit(a) }}>编辑</span>
-                <span className="del" onClick={e => { e.stopPropagation(); onDelete(a.id) }}>删除</span>
+                <span onClick={e => { e.stopPropagation(); onEdit(a) }}>{t('copy211')}</span>
+                <span className="del" onClick={e => { e.stopPropagation(); onDelete(a.id) }}>{t('copy212')}</span>
               </div>
             </div>
           </div>
         ))}
       </div>
-      <button className="add-add-btn" onClick={onAdd}>+ 新增收货地址</button>
+      <button className="add-add-btn" onClick={onAdd}>{t('copy213')}</button>
     </div>
   )
 }
 
 /* ========== 地址编辑页 ========== */
-function AddressEditPage({ addr, onSave, onBack }) {
+function AddressEditPage({ t, addr, onSave, onBack }) {
   const [name, setName] = useState(addr?.name || '')
   const [phone, setPhone] = useState(addr?.phone || '')
   const [detail, setDetail] = useState(addr?.detail || '')
   const [isDefault, setIsDefault] = useState(addr?.isDefault || false)
 
   const save = () => {
-    if (!name || !phone || !detail) { alert('请填写完整信息'); return }
-    onSave({ ...(addr || {}), name, phone, detail, isDefault })
+    if (!name.trim() || !detail.trim()) { alert(t('addressRequired')); return }
+    if (phone && normalizeContactPhone(phone) === null) { alert(t('INVALID_PHONE')); return }
+    onSave({ ...(addr || {}), name: name.trim(), phone: normalizeContactPhone(phone) || '', detail: detail.trim(), isDefault })
   }
 
   return (
     <div>
-      <div className="back-btn" onClick={onBack}>‹ 返回</div>
-      <h3 style={{ fontSize: 18, padding: '0 16px 12px' }}>{addr ? '编辑地址' : '新增地址'}</h3>
+      <div className="back-btn" onClick={onBack}>{t('copy027')}</div>
+      <h3 style={{ fontSize: 18, padding: '0 16px 12px' }}>{addr ? t('copy214') : t('copy215')}</h3>
       <div style={{ padding: '0 16px' }}>
-        <div className="form-group"><label>收货人</label><input value={name} onChange={e => setName(e.target.value)} placeholder="请输入姓名" /></div>
-        <div className="form-group"><label>手机号</label><input value={phone} onChange={e => setPhone(e.target.value)} placeholder="请输入手机号" /></div>
-        <div className="form-group"><label>详细地址</label><textarea value={detail} onChange={e => setDetail(e.target.value)} placeholder="请输入详细地址" rows={3} /></div>
+        <div className="form-group"><label>{t('copy216')}</label><input value={name} onChange={e => setName(e.target.value)} placeholder={t('copy217')} /></div>
+        <div className="form-group"><label>{t('copy218')}</label><input value={phone} onChange={e => setPhone(e.target.value)} placeholder={t('copy219')} /></div>
+        <div className="form-group"><label>{t('copy220')}</label><textarea value={detail} onChange={e => setDetail(e.target.value)} placeholder={t('copy221')} rows={3} /></div>
         <div className="form-group">
           <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <input type="checkbox" checked={isDefault} onChange={e => setIsDefault(e.target.checked)} style={{ width: 'auto' }} />
-            设为默认地址
-          </label>
+            <input type="checkbox" checked={isDefault} onChange={e => setIsDefault(e.target.checked)} style={{ width: 'auto' }} /> {t('copy222')} </label>
         </div>
-        <button className="login-btn" onClick={save} style={{ marginTop: 20 }}>保存</button>
+        <button className="login-btn" onClick={save} style={{ marginTop: 20 }}>{t('copy223')}</button>
       </div>
     </div>
   )
@@ -1997,12 +1964,12 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast, onRe
   const submitRequest = async (type) => {
     if (submitting) return
     if (type === 'delivery_upgrade' && deliveryAddress.trim().length < 5) {
-      showToast('请填写完整的送货地址')
+      showToast(t('copy224'))
       return
     }
     const promptText = type === 'refund'
-      ? '确认申请取消订单并退款？退款将由店主线下处理。'
-      : '确认申请加 ¥30 单独配送？店主确认额外运费后才会改为送货到家。'
+      ? t('copy225')
+      : t('copy226')
     if (!window.confirm(promptText)) return
     setSubmitting(true)
     try {
@@ -2011,46 +1978,46 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast, onRe
         body: JSON.stringify({ order_id: order.id, type, address: deliveryAddress })
       })
       const data = await response.json()
-      showToast(response.ok ? '申请已提交，请等待店主处理' : data.error || '申请失败')
+      showToast(response.ok ? t('copy227') : apiError(t, data))
       if (response.ok) await onRefresh()
-    } catch { showToast('申请失败，请重试') }
+    } catch { showToast(t('copy229')) }
     finally { setSubmitting(false) }
   }
   return (
     <div>
-      <div className="back-btn" onClick={onBack}>‹ 返回</div>
-      <h3 style={{ fontSize: 18, padding: '0 16px 12px' }}>订单详情</h3>
+      <div className="back-btn" onClick={onBack}>{t('copy027')}</div>
+      <h3 style={{ fontSize: 18, padding: '0 16px 12px' }}>{t('copy230')}</h3>
       <div className="order-detail-page">
         {order.payment_method !== 'cash_on_delivery' && ['pending', 'awaiting_confirmation'].includes(order.status) && (
           <div className="order-detail-card proof-priority-card">
-            <h4>{order.status === 'pending' ? '待付款 · 上传付款凭证' : '付款凭证待确认'}</h4>
-            <p>{order.status === 'pending' ? `本单应付 ${orderPaymentText(order)}。完成转账后，在这里上传付款截图。` : '截图已提交，店主确认后订单会进入拼团中。需要更换截图也可以重新上传。'}</p>
-            <button type="button" className="payment-info-open" onClick={() => setShowPaymentDetails(true)}>查看收款方式与应付金额 ›</button>
-            <label className="proof-file-picker">选择付款截图<input type="file" accept="image/png,image/jpeg,image/webp" disabled={proofUploading} onChange={e => setProofFile(e.target.files[0] || null)} /></label>
-            {proofFile && <><small className="proof-selected">已选择：{proofFile.name}</small><button className="btn-submit proof-confirm" disabled={proofUploading} onClick={async () => {
+            <h4>{order.status === 'pending' ? t('copy231') : t('copy232')}</h4>
+            <p>{order.status === 'pending' ? t('copy233', { '0': orderPaymentText(order) }) : t('copy234')}</p>
+            <button type="button" className="payment-info-open" onClick={() => setShowPaymentDetails(true)}>{t('copy235')}</button>
+            <label className="proof-file-picker">{t('copy236')}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={proofUploading} onChange={e => setProofFile(e.target.files[0] || null)} /></label>
+            {proofFile && <><small className="proof-selected">{t('copy130')}{proofFile.name}</small><button className="btn-submit proof-confirm" disabled={proofUploading} onClick={async () => {
               setProofUploading(true)
               try {
-                const error = await uploadProofFile(proofFile, order.id)
+                const error = await uploadProofFile(proofFile, order.id, t)
                 if (error) showToast(error)
-                else { showToast('凭证已保存，等待店主确认'); setProofFile(null); await onRefresh() }
-                } catch (error) { showToast(error.message || '上传失败，请重试') }
+                else { showToast(t('copy131')); setProofFile(null); await onRefresh() }
+                } catch (error) { showToast(error.message || t('copy004')) }
               finally { setProofUploading(false) }
-            }}>{proofUploading ? '正在上传…' : '确认上传付款凭证'}</button></>}
-            <small className="proof-file-hint">支持 PNG、JPEG、WebP；较大的截图会自动压缩</small>
+            }}>{proofUploading ? t('copy132') : t('copy133')}</button></>}
+            <small className="proof-file-hint">{t('copy237')}</small>
           </div>
         )}
         <div className="order-detail-card">
-          <h4>收货信息</h4>
+          <h4>{t('copy238')}</h4>
           <div className="order-detail-addr">
             <div className="icon">📍</div>
             <div className="info">
               <div className="name">{order.customer} <span className="phone">{order.phone}</span></div>
-              <div className="detail">{order.address}</div>
+              <div className="detail">{order.address}</div>{order.contact_wechat_id && <div>{t('wechatId')}: {order.contact_wechat_id}</div>}{order.contact_whatsapp && <div>WhatsApp: {order.contact_whatsapp}</div>}
             </div>
           </div>
         </div>
         <div className="order-detail-card">
-          <h4>商品信息</h4>
+          <h4>{t('copy239')}</h4>
           {order.items?.map(i => (
             <div className="order-detail-goods-item" key={i.id}>
               <div className="emoji">{i.product?.image ? <img src={i.product.image} alt="" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:6}} /> : '🛒'}</div>
@@ -2062,48 +2029,48 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast, onRe
             </div>
           ))}
           <div className="order-detail-summary">
-            <div className="row"><span>商品小计</span><span>{orderFmt(order.items?.reduce((sum, i) => sum + Number(i.price) * Number(i.quantity), 0) || 0)}</span></div>
-            {Number(order.coupon_discount) > 0 && <div className="row"><span>优惠券</span><span>−{orderFmt(order.coupon_discount)}</span></div>}
-            <div className="row"><span>运费</span><span>{orderFmt(order.delivery_fee || 0)}</span></div>
-            <div className="row total"><span>{order.payment_status === 'refunded' ? '原订单金额' : '应付'}</span><span>{orderPaymentText(order)} · {order.payment_currency || 'CNY'}</span></div>
+            <div className="row"><span>{t('copy240')}</span><span>{orderFmt(order.items?.reduce((sum, i) => sum + Number(i.price) * Number(i.quantity), 0) || 0)}</span></div>
+            {Number(order.coupon_discount) > 0 && <div className="row"><span>{t('copy079')}</span><span>−{orderFmt(order.coupon_discount)}</span></div>}
+            <div className="row"><span>{t('copy071')}</span><span>{orderFmt(order.delivery_fee || 0)}</span></div>
+            <div className="row total"><span>{order.payment_status === 'refunded' ? t('copy241') : t('copy242')}</span><span>{orderPaymentText(order)} · {order.payment_currency || 'CNY'}</span></div>
           </div>
         </div>
         <div className="order-detail-card">
-          <h4>订单信息</h4>
+          <h4>{t('copy243')}</h4>
           <div className="order-detail-meta">
-            <div>订单编号：{displayOrderNo(order)}</div>
-            {order.delivery_point_id && <div>取货时报订单号；手机号后四位用于核对。</div>}
+            <div>{t('copy244')}{displayOrderNo(order)}</div>
+            {order.delivery_point_id && <div>{t('copy245')}</div>}
             <div>{t('orderStatus')}：{statusTxt[order.status] || order.status}</div>
-            <div>支付方式：{paymentText[order.payment_method] || order.payment_method}</div>
-            <div>支付状态：{payStatusText[order.payment_status] || order.payment_status}</div>
-            {order.request && <div>最新申请：{order.request.type === 'refund' ? '取消退款' : '加费单独配送'} · {order.request.status === 'pending' ? '待店主处理' : order.request.status === 'approved' ? '已处理' : '未通过'}{order.request.admin_note ? `（${order.request.admin_note}）` : ''}</div>}
-            {order.request?.status === 'pending' && <div>{order.request.type === 'refund' ? '店主线下退款后会在后台标记，请留意订单状态。' : `请联系店主支付额外 ${orderFmt(30)}（运费基准 ¥30）；店主确认收款后改为送货到家。`}</div>}
-            {order.payment_screenshot && <div className="saved-proof"><strong>已保存的付款凭证</strong><img src={order.payment_screenshot} alt="付款凭证" /></div>}
-            <div>下单时间：{order.created_at?.slice(0, 19).replace('T', ' ')}</div>
-            {order.remark && <div>备注：{order.remark}</div>}
+            <div>{t('copy246')}{t(`payment_${order.payment_method}`)}</div>
+            <div>{t('copy247')}{t(`payStatus_${order.payment_status}`)}</div>
+            {order.request && <div>{t('copy248')}{order.request.type === 'refund' ? t('copy249') : t('copy250')} · {order.request.status === 'pending' ? t('copy251') : order.request.status === 'approved' ? t('copy252') : t('copy253')}{order.request.admin_note ? `（${order.request.admin_note}）` : ''}</div>}
+            {order.request?.status === 'pending' && <div>{order.request.type === 'refund' ? t('copy254') : t('copy255', { '0': orderFmt(30) })}</div>}
+            {order.payment_screenshot && <div className="saved-proof"><strong>{t('copy256')}</strong><img src={order.payment_screenshot} alt={t('copy257')} /></div>}
+            <div>{t('copy258')}{order.created_at?.slice(0, 19).replace('T', ' ')}</div>
+            {order.remark && <div>{t('copy259')}{order.remark}</div>}
           </div>
         </div>
         {order.delivery_point_id && order.status === 'paid' && order.payment_status === 'confirmed' && order.request?.status !== 'pending' && (
           <div className="order-detail-card order-service-actions">
-            <h4>等待凑单期间</h4>
-            <p>自取免运费。你也可以申请加 {orderFmt(30)} 单独配送（运费基准 ¥30），或取消订单并申请退款。</p>
-            <label htmlFor="delivery-upgrade-address">单独配送地址</label>
-            <input id="delivery-upgrade-address" value={deliveryAddress} onChange={e => setDeliveryAddress(e.target.value)} placeholder="填写完整收货地址" maxLength={300} />
+            <h4>{t('copy260')}</h4>
+            <p>{t('waitingOptions', { fee: orderFmt(30) })}</p>
+            <label htmlFor="delivery-upgrade-address">{t('copy261')}</label>
+            <input id="delivery-upgrade-address" value={deliveryAddress} onChange={e => setDeliveryAddress(e.target.value)} placeholder={t('copy262')} maxLength={300} />
             <div className="service-action-row">
-              <button disabled={submitting} onClick={() => submitRequest('delivery_upgrade')}>加 {orderFmt(30)} 单独配送</button>
-              <button disabled={submitting} className="secondary" onClick={() => submitRequest('refund')}>取消订单并退款</button>
+              <button disabled={submitting} onClick={() => submitRequest('delivery_upgrade')}>{t('upgradeFee', { fee: orderFmt(30) })}</button>
+              <button disabled={submitting} className="secondary" onClick={() => submitRequest('refund')}>{t('copy263')}</button>
             </div>
           </div>
         )}
       </div>
       {showPaymentDetails && <div className="checkout-overlay" onClick={() => setShowPaymentDetails(false)}>
         <div className="checkout-panel payment-detail-panel" onClick={e => e.stopPropagation()}>
-          <h3>付款信息</h3><p>订单号：{displayOrderNo(order)}</p>
-          <div className="payment-due">应付 {orderPaymentText(order)}</div>
-          {order.payment_method === 'fps_transfer' ? <div className="fps-pay-number">FPS 转数快手机号<br /><strong>95480721</strong></div> :
-            <img className="payment-detail-qr" src={order.payment_method === 'wechat_transfer' ? '/images/pay/wechat.jpg' : '/images/pay/alipay.jpg'} alt="收款码" />}
-          <p>转账时请备注订单号，付款后返回订单上传截图。二维码扫不了请联系老板微信：{BOSS_WECHAT}。</p>
-          <button className="btn-submit proof-confirm" onClick={() => setShowPaymentDetails(false)}>返回上传截图</button>
+          <h3>{t('copy264')}</h3><p>{t('copy106')}{displayOrderNo(order)}</p>
+          <div className="payment-due">{t('copy242')} {orderPaymentText(order)}</div>
+          {order.payment_method === 'fps_transfer' ? <div className="fps-pay-number">{t('copy265')}<br /><strong>95480721</strong></div> :
+            <img className="payment-detail-qr" src={order.payment_method === 'wechat_transfer' ? '/images/pay/wechat.jpg' : '/images/pay/alipay.jpg'} alt={t('copy111')} />}
+          <p>{t('copy266')}{BOSS_WECHAT}。</p>
+          <button className="btn-submit proof-confirm" onClick={() => setShowPaymentDetails(false)}>{t('copy267')}</button>
         </div>
       </div>}
     </div>

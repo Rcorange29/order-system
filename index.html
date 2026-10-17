@@ -191,28 +191,42 @@
 </head>
 <body>
   <div id="root"><div id="startup-screen" role="status" style="max-width:420px;margin:80px auto;padding:24px;font:16px/1.7 sans-serif;color:#203b2d">
-    <h1 style="font-size:24px">珍珍优质果菜</h1>
+    <h1 id="startup-title" style="font-size:24px">珍珍优质果菜</h1>
     <p id="startup-message">正在打开商城，请稍候…</p>
     <p id="startup-details" style="font-size:14px;overflow-wrap:break-word"></p>
-    <a href="/check" style="display:block;margin:12px 0">打开检测页，帮助排查</a>
+    <a id="startup-check" href="/check" style="display:block;margin:12px 0">打开检测页，帮助排查</a>
     <button id="startup-retry" type="button" hidden style="padding:12px 24px;background:#203b2d;color:white;border:0;border-radius:6px;font-size:16px" onclick="location.reload()">重新加载</button>
   </div></div>
   <script>
     (function () {
+      var savedLanguage = 'zh_CN';
+      try { savedLanguage = localStorage.getItem('lang') || 'zh_CN'; } catch (ignored) {}
+      var startupCopy = {
+        zh_CN: ['珍珍优质果菜', '正在打开商城，请稍候…', '打开检测页，帮助排查', '重新加载', '页面未能加载完成。请重新加载；如仍打不开，可在微信右上角选择在浏览器打开，或切换手机流量重试。', '错误信息：', '文件加载失败：'],
+        zh_HK: ['珍珍優質果菜', '正在開啟商店，請稍候…', '開啟連線檢測頁', '重新載入', '未能完成載入。請重新載入；如仍無法開啟，可在微信右上角選擇以瀏覽器開啟，或轉用流動數據再試。', '錯誤資料：', '無法載入檔案：'],
+        en: ['Jenny Fresh', 'Opening the shop, please wait…', 'Check your connection', 'Reload', 'The page could not finish loading. Reload, open it in your browser from the WeChat menu, or try mobile data.', 'Error: ', 'Unable to load file: ']
+      };
+      var copy = startupCopy[savedLanguage] || startupCopy.zh_CN;
+      document.documentElement.lang = savedLanguage === 'zh_HK' ? 'zh-HK' : savedLanguage === 'en' ? 'en' : 'zh-CN';
+      document.title = copy[0];
+      ['startup-title', 'startup-message', 'startup-check', 'startup-retry'].forEach(function (id, index) {
+        var element = document.getElementById(id);
+        if (element) element.textContent = copy[index];
+      });
       window.__showLoadError = function (error) {
         var message = document.getElementById('startup-message');
         var retry = document.getElementById('startup-retry');
-        if (message) message.textContent = '页面未能加载完成。请点击重新加载；如果仍打不开，可在微信右上角选择在浏览器打开，或切换手机流量后重试。';
+        if (message) message.textContent = copy[4];
         if (retry) retry.hidden = false;
         var details = document.getElementById('startup-details');
-        if (details && error) details.textContent = '错误信息：' + String(error.message || error).slice(0,240);
+        if (details && error) details.textContent = copy[5] + String(error.message || error).slice(0,240);
       };
       setTimeout(function () {
         if (document.getElementById('startup-screen')) window.__showLoadError();
       }, 15000);
       window.addEventListener('error', function (event) {
         if (event.message || (event.target && event.target.tagName === 'SCRIPT')) {
-          window.__showLoadError(event.message || ('文件加载失败：' + (event.target.src || '').split('/').pop()));
+          window.__showLoadError(event.message || (copy[6] + (event.target.src || '').split('/').pop()));
         }
       }, true);
     })();

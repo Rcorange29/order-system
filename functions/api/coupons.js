@@ -35,11 +35,11 @@ export async function onRequest({ request, env }) {
     return json({ success: true }, 201)
   }
   if (request.method !== 'GET') return json({ error: 'Method not allowed' }, 405)
-  const campaigns = await env.DB.prepare('SELECT id, title, details, min_spend, discount_amount, created_at FROM coupon_campaigns WHERE is_published = 1 ORDER BY id DESC').all()
+  const campaigns = await env.DB.prepare('SELECT id, title, details, title_zh_hk, title_en, details_zh_hk, details_en, min_spend, discount_amount, created_at FROM coupon_campaigns WHERE is_published = 1 ORDER BY id DESC').all()
   let grants = { results: [] }
   let claims = { results: [] }
   if (user) {
-    grants = await env.DB.prepare('SELECT g.id, g.granted_at, g.used_order_no, c.id AS campaign_id, c.title, c.details, c.min_spend, c.discount_amount FROM coupon_grants g JOIN coupon_campaigns c ON c.id = g.campaign_id WHERE g.user_id = ? ORDER BY g.id DESC').bind(user.id).all()
+    grants = await env.DB.prepare('SELECT g.id, g.granted_at, g.used_order_no, c.id AS campaign_id, c.title, c.details, c.title_zh_hk, c.title_en, c.details_zh_hk, c.details_en, c.min_spend, c.discount_amount FROM coupon_grants g JOIN coupon_campaigns c ON c.id = g.campaign_id WHERE g.user_id = ? ORDER BY g.id DESC').bind(user.id).all()
     claims = await env.DB.prepare('SELECT campaign_id, status, admin_note, created_at FROM coupon_claims WHERE user_id = ?').bind(user.id).all()
   }
   return json({ campaigns: campaigns.results, grants: grants.results, claims: claims.results })

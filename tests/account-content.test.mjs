@@ -1,0 +1,74 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {setupDatabase} from './helpers/d1.mjs'
+import {hashPassword} from '../functions/api/_utils.js'
+import {onRequest as register} from '../functions/api/register.js'
+import {onRequest as orders} from '../functions/api/orders.js'
+import {onRequest as upload} from '../functions/api/orders/upload-proof.js'
+import {onRequest as adminOrder} from '../functions/api/admin/orders/[id].js'
+import {onRequest as announcement} from '../functions/api/announcements.js'
+import {onRequest as adminCoupons} from '../functions/api/admin/coupons.js'
+import {onRequest as coupons} from '../functions/api/coupons.js'
+import {onRequest as serviceRequest} from '../functions/api/orders/request.js'
+import {onRequest as manageRequest} from '../functions/api/admin/order-requests.js'
+import {localizedContent} from '../src/client/i18n.js'
+const proof='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/pR8AAAAASUVORK5CYII='
+async function setup(){const context=setupDatabase();context.sqlite.prepare('INSERT INTO users(username,password_hash,is_admin,token) VALUES(?,?,1,?)').run('jchengat',await hashPassword('AdminTest!123'),'admin-token');return context}
+test('WeChat-only customer can order, upload later, receive confirmation and complete delivery; contacts stay attached',async()=>{
+ const{sqlite,call}=await setup()
+ const account=await(await call(register,'POST',{username:'wechat_student',password:'CustomerTest!123',wechat_id:'student_wx',phone:'',whatsapp:''})).json()
+ sqlite.exec("INSERT INTO products(id,name,price,unit,is_active) VALUES(1,'QA produce',15,'/pack',1)")
+ const body={items:[{product_id:1,quantity:2}],delivery_type:'pickup',delivery_point_id:2,payment_method:'fps_transfer',payment_currency:'HKD',expected_payment_amount:36,expected_cny_total:30}
+ const response=await call(orders,'POST',body,account.token);assert.equal(response.status,201)
+ const placed=await response.json();assert.equal(placed.public_no,1);assert.equal(placed.contact_wechat_id,'student_wx');assert.equal(placed.phone,'');assert.equal(placed.delivery_fee,0);assert.equal(placed.payment_amount,36)
+ assert.equal((await call(upload,'POST',{order_id:placed.id,screenshot:proof},account.token)).status,200)
+ let row=sqlite.prepare('SELECT * FROM orders WHERE id=?').get(placed.id);assert.equal(row.status,'awaiting_confirmation');assert.equal(row.payment_screenshot,proof)
+ assert.equal((await call(adminOrder,'PUT',{status:'paid',payment_status:'confirmed'},'admin-token',placed.id)).status,200)
+ for(const status of ['shipped','completed'])assert.equal((await call(adminOrder,'PUT',{status},'admin-token',placed.id)).status,200)
+ row=sqlite.prepare('SELECT * FROM orders WHERE id=?').get(placed.id);assert.equal(row.status,'completed');assert.equal(row.payment_screenshot,proof)
+ // Home delivery still costs CNY 30 and can use the account's WeChat contact.
+ const home=await call(orders,'POST',{...body,delivery_type:'delivery',address:'Room 123, Hong Kong',expected_cny_total:60,expected_payment_amount:72},account.token);assert.equal(home.status,201);const h=await home.json();assert.equal(h.delivery_fee,30);assert.equal(h.contact_wechat_id,'student_wx')
+ sqlite.close()
+})
+test('paid group orders support both manual refund and home delivery upgrade without losing contacts',async()=>{
+ const{sqlite,call}=await setup()
+ sqlite.exec("INSERT INTO users(id,username,password_hash,wechat_id,token) VALUES(2,'student','unused','student_wx','buyer-token')")
+ const insert=sqlite.prepare("INSERT INTO orders(id,order_no,user_id,customer,total,payment_currency,payment_amount,status,payment_status,delivery_point_id,contact_wechat_id) VALUES(?,?,'2','student',30,'HKD',36,'paid','confirmed',2,'student_wx')")
+ insert.run(1,'refund-test');insert.run(2,'delivery-test')
+ for(const[id,type]of [[1,'refund'],[2,'delivery_upgrade']]){assert.equal((await call(serviceRequest,'POST',{order_id:id,type,address:'Room 123, HKUST'},'buyer-token')).status,201);assert.equal((await call(manageRequest,'PUT',{id,decision:'approve'})).status,200)}
+ const refunded=sqlite.prepare('SELECT * FROM orders WHERE id=1').get();assert.equal(refunded.payment_status,'refunded');assert.equal(refunded.status,'cancelled')
+ const upgraded=sqlite.prepare('SELECT * FROM orders WHERE id=2').get();assert.equal(upgraded.payment_amount,72);assert.equal(upgraded.delivery_fee,30);assert.equal(upgraded.delivery_point_id,null);assert.equal(upgraded.contact_wechat_id,'student_wx')
+ sqlite.close()
+})
+test('merchant translations save independently, public APIs include all languages and blank translations fall back per field',async()=>{
+ const{sqlite,call}=await setup()
+ const input={title:'原文标题',content:'原文正文',title_zh_hk:'繁體標題',content_zh_hk:'繁體內容',title_en:'Pickup update',content_en:'Collect tomorrow.',is_published:true}
+ assert.equal((await call(announcement,'POST',input)).status,200)
+ let data=await(await call(announcement,'GET',null,'guest',1,'/api/announcements')).json();assert.equal(localizedContent(data[0],'content','en'),'Collect tomorrow.');assert.equal(localizedContent(data[0],'title','zh_HK'),'繁體標題')
+ assert.equal((await call(announcement,'PUT',{...input,id:data[0].id,title_en:'',content_zh_hk:'  '})).status,200)
+ data=await(await call(announcement,'GET',null,'guest')).json();assert.equal(localizedContent(data[0],'title','en'),'原文标题');assert.equal(localizedContent(data[0],'content','zh_HK'),'原文正文');assert.equal(localizedContent(data[0],'content','en'),'Collect tomorrow.')
+ assert.equal((await call(announcement,'POST',{...input,title_en:'x'.repeat(101)})).status,400)
+ const campaign={title:'商家活动原文',details:'不自动翻译旧内容',details_zh_hk:'商戶輸入內容',details_en:'Merchant-written offer details.',min_spend:15,discount_amount:5,is_published:true}
+ const created=await(await call(adminCoupons,'POST',campaign)).json();const publicCoupons=await(await call(coupons,'GET',null,'guest')).json();const c=publicCoupons.campaigns.find(c=>c.id===created.id);assert.equal(localizedContent(c,'details','en'),campaign.details_en);assert.equal(localizedContent(c,'title','en'),campaign.title)
+ assert.equal((await call(adminCoupons,'PUT',{...campaign,id:created.id,details_en:''})).status,200);const stored=sqlite.prepare('SELECT * FROM coupon_campaigns WHERE id=?').get(created.id);assert.equal(stored.details,campaign.details);assert.equal(localizedContent(stored,'details','en'),campaign.details)
+ assert.equal((await call(announcement,'POST',input,'guest')).status,403)
+ sqlite.close()
+})
+
+test('WeChat-only account can submit a social screenshot, receive one reviewed coupon and use it at checkout',async()=>{
+ const{sqlite,call}=await setup()
+ const account=await(await call(register,'POST',{username:'coupon_student',password:'CustomerTest!123',wechat_id:'coupon_student',phone:'',whatsapp:''})).json()
+ const claim=await call(coupons,'POST',{campaign_id:1,screenshot:proof},account.token);assert.equal(claim.status,201)
+ const {onRequest:review}=await import('../functions/api/admin/coupon-claims.js')
+ const pending=await(await call(review)).json();assert.equal(pending.length,1);assert.equal(pending[0].wechat_id,'coupon_student');assert.equal(pending[0].phone,'')
+ assert.equal((await call(coupons,'POST',{campaign_id:1,screenshot:proof},account.token)).status,409)
+ assert.equal((await call(review,'PUT',{id:pending[0].id,decision:'approve'})).status,200)
+ assert.equal((await call(review,'PUT',{id:pending[0].id,decision:'approve'})).status,409)
+ assert.equal((await call(coupons,'POST',{campaign_id:1,screenshot:proof},account.token)).status,409)
+ const available=await(await call(coupons,'GET',null,account.token)).json();assert.equal(available.grants.length,1)
+ sqlite.exec("INSERT INTO products(id,name,price,is_active) VALUES(1,'QA product',15,1)")
+ const response=await call(orders,'POST',{items:[{product_id:1,quantity:1}],delivery_type:'pickup',delivery_point_id:2,payment_method:'wechat_transfer',payment_currency:'CNY',coupon_grant_id:available.grants[0].id,expected_cny_total:10,expected_payment_amount:10},account.token)
+ assert.equal(response.status,201);const order=await response.json();assert.equal(order.total,10);assert.equal(order.coupon_discount,5);assert.equal(order.delivery_fee,0)
+ assert.equal(sqlite.prepare('SELECT used_order_no FROM coupon_grants WHERE id=?').get(available.grants[0].id).used_order_no,order.order_no)
+ sqlite.close()
+})

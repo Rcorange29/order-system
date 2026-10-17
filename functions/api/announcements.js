@@ -9,7 +9,7 @@ export async function onRequest({ request, env }) {
     const pointId = Number(url.searchParams.get('point')) || 0
     const sql = admin
       ? 'SELECT * FROM announcements ORDER BY id DESC LIMIT 100'
-      : 'SELECT id, delivery_point_id, title, content, created_at FROM announcements WHERE is_published = 1 AND (delivery_point_id IS NULL OR delivery_point_id = ?) ORDER BY id DESC LIMIT 20'
+      : 'SELECT id, delivery_point_id, title, content, title_zh_hk, title_en, content_zh_hk, content_en, created_at FROM announcements WHERE is_published = 1 AND (delivery_point_id IS NULL OR delivery_point_id = ?) ORDER BY id DESC LIMIT 20'
     const { results } = admin ? await env.DB.prepare(sql).all() : await env.DB.prepare(sql).bind(pointId).all()
     return json(results)
   }
@@ -19,6 +19,8 @@ export async function onRequest({ request, env }) {
   if (request.method === 'POST' || request.method === 'PUT') {
     const title = String(body.title || '').trim()
     const content = String(body.content || '').trim()
+    const translations = ['title_zh_hk', 'title_en', 'content_zh_hk', 'content_en'].map(key => String(body[key] || '').trim() || null)
+    if (translations.some((value, i) => value && value.length > (i < 2 ? 100 : 2000))) return json({ error: '译文标题最多100字，正文最多2000字' }, 400)
     const pointId = body.delivery_point_id ? Number(body.delivery_point_id) : null
     if (!title || title.length > 100 || !content || content.length > 2000 || (pointId !== null && (!Number.isInteger(pointId) || pointId < 1))) {
       return json({ error: '请填写标题和公告内容' }, 400)
@@ -28,13 +30,13 @@ export async function onRequest({ request, env }) {
       if (!point) return json({ error: '服务点不存在' }, 400)
     }
     if (request.method === 'POST') {
-      await env.DB.prepare('INSERT INTO announcements (delivery_point_id, title, content, is_published) VALUES (?, ?, ?, ?)')
-        .bind(pointId, title, content, body.is_published === false ? 0 : 1).run()
+      await env.DB.prepare('INSERT INTO announcements (delivery_point_id, title, content, is_published, title_zh_hk, title_en, content_zh_hk, content_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+        .bind(pointId, title, content, body.is_published === false ? 0 : 1, ...translations).run()
     } else {
       const id = Number(body.id)
       if (!Number.isInteger(id) || id < 1) return json({ error: '公告编号无效' }, 400)
-      await env.DB.prepare('UPDATE announcements SET delivery_point_id = ?, title = ?, content = ?, is_published = ? WHERE id = ?')
-        .bind(pointId, title, content, body.is_published === false ? 0 : 1, id).run()
+      await env.DB.prepare('UPDATE announcements SET delivery_point_id = ?, title = ?, content = ?, is_published = ?, title_zh_hk = ?, title_en = ?, content_zh_hk = ?, content_en = ? WHERE id = ?')
+        .bind(pointId, title, content, body.is_published === false ? 0 : 1, ...translations, id).run()
     }
     return json({ ok: true })
   }

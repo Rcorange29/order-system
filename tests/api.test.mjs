@@ -25,7 +25,7 @@ function database(overrides = {}) {
             ...statement,
             async first() {
               if (sql.includes('FROM users WHERE token')) return { id: 7, username: 'buyer', is_admin: 1 }
-              if (sql.includes('SELECT username, phone FROM users')) return { username: 'buyer', phone: '12345678' }
+              if (sql.includes('SELECT username, phone, wechat_id, whatsapp FROM users')) return { username: 'buyer', phone: '+85291234567' }
               if (sql.includes('FROM products WHERE id')) return overrides.product === null ? null : product
               if (sql.includes('FROM delivery_points WHERE id')) return overrides.point === null ? null : { id: 2, fee: 10, threshold: overrides.threshold ?? 1000, is_active: 1 }
               if (sql.includes('COALESCE(SUM(total)')) return { t: overrides.confirmedTotal ?? 100, confirmed_total: overrides.confirmedTotal ?? 100, confirmed_count: 1 }
@@ -119,7 +119,7 @@ test('always waives pickup fee while the group waits for the threshold', async (
 test('uses RMB 30 home-delivery fee and RMB 1000 pickup threshold', async () => {
   const db = database({ confirmedTotal: 800 })
   const response = await call(orders, db, '/api/orders', 'POST', {
-    ...orderBody(), delivery_type: 'delivery', delivery_point_id: null, address: 'Test address', phone: '12345678'
+    ...orderBody(), delivery_type: 'delivery', delivery_point_id: null, address: 'Test address', phone: '+85291234567'
   })
   assert.equal(response.status, 201)
   assert.equal(db.state.batches[0][0].values[7], 30)
