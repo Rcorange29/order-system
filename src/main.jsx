@@ -30,4 +30,4 @@ async function bootstrap() {
   }
 }
 
-bootstrap().catch(() => window.__showLoadError?.())
+bootstrap().catch(error => window.__showLoadError?.(error))

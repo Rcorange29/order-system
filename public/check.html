@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>珍珍果菜 · 打开检测</title>
+<style>body{max-width:640px;margin:28px auto;padding:20px;font:16px/1.7 sans-serif;color:#203b2d}h1{font-size:24px}#results{white-space:pre-wrap;overflow-wrap:break-word;background:#f3f5f0;padding:16px;font:14px/1.7 monospace}button{padding:12px 20px;font-size:16px}#root{display:none}</style></head>
+<body><h1>网站打开检测</h1><p>请在打不开商城的微信里打开本页，等待约 30 秒，将下方结果截图发来。检测不会提交订单或修改账号。</p><pre id="results" role="status">检测开始…</pre><button onclick="location.reload()">重新检测</button><div id="root"></div>
+<script>
+(function () {
+  var output = document.getElementById('results');
+  var started = Date.now();
+  function log(message) { output.textContent += '\n[' + Math.round((Date.now()-started)/1000) + '秒] ' + String(message).slice(0,700); }
+  window.addEventListener('error', function (event) {
+    log('执行错误：' + (event.message || '资源加载失败') + ' ' + ((event.filename || (event.target && event.target.src) || '').split('/').pop()) + ':' + (event.lineno || ''));
+  }, true);
+  window.__showLoadError = function (error) { log('程序启动失败：' + (error && error.message || error || '未返回具体错误')); };
+  function request(url, callback) {
+    var xhr = new XMLHttpRequest(); var finished = false;
+    function finish(error) { if (finished) return; finished=true; callback(error,xhr); }
+    xhr.open('GET', url, true); xhr.timeout=12000;
+    xhr.onload=function(){finish(null);}; xhr.onerror=function(){finish('网络错误');}; xhr.ontimeout=function(){finish('超过12秒未响应');}; xhr.send();
+  }
+  function loadScript(src, callback) {
+    var node=document.createElement('script'); var done=false;
+    function finish(error) { if(done)return;done=true;clearTimeout(timer);callback(error); }
+    var timer=setTimeout(function(){finish('超过15秒未加载完成');},15000);
+    node.onload=function(){finish(null);}; node.onerror=function(){finish('脚本加载失败');}; node.src=src;
+    document.head.appendChild(node);
+  }
+  log('浏览器：' + navigator.userAgent);
+  log('基础功能：Promise=' + typeof Promise + '，fetch=' + typeof fetch + '，模块=' + ('noModule' in document.createElement('script')));
+  request('/api/categories',function(error,xhr){log('商品接口：'+(error || ('HTTP '+xhr.status+'，'+(xhr.getResponseHeader('Content-Type')||''))));});
+  loadScript('/assets/connection-probe.js?v=1',function(error){log('小脚本：'+(error || (window.__jennyScriptProbe?'下载并执行成功':'下载完成但未执行')));});
+  request('/wechat?check='+Date.now(),function(error,xhr){
+    if(error || xhr.status!==200){log('兼容页面：'+(error || 'HTTP '+xhr.status));return;}
+    var poly=xhr.responseText.match(/<script[^>]*id="vite-legacy-polyfill"[^>]*src="([^"]+)"/);
+    var entry=xhr.responseText.match(/<script[^>]*id="vite-legacy-entry"[^>]*data-src="([^"]+)"/);
+    if(!poly||!entry){log('兼容页面：HTTP 200，但未找到程序入口');return;}
+    log('兼容页面：HTTP 200，已找到入口');
+    loadScript(poly[1],function(error){
+      if(error || !window.System){log('兼容支持文件：'+(error || '已下载，但System未初始化'));return;}
+      log('兼容支持文件：下载并执行成功');
+      var settled=false;
+      setTimeout(function(){if(!settled)log('商城程序：等待超过15秒，可能有后续文件未加载完成');},15000);
+      window.System.import(entry[1]).then(function(){
+        settled=true;log('商城程序：入口执行完成');
+        setTimeout(function(){log('商城界面：'+(document.getElementById('root').textContent.length>10?'已成功渲染':'仍未渲染'));log('检测结束，请将本页结果截图发来。');},2000);
+      },function(error){settled=true;log('商城程序失败：'+(error && (error.stack || error.message) || error));});
+    });
+  });
+})();
+</script></body></html>
