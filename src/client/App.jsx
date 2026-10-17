@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { normalizePhone } from '../../functions/api/_phone.js'
 import useVisualViewport from '../useVisualViewport.js'
+import { storage, readStoredArray } from '../storage.js'
 
 const API = '/api'
 const BOSS_WECHAT = 'jennybabi1988'
@@ -148,7 +149,7 @@ const pointNameMap = {
 
 // 带鉴权的 fetch
 function authFetch(url, options = {}) {
-  const token = localStorage.getItem('token')
+  const token = storage.getItem('token')
   const headers = { ...(options.headers || {}) }
   if (token) headers['Authorization'] = `Bearer ${token}`
   return fetch(url, { ...options, headers })
@@ -228,15 +229,15 @@ export default function App() {
   const [announcements, setAnnouncements] = useState([])
   const [seenNoticeIds, setSeenNoticeIds] = useState([])
   const [deliveryPoints, setDeliveryPoints] = useState([])
-  const [selectedPointId, setSelectedPointId] = useState(() => localStorage.getItem('selectedPointId') || null)
+  const [selectedPointId, setSelectedPointId] = useState(() => storage.getItem('selectedPointId') || null)
   const [showPointPicker, setShowPointPicker] = useState(false)
   const [deliveryType, setDeliveryType] = useState('pickup')
   const [ustBenefit, setUstBenefit] = useState(false)
   const [showIntro, setShowIntro] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [selectedVariant, setSelectedVariant] = useState(null)
-  const [favorites, setFavorites] = useState(() => JSON.parse(localStorage.getItem('favorites') || '[]'))
-  const [searchHistory, setSearchHistory] = useState(() => JSON.parse(localStorage.getItem('searchHistory') || '[]'))
+  const [favorites, setFavorites] = useState(() => readStoredArray('favorites'))
+  const [searchHistory, setSearchHistory] = useState(() => readStoredArray('searchHistory'))
   const [showHelp, setShowHelp] = useState(false)
   const [showContact, setShowContact] = useState(false)
   const [showRefund, setShowRefund] = useState(false)
@@ -250,22 +251,22 @@ export default function App() {
   const [returnToActivityAfterLogin, setReturnToActivityAfterLogin] = useState(false)
   const [claimUploading, setClaimUploading] = useState(false)
   const [selectedCouponId, setSelectedCouponId] = useState('')
-  const [lang, setLang] = useState(() => localStorage.getItem('lang') || 'zh_CN')
-  const [currency, setCurrency] = useState(() => localStorage.getItem('currency') || '')
+  const [lang, setLang] = useState(() => storage.getItem('lang') || 'zh_CN')
+  const [currency, setCurrency] = useState(() => storage.getItem('currency') || '')
   const [paymentCurrency, setPaymentCurrency] = useState('CNY')
   const [exchangeRate, setExchangeRate] = useState(1.2)
   const [showOnboard, setShowOnboard] = useState(false)
   const [onboardStep, setOnboardStep] = useState(0)
 
-  const t = (key) => langPack[lang][key] || key
+  const t = (key) => (langPack[lang] || langPack.zh_CN)[key] || key
   const fmt = (rmbPrice) => {
     const n = Number(rmbPrice) || 0
     if (currency === 'HKD') return 'HK$' + (n * exchangeRate).toFixed(2)
     return '¥' + n.toFixed(2)
   }
   const ruleText = (key, threshold = 1000) => t(key)
-    .replaceAll('¥1000', fmt(threshold))
-    .replaceAll('¥30', fmt(30))
+    .split('¥1000').join(fmt(threshold))
+    .split('¥30').join(fmt(30))
   const pn = (pname) => {
     if (lang === 'zh_CN') return pname
     const m = productNameMap[pname]
@@ -303,19 +304,19 @@ export default function App() {
 
   const switchLang = (l) => {
     setLang(l)
-    localStorage.setItem('lang', l)
+    storage.setItem('lang', l)
   }
 
   // 首次进入显示新手指引 + 注意事项
   useEffect(() => {
-    if (!localStorage.getItem('intro_read')) {
+    if (!storage.getItem('intro_read')) {
       setShowOnboard(true)
     }
   }, [])
 
   // 初始化：用本地 token 调用 /api/me 验证登录状态
   useEffect(() => {
-    const token = localStorage.getItem('token')
+    const token = storage.getItem('token')
     if (token) {
       authFetch(`${API}/me`).then(r => {
         if (r.ok) return r.json()
@@ -323,8 +324,8 @@ export default function App() {
       }).then(user => {
         setCurrentUser(user)
       }).catch(() => {
-        localStorage.removeItem('token')
-        localStorage.removeItem('currentUser')
+        storage.removeItem('token')
+        storage.removeItem('currentUser')
       })
     }
   }, [])
@@ -333,8 +334,7 @@ export default function App() {
   useEffect(() => {
     if (currentUser) {
       const addrKey = `addrs_${currentUser.username}`
-      const saved = localStorage.getItem(addrKey)
-      const list = saved ? JSON.parse(saved) : []
+      const list = readStoredArray(addrKey)
       setAddresses(list)
       const def = list.find(a => a.isDefault) || list[0]
       if (def) setSelectedAddrId(def.id)
@@ -362,7 +362,7 @@ export default function App() {
     fetch(`${API}/products`).then(r => r.json()).then(setProducts)
     fetch(`${API}/categories`).then(r => r.json()).then(setCategories)
     fetch(`${API}/settings`).then(r => r.json()).then(d => setExchangeRate(d.exchange_rate || 1.2)).catch(()=>{})
-    if (!localStorage.getItem('currency')) setShowOnboard(true)
+    if (!storage.getItem('currency')) setShowOnboard(true)
     if (new URLSearchParams(window.location.search).get('activity') === 'share') setShowActivity(true)
   }, [])
 
@@ -386,13 +386,13 @@ export default function App() {
   useEffect(() => {
     fetch(`${API}/delivery-points`).then(r => r.json()).then(points => {
       setDeliveryPoints(points)
-      if (!localStorage.getItem('selectedPointId')) setShowPointPicker(true)
+      if (!storage.getItem('selectedPointId')) setShowPointPicker(true)
     }).catch(() => {})
   }, [])
 
   // 加载凑单统计 + 每5秒刷新（按当前配送点）
   const loadStats = () => {
-    const pid = localStorage.getItem('selectedPointId')
+    const pid = storage.getItem('selectedPointId')
     const url = pid ? `${API}/stats?point=${pid}` : `${API}/stats`
     return fetch(url).then(r => r.json()).then(setStats).catch(() => {})
   }
@@ -410,7 +410,7 @@ export default function App() {
     return () => clearInterval(timer)
   }, [selectedPointId])
   useEffect(() => {
-    try { setSeenNoticeIds(JSON.parse(localStorage.getItem(`seenNotices_${currentUser?.id || 'guest'}_${selectedPointId || 'all'}`) || '[]')) }
+    try { setSeenNoticeIds(JSON.parse(storage.getItem(`seenNotices_${currentUser?.id || 'guest'}_${selectedPointId || 'all'}`) || '[]')) }
     catch { setSeenNoticeIds([]) }
   }, [currentUser?.id, selectedPointId])
 
@@ -420,7 +420,7 @@ export default function App() {
   }, [tab])
 
   const selectPoint = (pid) => {
-    localStorage.setItem('selectedPointId', String(pid))
+    storage.setItem('selectedPointId', String(pid))
     setSelectedPointId(String(pid))
     setShowPointPicker(false)
     loadStats()
@@ -505,7 +505,7 @@ export default function App() {
   const toggleFavorite = (id) => {
     setFavorites(prev => {
       const next = prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]
-      localStorage.setItem('favorites', JSON.stringify(next))
+      storage.setItem('favorites', JSON.stringify(next))
       return next
     })
     showToast(favorites.includes(id) ? '已取消收藏' : '已收藏')
@@ -515,14 +515,14 @@ export default function App() {
     if (!kw) return
     setSearchHistory(prev => {
       const next = [kw, ...prev.filter(h => h !== kw)].slice(0, 8)
-      localStorage.setItem('searchHistory', JSON.stringify(next))
+      storage.setItem('searchHistory', JSON.stringify(next))
       return next
     })
   }
 
   const saveAddresses = (list) => {
     if (!currentUser) return
-    localStorage.setItem(`addrs_${currentUser.username}`, JSON.stringify(list))
+    storage.setItem(`addrs_${currentUser.username}`, JSON.stringify(list))
     setAddresses(list)
   }
 
@@ -567,7 +567,7 @@ export default function App() {
   const markNoticesRead = () => {
     const ids = [...new Set([...seenNoticeIds, ...announcements.map(n => n.id)])]
     setSeenNoticeIds(ids)
-    localStorage.setItem(noticeStorageKey, JSON.stringify(ids))
+    storage.setItem(noticeStorageKey, JSON.stringify(ids))
   }
   const featuredIds = [95, 48, 56, 57, 13, 20, 115, 93]
   const featuredProducts = [...featuredIds.map(id => products.find(p => p.id === id)).filter(p => p && p.is_active !== false), ...products.filter(p => p.is_active !== false && p.is_hot && !featuredIds.includes(p.id))].slice(0, 8)
@@ -649,8 +649,8 @@ export default function App() {
     })
     const data = await res.json()
     if (!res.ok) return data.error || '登录失败'
-    localStorage.setItem('token', data.token)
-    localStorage.setItem('currentUser', JSON.stringify({ username: data.username, phone: data.phone }))
+    storage.setItem('token', data.token)
+    storage.setItem('currentUser', JSON.stringify({ username: data.username, phone: data.phone }))
     setCurrentUser({ username: data.username, phone: data.phone })
     if (returnToActivityAfterLogin) {
       setReturnToActivityAfterLogin(false)
@@ -669,8 +669,8 @@ export default function App() {
     })
     const data = await res.json()
     if (!res.ok) return data.error || '注册失败'
-    localStorage.setItem('token', data.token)
-    localStorage.setItem('currentUser', JSON.stringify({ username: data.username, phone: data.phone }))
+    storage.setItem('token', data.token)
+    storage.setItem('currentUser', JSON.stringify({ username: data.username, phone: data.phone }))
     setCurrentUser({ username: data.username, phone: data.phone })
     if (returnToActivityAfterLogin) {
       setReturnToActivityAfterLogin(false)
@@ -681,8 +681,8 @@ export default function App() {
   }
 
   const logout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('currentUser')
+    storage.removeItem('token')
+    storage.removeItem('currentUser')
     setCurrentUser(null)
     setCart({})
     setTab('home')
@@ -813,7 +813,7 @@ export default function App() {
             <span className="display-currency-label">{lang === 'en' ? 'View prices' : lang === 'zh_HK' ? '看價幣種' : '看价币种'}</span>
             <span onClick={() => {
               const c = currency === 'HKD' ? 'CNY' : 'HKD'
-              setCurrency(c); localStorage.setItem('currency', c)
+              setCurrency(c); storage.setItem('currency', c)
             }} className="currency-switch">
               <span className={currency === 'HKD' ? 'active' : ''}>HK$ HKD</span>
               <span className={currency === 'CNY' ? 'active' : ''}>¥ CNY</span>
@@ -1474,7 +1474,7 @@ export default function App() {
       )}
       {/* 配送点选择弹窗（强制选择） */}
       {showPointPicker && (
-        <div className="checkout-overlay" style={{ zIndex: 3000 }} onClick={() => { if (localStorage.getItem('selectedPointId')) setShowPointPicker(false) }}>
+        <div className="checkout-overlay" style={{ zIndex: 3000 }} onClick={() => { if (storage.getItem('selectedPointId')) setShowPointPicker(false) }}>
           <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
             <h3>📍 {t('pickPoint')}</h3>
             <div style={{ background: '#fff8e1', padding: 10, borderRadius: 8, fontSize: 12, color: '#f57c00', marginBottom: 12, textAlign: 'left', lineHeight: 1.6 }}>
@@ -1597,11 +1597,11 @@ export default function App() {
             <h3 style={{ marginBottom: 16 }}>请选择看价币种</h3>
             <p style={{ fontSize: 13, color: '#777', marginBottom: 20 }}>下单时可以另选实际付款币种</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <button onClick={() => { setCurrency('HKD'); localStorage.setItem('currency', 'HKD'); setShowOnboard(true) }}
+              <button onClick={() => { setCurrency('HKD'); storage.setItem('currency', 'HKD'); setShowOnboard(true) }}
                 style={{ padding: 16, borderRadius: 12, border: '2px solid var(--market-green)', background: 'var(--market-green-soft)', color: 'var(--market-accent)', fontSize: 18, fontWeight: 700, cursor: 'pointer' }}>
                 HK$ HKD
               </button>
-              <button onClick={() => { setCurrency('CNY'); localStorage.setItem('currency', 'CNY'); setShowOnboard(true) }}
+              <button onClick={() => { setCurrency('CNY'); storage.setItem('currency', 'CNY'); setShowOnboard(true) }}
                 style={{ padding: 16, borderRadius: 12, border: '2px solid #ddd', background: '#fff', color: '#333', fontSize: 18, fontWeight: 600, cursor: 'pointer' }}>
                 ¥ CNY
               </button>
@@ -1683,7 +1683,7 @@ export default function App() {
               className="btn-submit"
               style={{ width: '100%', padding: 14, marginTop: 8 }}
               onClick={() => {
-                localStorage.setItem('intro_read', '1')
+                storage.setItem('intro_read', '1')
                 setShowIntro(false)
               }}
             >

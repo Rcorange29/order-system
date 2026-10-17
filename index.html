@@ -126,7 +126,7 @@
   <script>
     (function() {
       function initAdminSidebar() {
-        if (!location.pathname.startsWith('/admin')) return;
+        if (location.hostname !== 'admin.jennyfresh.com' && !location.pathname.startsWith('/admin')) return;
         if (document.getElementById('admin-hamburger')) return;
         var ham = document.createElement('button');
         ham.id = 'admin-hamburger';
@@ -183,7 +183,27 @@
   </script>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root"><div id="startup-screen" role="status" style="max-width:420px;margin:80px auto;padding:24px;font:16px/1.7 sans-serif;color:#203b2d">
+    <h1 style="font-size:24px">珍珍优质果菜</h1>
+    <p id="startup-message">正在打开商城，请稍候…</p>
+    <button id="startup-retry" type="button" hidden style="padding:12px 24px;background:#203b2d;color:white;border:0;border-radius:6px;font-size:16px" onclick="location.reload()">重新加载</button>
+  </div></div>
+  <script>
+    (function () {
+      window.__showLoadError = function () {
+        var message = document.getElementById('startup-message');
+        var retry = document.getElementById('startup-retry');
+        if (message) message.textContent = '页面未能加载完成。请点击重新加载；如果仍打不开，可在微信右上角选择在浏览器打开，或切换手机流量后重试。';
+        if (retry) retry.hidden = false;
+      };
+      setTimeout(function () {
+        if (document.getElementById('startup-screen')) window.__showLoadError();
+      }, 15000);
+      window.addEventListener('error', function (event) {
+        if (event.target && event.target.tagName === 'SCRIPT') window.__showLoadError();
+      }, true);
+    })();
+  </script>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
