@@ -2,6 +2,13 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
+  <script>
+    (function () {
+      if (/MicroMessenger/i.test(navigator.userAgent) && location.pathname !== '/wechat' && location.pathname !== '/wechat.html' && !/^\/admin/.test(location.pathname)) {
+        location.replace('/wechat' + location.search + location.hash);
+      }
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="version" content="20260924-responsive" />
   <title>珍珍优质果菜</title>

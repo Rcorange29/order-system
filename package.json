@@ -15,10 +15,14 @@
   },
   "dependencies": {
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "url-search-params-polyfill": "^8.2.5",
+    "whatwg-fetch": "^3.6.20"
   },
   "devDependencies": {
+    "@vitejs/plugin-legacy": "5.4.3",
     "@vitejs/plugin-react": "^4.3.1",
+    "terser": "^5.51.2",
     "vite": "^5.4.0",
     "wrangler": "^3.78.0"
   }
