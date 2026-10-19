@@ -29,16 +29,16 @@ test('username signup accepts WeChat-only contact and signs in without a phone',
 })
 test('registration accepts HK and mainland contacts, normalizes numbers, and keeps contacts separate from usernames',async()=>{
   const {sqlite,request}=setup()
-  for(const [username,phone,expected]of [['hk_user','9123 4567','+85291234567'],['cn_user','+86 13800138000','+8613800138000']]){
-    const response=await request(register,{...profile,username,wechat_id:'',phone,whatsapp:phone});assert.equal(response.status,201)
-    const account=await response.json();assert.equal(account.phone,expected);assert.equal(account.whatsapp,expected)
+  for(const [username,phone,expected]of [['hk_user','9123 4567','+85291234567'],['cn_user','+86 13800138000','+8613800138000']] ){
+    const response=await request(register,{...profile,username,wechat_id:'',phone,whatsapp:''});assert.equal(response.status,201)
+    const account=await response.json();assert.equal(account.phone,expected);assert.equal(account.whatsapp,'')
     assert.equal((await request(login,{username:expected,password:profile.password})).status,401)
   }
   sqlite.close()
 })
 test('invalid usernames, contacts and passwords fail before creating an account',async()=>{
   const {sqlite,request}=setup()
-  for(const bad of [{username:'with space'},{wechat_id:'123bad'},{wechat_id:'',phone:'',whatsapp:''},{phone:'+85361234567'},{phone:'+852912345678'},{phone:'+8612800138000'},{password:'short'},{password:'x'.repeat(129)}])assert.equal((await request(register,{...profile,...bad})).status,400,JSON.stringify(bad))
+  for(const bad of [{username:'with space'},{wechat_id:'123bad'},{wechat_id:'',phone:'',whatsapp:''},{phone:'+85361234567'},{phone:'+852912345678'},{phone:'+8612800138000'},{whatsapp:'+8613800138000'}])assert.equal((await request(register,{...profile,...bad})).status,400,JSON.stringify(bad))
   assert.equal((await request(login,{phone:'91234567',password:profile.password})).status,400)
   assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM users').get().n,0)
   sqlite.close()

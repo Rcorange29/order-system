@@ -1864,7 +1864,6 @@ function LoginPage({ onLogin, onRegister, onBack, t }) {
     if (mode === 'register') {
       const result = validateProfile(profile)
       if (result.error) return setError(t(result.code))
-      if (password.length < 8 || password.length > 128) return setError(t('INVALID_PASSWORD'))
       if (password !== confirmation) return setError(t('PASSWORD_MISMATCH'))
     }
     setSubmitting(true)
@@ -1877,11 +1876,11 @@ function LoginPage({ onLogin, onRegister, onBack, t }) {
     <form className="login-box" onSubmit={submit}>
       <div className="login-tabs">{['login','register'].map(value => <button type="button" key={value} className={`login-tab ${mode === value ? 'active' : ''}`} onClick={() => { setMode(value); setError(''); setPassword(''); setConfirmation('') }}>{t(value)}</button>)}</div>
       <div className="login-input-group"><label htmlFor="account-username">{t('username')}</label><input id="account-username" autoComplete="username" required maxLength={40} value={profile.username} onChange={e => update('username',e.target.value)} placeholder={t('usernameHint')} /></div>
-      <div className="login-input-group"><label htmlFor="account-password">{t('password')}</label><input id="account-password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required maxLength={128} value={password} onChange={e => setPassword(e.target.value)} placeholder={t('password')} /></div>
+      <div className="login-input-group"><label htmlFor="account-password">{t('password')}</label><input id="account-password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required value={password} onChange={e => setPassword(e.target.value)} placeholder={t('password')} /></div>
       {mode === 'register' && <>
-        <div className="login-input-group"><label htmlFor="account-confirmation">{t('confirmPassword')}</label><input id="account-confirmation" type="password" autoComplete="new-password" required maxLength={128} value={confirmation} onChange={e => setConfirmation(e.target.value)} /></div>
+        <div className="login-input-group"><label htmlFor="account-confirmation">{t('confirmPassword')}</label><input id="account-confirmation" type="password" autoComplete="new-password" required value={confirmation} onChange={e => setConfirmation(e.target.value)} /></div>
         <p className="login-phone-hint">{t('contactHint')}</p>
-        {[['wechat_id','wechatId','wechatHint'],['whatsapp','WhatsApp','phoneHint'],['phone','phone','phoneHint']].map(([key,label,hint]) => <div className="login-input-group" key={key}><label htmlFor={`account-${key}`}>{t(label)} <small>{t(key === 'wechat_id' ? 'preferredContact' : 'optional')}</small></label><input id={`account-${key}`} type={key === 'wechat_id' ? 'text' : 'tel'} maxLength={key === 'wechat_id' ? 20 : 24} value={profile[key]} onChange={e => update(key,e.target.value)} placeholder={t(hint)} /></div>)}
+        {[['wechat_id','wechatId','wechatHint'],['whatsapp','WhatsApp','whatsappHint'],['phone','phone','phoneHint']].map(([key,label,hint]) => <div className="login-input-group" key={key}><label htmlFor={`account-${key}`}>{t(label)} <small>{t(key === 'wechat_id' ? 'preferredContact' : 'optional')}</small></label><input id={`account-${key}`} type={key === 'wechat_id' ? 'text' : 'tel'} maxLength={key === 'wechat_id' ? 20 : 24} value={profile[key]} onChange={e => update(key,e.target.value)} placeholder={t(hint)} /></div>)}
         <p className="login-phone-hint">{t('noSmsHint')}</p>
       </>}
       {error && <p className="login-form-error" role="alert">{error}</p>}

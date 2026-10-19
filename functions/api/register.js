@@ -8,7 +8,7 @@ export async function onRequest({ request, env }) {
   const body = await readBody(request) || {}
   const profile = validateProfile(body)
   if (profile.error) return json(profile, 400)
-  if (typeof body.password !== 'string' || body.password.length < 8 || body.password.length > 128) return json({ code: 'INVALID_PASSWORD' }, 400)
+  if (typeof body.password !== 'string' || !body.password) return json({ code: 'INVALID_PASSWORD' }, 400)
   const { username, phone, wechat_id, whatsapp } = profile.value
   if (await env.DB.prepare('SELECT id FROM users WHERE username = ?').bind(username).first()) return json({ code: 'USERNAME_TAKEN' }, 409)
   const passwordHash = await hashPassword(body.password)

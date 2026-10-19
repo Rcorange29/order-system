@@ -37,7 +37,7 @@ export async function onRequest({ request, env, params }) {
       token = CASE WHEN username <> ? THEN NULL ELSE token END WHERE id = ?`)
       .bind(next.username, next.wechat_id, next.whatsapp, next.phone, (normalizePhone(user.phone) || normalizePhone(user.username)) ? '+' + (normalizePhone(user.phone) || normalizePhone(user.username)) : '', next.username, id)
   } else if (body.action === 'reset_password') {
-    if (typeof body.new_password !== 'string' || body.new_password.length < 1 || body.new_password.length > 128) return json({ error: '新密码需为1–128个字符' }, 400)
+    if (typeof body.new_password !== 'string' || body.new_password.length < 1) return json({ error: '新密码不能为空' }, 400)
     statement = env.DB.prepare('UPDATE users SET password_hash = ?, token = NULL WHERE id = ?').bind(await hashPassword(body.new_password), id)
     fields = ['password']
   } else if (body.action === 'status') {
