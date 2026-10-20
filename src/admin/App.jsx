@@ -19,16 +19,6 @@ function authFetch(url, options = {}) {
   return fetch(url, { ...options, headers })
 }
 
-function matchingPhone(a, b) {
-  const digits = value => String(value || '').replace(/\D/g, '')
-  const one = digits(a)
-  const two = digits(b)
-  if (!one || !two) return false
-  return one === two || (one.length === 8 && two === `852${one}`) || (two.length === 8 && one === `852${two}`)
-    || (one.length === 11 && one.startsWith('1') && two === `86${one}`)
-    || (two.length === 11 && two.startsWith('1') && one === `86${two}`)
-}
-
 export default function App() {
   useVisualViewport()
   const [token, setToken] = useState(localStorage.getItem('admin_token') || '')
@@ -41,8 +31,6 @@ export default function App() {
   const [users, setUsers] = useState([])
   const [serviceRequests, setServiceRequests] = useState([])
   const [announcements, setAnnouncements] = useState([])
-  const [coupons, setCoupons] = useState([])
-  const [couponClaims, setCouponClaims] = useState([])
   const [toast, setToast] = useState('')
 
   const reload = () => {
@@ -52,8 +40,6 @@ export default function App() {
     authFetch(`${API}/admin/users`).then(r => { if (!r.ok) throw new Error('无法读取用户'); return r.json() }).then(setUsers).catch(() => showToast('无法读取用户列表，请重试或重新登录'))
     authFetch(`${API}/admin/order-requests`).then(r => r.ok ? r.json() : []).then(setServiceRequests)
     authFetch(`${API}/announcements?all=1`).then(r => r.ok ? r.json() : []).then(setAnnouncements)
-    authFetch(`${API}/admin/coupons`).then(r => r.ok ? r.json() : []).then(setCoupons)
-    authFetch(`${API}/admin/coupon-claims`).then(r => r.ok ? r.json() : []).then(setCouponClaims)
   }
 
   useEffect(() => {
@@ -97,7 +83,6 @@ export default function App() {
     { key: 'requests', label: `↩️ 配送与退款申请${serviceRequests.filter(r => r.status === 'pending').length ? ` (${serviceRequests.filter(r => r.status === 'pending').length})` : ''}` },
     { key: 'announcements', label: '📣 配送公告' },
     { key: 'users', label: '👥 用户管理' },
-    { key: 'coupons', label: `🎟️ 优惠券活动${couponClaims.filter(c => c.status === 'pending').length ? ` (${couponClaims.filter(c => c.status === 'pending').length})` : ''}` },
     { key: 'categories', label: '🏷️ 分类管理' },
     { key: 'settings', label: '⚙️ 系统设置' },
   ]
@@ -122,7 +107,6 @@ export default function App() {
         {page === 'requests' && <RequestManage requests={serviceRequests} reload={reload} showToast={showToast} />}
         {page === 'announcements' && <AnnouncementManage announcements={announcements} reload={reload} showToast={showToast} />}
         {page === 'users' && <UserManage users={users} authFetch={authFetch} reload={reload} showToast={showToast} adminUser={adminUser} onSelfLogout={handleLogout} onOpenOrder={id => {setOrderToOpen(id);setPage('orders')}} />}
-        {page === 'coupons' && <CouponManage coupons={coupons} claims={couponClaims} users={users} reload={reload} showToast={showToast} />}
         {page === 'categories' && <CategoryManage categories={categories} reload={reload} showToast={showToast} />}
         {page === 'settings' && <SettingsPage authFetch={authFetch} showToast={showToast} />}
       </div>
@@ -322,70 +306,6 @@ function AnnouncementManage({ announcements, reload, showToast }) {
       <p className="announcement-content">{item.content}</p>
       <div className="announcement-actions"><button className="btn btn-default btn-sm" onClick={() => edit(item)}>编辑</button><button className="btn btn-danger btn-sm" onClick={() => remove(item.id)}>删除</button></div>
     </div>)}</div>
-  </div>
-}
-
-function CouponManage({ coupons, claims, users, reload, showToast }) {
-  const [editing, setEditing] = useState(null)
-  const [title, setTitle] = useState('')
-  const [details, setDetails] = useState('')
-  const [translations, setTranslations] = useState({})
-  const [minSpend, setMinSpend] = useState('15')
-  const [discount, setDiscount] = useState('5')
-  const [published, setPublished] = useState(false)
-  const [selectedUser, setSelectedUser] = useState('')
-  const reset = () => { setEditing(null); setTranslations({}); setTitle(''); setDetails(''); setMinSpend('15'); setDiscount('5'); setPublished(false) }
-  const edit = c => { setEditing(c); setTranslations(Object.fromEntries(['title_zh_hk','title_en','details_zh_hk','details_en'].map(k => [k,c[k] || '']))); setTitle(c.title); setDetails(c.details); setMinSpend(String(c.min_spend)); setDiscount(String(c.discount_amount)); setPublished(Boolean(c.is_published)) }
-  const save = async () => {
-    const r = await authFetch(`${API}/admin/coupons`, { method: editing ? 'PUT' : 'POST', body: { id: editing?.id, title, details, ...translations, min_spend: Number(minSpend), discount_amount: Number(discount), is_published: published } })
-    const data = await r.json()
-    showToast(r.ok ? '活动已保存' : data.error || '保存失败')
-    if (r.ok) { reset(); reload() }
-  }
-  const grant = async campaignId => {
-    const r = await authFetch(`${API}/admin/coupons`, { method: 'PATCH', body: { campaign_id: campaignId, user_id: Number(selectedUser) } })
-    const data = await r.json()
-    showToast(r.ok ? (data.already_granted ? '该用户已领取' : '已发给用户') : data.error || '发放失败')
-    if (r.ok) reload()
-  }
-  const review = async (id, decision) => {
-    const note = decision === 'reject' ? (window.prompt('请填写未通过原因，方便用户重新提交') || '') : ''
-    if (decision === 'reject' && !note.trim()) return
-    const r = await authFetch(`${API}/admin/coupon-claims`, { method: 'PUT', body: { id, decision, note } })
-    const data = await r.json()
-    showToast(r.ok ? (decision === 'approve' ? '审核通过，已发券' : '已退回截图') : data.error || '处理失败')
-    if (r.ok) reload()
-  }
-  return <div>
-    <div className="page-header"><h2>优惠券活动</h2></div>
-    <div className="card announcement-editor">
-      <p>任意社交平台均可参与，包括朋友圈、小红书、抖音、Facebook、Instagram、Threads、X 等。请核对单篇分享含团购链接、发布账号和至少 10 个赞；审核通过后发券。每人限领一次，跨平台也不重复发券。</p>
-      <div className="form-row"><label>活动名称 · 简体</label><input value={title} onChange={e => setTitle(e.target.value)} maxLength={100} placeholder="例如：新客活动" /></div>
-      <div className="form-row"><label>活动说明 · 简体</label><textarea value={details} onChange={e => setDetails(e.target.value)} maxLength={2000} rows={4} placeholder="写明优惠金额、门槛、有效期等" /></div>
-      <p>繁體及 English 可留空；空白时显示简体原文，不会自动翻译旧内容。</p>
-      {[['zh_hk','繁體'],['en','English']].map(([code,label]) => <fieldset key={code} className="merchant-language-fields"><legend>{label}（选填）</legend>
-        <div className="form-row"><label>活动名称 · {label}</label><input value={translations[`title_${code}`] || ''} maxLength={100} onChange={e => setTranslations(prev => ({...prev,[`title_${code}`]:e.target.value}))} /></div>
-        <div className="form-row"><label>活动说明 · {label}</label><textarea value={translations[`details_${code}`] || ''} rows={4} maxLength={2000} onChange={e => setTranslations(prev => ({...prev,[`details_${code}`]:e.target.value}))} /></div>
-      </fieldset>)}
-      <div className="form-row"><label>满额（人民币）</label><input type="number" min="0.01" step="0.01" value={minSpend} onChange={e => setMinSpend(e.target.value)} /></div>
-      <div className="form-row"><label>减额（人民币）</label><input type="number" min="0.01" step="0.01" value={discount} onChange={e => setDiscount(e.target.value)} /></div>
-      <label className="publish-toggle"><input type="checkbox" checked={published} onChange={e => setPublished(e.target.checked)} /> 在顾客页面公开活动</label>
-      <div className="announcement-actions"><button className="btn btn-primary" onClick={save}>{editing ? '保存修改' : '创建活动'}</button>{editing && <button className="btn btn-default" onClick={reset}>取消编辑</button>}</div>
-    </div>
-    <h3>截图审核</h3>
-    {claims.filter(q => q.status === 'pending').map(q => <div className="card" key={q.id}>
-      <strong>{q.username}</strong> · {q.title}<p>微信 ID：{q.wechat_id || '—'} · WhatsApp：{q.whatsapp || '—'} · 手机号：{q.phone || '—'}</p><p>提交时间：{q.created_at}</p>
-      {claims.some(other => other.id !== q.id && other.campaign_id === q.campaign_id && other.status !== 'rejected' && ((other.wechat_id && q.wechat_id && other.wechat_id.toLowerCase() === q.wechat_id.toLowerCase()) || [other.phone,other.whatsapp].some(a => [q.phone,q.whatsapp].some(b => matchingPhone(a,b))))) && <p className="coupon-review-warning">提醒：相同联系方式曾用其他账号提交此活动，请核对后再发券。</p>}
-      {claims.some(other => other.id !== q.id && other.campaign_id === q.campaign_id && other.status !== 'rejected' && other.screenshot === q.screenshot) && <p className="coupon-review-warning">提醒：这张截图曾用于其他账号，请核对后再发券。</p>}
-      <img src={q.screenshot} alt="社交平台集赞截图" style={{ display: 'block', maxWidth: 280, maxHeight: 440, objectFit: 'contain', margin: '10px 0' }} />
-      <div className="announcement-actions"><button className="btn btn-primary btn-sm" onClick={() => review(q.id, 'approve')}>确认至少 10 赞并发券</button><button className="btn btn-default btn-sm" onClick={() => review(q.id, 'reject')}>未达要求，退回</button></div>
-    </div>)}
-    {!claims.some(q => q.status === 'pending') && <div className="card">暂无待审核截图</div>}
-    <div className="card"><label>发券给用户 </label><select value={selectedUser} onChange={e => setSelectedUser(e.target.value)}><option value="">请选择用户</option>{users.map(u => <option key={u.id} value={u.id}>{u.username} · #{u.id}</option>)}</select></div>
-    {coupons.map(c => <div className="card" key={c.id}>
-      <strong>{c.title}</strong> · 满 ¥{c.min_spend} 减 ¥{c.discount_amount} <span className="tag">{c.is_published ? '已公开' : '未公开'}</span><p>{c.details || '尚未填写活动规则'}</p><p>已发给 {c.grant_count} 位用户</p>
-      <div className="announcement-actions"><button className="btn btn-default btn-sm" onClick={() => edit(c)}>编辑活动</button><button className="btn btn-primary btn-sm" disabled={!selectedUser} onClick={() => grant(c.id)}>发给所选用户</button></div>
-    </div>)}
   </div>
 }
 
@@ -782,7 +702,6 @@ function OrderManage({ orders, reload, showToast, initialOrderId }) {
                     </div>
                   ))}
                   <div className="order-detail-item"><span>商品小计</span><span>¥{detail.items?.reduce((sum, i) => sum + Number(i.price) * Number(i.quantity), 0).toFixed(2)}</span></div>
-                  {Number(detail.coupon_discount) > 0 && <div className="order-detail-item"><span>优惠券</span><span>−¥{Number(detail.coupon_discount).toFixed(2)}</span></div>}
                   <div className="order-detail-item"><span>运费</span><span>¥{Number(detail.delivery_fee || 0).toFixed(2)}</span></div>
                   <div className="order-detail-item" style={{ borderTop: '1px solid #e8e8e8', marginTop: 8, paddingTop: 10, fontWeight: 600 }}>
                     <span>应收（含运费）</span><span style={{ color: '#ff4444' }}>{orderPaymentText(detail)}</span>

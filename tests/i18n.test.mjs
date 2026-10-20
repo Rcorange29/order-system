@@ -10,7 +10,6 @@ test('all customer interface keys have three complete translations and matching 
  const keys=Object.keys(langPack.zh_CN).sort()
  for(const lang of ['zh_HK','en'])assert.deepEqual(Object.keys(langPack[lang]).sort(),keys)
  for(const key of keys){const slots=value=>[...value.matchAll(/\{(\w+)\}/g)].map(m=>m[1]).sort();for(const lang of ['zh_CN','zh_HK','en']){assert.equal(typeof langPack[lang][key],'string');assert(langPack[lang][key].trim(),`${lang}/${key}`);assert.deepEqual(slots(langPack[lang][key]),slots(langPack.zh_CN[key]),`${lang}/${key}`)}assert(!/[\u3400-\u9fff]/.test(langPack.en[key]),`Chinese UI in English: ${key}`)}
- assert.equal(translate('en','couponValue',{min:'¥15',discount:'¥5'}),'¥5 off ¥15')
 })
 test('customer components have no untranslated CJK UI literals and every static t() key exists',()=>{
  const source=readFileSync(new URL('../src/client/App.jsx',import.meta.url),'utf8')

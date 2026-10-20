@@ -7,8 +7,6 @@ import {onRequest as orders} from '../functions/api/orders.js'
 import {onRequest as upload} from '../functions/api/orders/upload-proof.js'
 import {onRequest as adminOrder} from '../functions/api/admin/orders/[id].js'
 import {onRequest as announcement} from '../functions/api/announcements.js'
-import {onRequest as adminCoupons} from '../functions/api/admin/coupons.js'
-import {onRequest as coupons} from '../functions/api/coupons.js'
 import {onRequest as serviceRequest} from '../functions/api/orders/request.js'
 import {onRequest as manageRequest} from '../functions/api/admin/order-requests.js'
 import {localizedContent} from '../src/client/i18n.js'
@@ -48,27 +46,6 @@ test('merchant translations save independently, public APIs include all language
  assert.equal((await call(announcement,'PUT',{...input,id:data[0].id,title_en:'',content_zh_hk:'  '})).status,200)
  data=await(await call(announcement,'GET',null,'guest')).json();assert.equal(localizedContent(data[0],'title','en'),'原文标题');assert.equal(localizedContent(data[0],'content','zh_HK'),'原文正文');assert.equal(localizedContent(data[0],'content','en'),'Collect tomorrow.')
  assert.equal((await call(announcement,'POST',{...input,title_en:'x'.repeat(101)})).status,400)
- const campaign={title:'商家活动原文',details:'不自动翻译旧内容',details_zh_hk:'商戶輸入內容',details_en:'Merchant-written offer details.',min_spend:15,discount_amount:5,is_published:true}
- const created=await(await call(adminCoupons,'POST',campaign)).json();const publicCoupons=await(await call(coupons,'GET',null,'guest')).json();const c=publicCoupons.campaigns.find(c=>c.id===created.id);assert.equal(localizedContent(c,'details','en'),campaign.details_en);assert.equal(localizedContent(c,'title','en'),campaign.title)
- assert.equal((await call(adminCoupons,'PUT',{...campaign,id:created.id,details_en:''})).status,200);const stored=sqlite.prepare('SELECT * FROM coupon_campaigns WHERE id=?').get(created.id);assert.equal(stored.details,campaign.details);assert.equal(localizedContent(stored,'details','en'),campaign.details)
  assert.equal((await call(announcement,'POST',input,'guest')).status,403)
- sqlite.close()
-})
-
-test('WeChat-only account can submit a social screenshot, receive one reviewed coupon and use it at checkout',async()=>{
- const{sqlite,call}=await setup()
- const account=await(await call(register,'POST',{username:'coupon_student',password:'CustomerTest!123',wechat_id:'coupon_student',phone:'',whatsapp:''})).json()
- const claim=await call(coupons,'POST',{campaign_id:1,screenshot:proof},account.token);assert.equal(claim.status,201)
- const {onRequest:review}=await import('../functions/api/admin/coupon-claims.js')
- const pending=await(await call(review)).json();assert.equal(pending.length,1);assert.equal(pending[0].wechat_id,'coupon_student');assert.equal(pending[0].phone,'')
- assert.equal((await call(coupons,'POST',{campaign_id:1,screenshot:proof},account.token)).status,409)
- assert.equal((await call(review,'PUT',{id:pending[0].id,decision:'approve'})).status,200)
- assert.equal((await call(review,'PUT',{id:pending[0].id,decision:'approve'})).status,409)
- assert.equal((await call(coupons,'POST',{campaign_id:1,screenshot:proof},account.token)).status,409)
- const available=await(await call(coupons,'GET',null,account.token)).json();assert.equal(available.grants.length,1)
- sqlite.exec("INSERT INTO products(id,name,price,is_active) VALUES(1,'QA product',15,1)")
- const response=await call(orders,'POST',{items:[{product_id:1,quantity:1}],delivery_type:'pickup',delivery_point_id:2,payment_method:'wechat_transfer',payment_currency:'CNY',coupon_grant_id:available.grants[0].id,expected_cny_total:10,expected_payment_amount:10},account.token)
- assert.equal(response.status,201);const order=await response.json();assert.equal(order.total,10);assert.equal(order.coupon_discount,5);assert.equal(order.delivery_fee,0)
- assert.equal(sqlite.prepare('SELECT used_order_no FROM coupon_grants WHERE id=?').get(available.grants[0].id).used_order_no,order.order_no)
  sqlite.close()
 })

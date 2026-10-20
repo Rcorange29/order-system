@@ -25,8 +25,8 @@
 | **Dual Currency** | Display in ¥CNY or HK$; exchange rate adjustable in the admin dashboard |
 | **Group Delivery** | Pickup points with free self-collection; consolidated delivery once the point threshold is met; home delivery +¥30 |
 | **Transfer Payment** | WeChat Pay / Alipay (CNY) and FPS (HKD). Upload a payment screenshot for manual confirmation |
-| **Marketing** | Share-and-like coupon campaign; admin review; point-targeted delivery announcements |
-| **Admin Dashboard** | Product / order / user / announcement / coupon / exchange-rate management; order state machine & refund/delivery-upgrade approvals |
+| **Announcements & Contact** | Point-targeted delivery announcements; WeChat / WhatsApp / FPS contacts with one-tap copy |
+| **Admin Dashboard** | Product / order / user / announcement / exchange-rate management; order state machine & refund/delivery-upgrade approvals |
 
 ## Tech Stack
 
@@ -55,7 +55,7 @@ flowchart LR
         F2[Static Assets + CDN Cache<br/>dist/]
     end
     subgraph Data["Cloudflare D1 (SQLite)"]
-        D1[(users, orders, products,<br/>categories, delivery_points,<br/>coupon_*, announcements,<br/>order_requests)]
+        D1[(users, orders, products,<br/>categories, delivery_points,<br/>announcements, order_requests)]
     end
     C1 -->|HTTPS /api/*| F1
     C2 -->|HTTPS /api/*| F1
@@ -68,15 +68,11 @@ flowchart LR
 ```mermaid
 erDiagram
     users ||--o{ orders : places
-    users ||--o{ coupon_grants : receives
-    users ||--o{ coupon_claims : claims
     orders ||--|{ order_items : contains
     orders ||--o| order_requests : has
     products }o--|| categories : belongs_to
     orders }o--|| delivery_points : pickup_at
     announcements }o--|| delivery_points : targets
-    coupon_campaigns ||--o{ coupon_grants : issues
-    coupon_campaigns ||--o{ coupon_claims : reviews
 ```
 
 ## Directory Structure
@@ -96,8 +92,6 @@ order-system/
 │   │   ├── order-requests.js
 │   │   ├── users.js
 │   │   ├── users/[id].js
-│   │   ├── coupons.js
-│   │   ├── coupon-claims.js
 │   │   └── settings.js         # Exchange-rate CRUD
 │   ├── categories.js
 │   ├── categories/[id].js
@@ -112,7 +106,6 @@ order-system/
 │   ├── me.js
 │   ├── stats.js                # Group-progress per pickup point
 │   ├── announcements.js
-│   ├── coupons.js              # Customer coupon list & claim
 │   ├── delivery-points.js
 │   ├── settings.js
 │   ├── seed-products.js
@@ -204,7 +197,6 @@ npm run deploy
 | **Payment method ↔ currency** | WeChat Pay / Alipay → CNY only. FPS → HKD only. |
 | **Order status flow** | `pending` → `awaiting_confirmation` → `paid` → `shipped` → `completed`. Cancellation requires refund if already paid. |
 | **Refund / upgrade** | Only pickup orders with `paid` + `confirmed` payment may request a refund or upgrade to home delivery (+¥30). The owner handles payment offline and confirms in the dashboard. |
-| **Coupon** | One claim per campaign per user. Admin reviews screenshots before approval. |
 | **Payment proof** | PNG / JPEG / WebP, max 1 MB. Cannot be re-uploaded after confirmation. |
 
 ## Testing
@@ -242,7 +234,7 @@ The production database is separate from the local one; use `--remote` with Wran
 - **Product / category / pickup-point names** are translated via front-end mapping tables (`productNameMap`, `categoryNameMap`, `pointNameMap` in `src/client/App.jsx`), not by a real-time translation service.
 - **Announcements** appear on the customer home page but are **not** automatically pushed to WeChat groups.
 - **Inventory (`stock`)** is advisory; the system does not lock stock at checkout.
-- Some features (exchange-rate updates, point-specific announcements, coupon approvals) require the app to be deployed to Cloudflare and connected to a live D1 database.
+- Some features (exchange-rate updates, point-specific announcements) require the app to be deployed to Cloudflare and connected to a live D1 database.
 
 ## License
 
@@ -277,8 +269,8 @@ This project does not currently include an open-source license. All rights reser
 | **双币种显示** | ¥CNY / HK$ 展示，后台可调汇率 |
 | **拼单配送** | 自取免运费；按点凑满门槛统一配送；送货到家 ¥30；UST 学生点满 ¥500 |
 | **转账支付** | 微信/支付宝（CNY）、转数快 FPS（HKD），上传付款凭证截图人工确认 |
-| **营销工具** | 分享集赞领券、后台审核、按自取点定向配送公告 |
-| **管理后台** | 商品/订单/用户/公告/优惠券/汇率管理；订单状态机与退款/加配送申请审批 |
+| **公告与联系** | 按自取点定向配送公告；微信/WhatsApp/转数快联系方式一键复制 |
+| **管理后台** | 商品/订单/用户/公告/汇率管理；订单状态机与退款/加配送申请审批 |
 
 ## 技术栈
 
@@ -307,7 +299,7 @@ flowchart LR
         F2[静态资源 + CDN 缓存<br/>dist/]
     end
     subgraph Data["Cloudflare D1 (SQLite)"]
-        D1[(users, orders, products,<br/>categories, delivery_points,<br/>coupon_*, announcements,<br/>order_requests)]
+        D1[(users, orders, products,<br/>categories, delivery_points,<br/>announcements, order_requests)]
     end
     C1 -->|HTTPS /api/*| F1
     C2 -->|HTTPS /api/*| F1
@@ -320,15 +312,11 @@ flowchart LR
 ```mermaid
 erDiagram
     users ||--o{ orders : places
-    users ||--o{ coupon_grants : receives
-    users ||--o{ coupon_claims : claims
     orders ||--|{ order_items : contains
     orders ||--o| order_requests : has
     products }o--|| categories : belongs_to
     orders }o--|| delivery_points : pickup_at
     announcements }o--|| delivery_points : targets
-    coupon_campaigns ||--o{ coupon_grants : issues
-    coupon_campaigns ||--o{ coupon_claims : reviews
 ```
 
 ## 目录结构
@@ -348,8 +336,6 @@ order-system/
 │   │   ├── order-requests.js
 │   │   ├── users.js
 │   │   ├── users/[id].js
-│   │   ├── coupons.js
-│   │   ├── coupon-claims.js
 │   │   └── settings.js         # 汇率增删改查
 │   ├── categories.js
 │   ├── categories/[id].js
@@ -364,7 +350,6 @@ order-system/
 │   ├── me.js
 │   ├── stats.js                # 各点拼单进度
 │   ├── announcements.js
-│   ├── coupons.js              # 顾客优惠券列表与领取
 │   ├── delivery-points.js
 │   ├── settings.js
 │   ├── seed-products.js
@@ -456,7 +441,6 @@ npm run deploy
 | **支付方式与币种对应** | 微信/支付宝仅支持 CNY；转数快 FPS 仅支持 HKD。 |
 | **订单状态流** | `pending` → `awaiting_confirmation` → `paid` → `shipped` → `completed`。已收款订单取消须先退款。 |
 | **退款 / 加配送** | 仅“已确认收款、待统一配送”的自取订单可申请。退款由店主线下退还后在后台标记；加配送额外收取 ¥30，线下支付后后台确认。 |
-| **优惠券** | 每人每活动限领一次，后台审核截图后发放。 |
 | **付款凭证** | 限 PNG / JPEG / WebP，最大 1 MB；确认收款后不可再次上传。 |
 
 ## 测试说明
@@ -494,7 +478,7 @@ npm run deploy
 - **商品名、分类名、自取点名**的多语言展示由前端译名表映射（`productNameMap`、`categoryNameMap`、`pointNameMap`），非后端实时翻译。
 - **网站公告**仅在前端展示，不会自动发送到微信群。
 - **库存（`stock`）**为参考值，系统目前不在下单时锁定库存。
-- 部分功能（汇率调整、按点公告、优惠券审批）需要部署到 Cloudflare 并连接线上 D1 后才生效。
+- 部分功能（汇率调整、按点公告）需要部署到 Cloudflare 并连接线上 D1 后才生效。
 
 ## 许可证
 

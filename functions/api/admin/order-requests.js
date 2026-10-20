@@ -40,9 +40,6 @@ export async function onRequest({ request, env }) {
     const markRequest = env.DB.prepare("UPDATE order_requests SET status = 'approved', admin_note = ?, handled_by = ?, handled_at = datetime('now', '+8 hours') WHERE id = ? AND status = 'pending'")
       .bind(note, admin.id, id)
     const statements = [updateOrder, markRequest]
-    if (entry.type === 'refund') {
-      statements.push(env.DB.prepare("UPDATE coupon_grants SET used_order_no = NULL, used_at = NULL WHERE used_order_no = (SELECT order_no FROM orders WHERE id = ?) ").bind(entry.order_id))
-    }
     await env.DB.batch(statements)
   } else {
     await env.DB.prepare("UPDATE order_requests SET status = 'rejected', admin_note = ?, handled_by = ?, handled_at = datetime('now', '+8 hours') WHERE id = ? AND status = 'pending'")

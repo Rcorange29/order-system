@@ -84,24 +84,12 @@ export async function onRequest(context) {
   // 自取点订单始终免运费；门槛只决定该点何时统一配送。
   const deliveryFee = point ? 0 : 30
 
-  let coupon = null
-  let discountCents = 0
-  if (body.coupon_grant_id !== undefined && body.coupon_grant_id !== null) {
-    const grantId = Number(body.coupon_grant_id)
-    if (!Number.isInteger(grantId) || grantId <= 0) return json({ error: '优惠券无效' }, 400)
-    coupon = await env.DB.prepare('SELECT g.id, c.min_spend, c.discount_amount FROM coupon_grants g JOIN coupon_campaigns c ON c.id = g.campaign_id WHERE g.id = ? AND g.user_id = ? AND g.used_order_no IS NULL').bind(grantId, user.id).first()
-    if (!coupon) return json({ error: '优惠券不存在或已使用' }, 409)
-    if (subtotalCents < cents(Number(coupon.min_spend))) return json({ error: `商品金额需满 ¥${coupon.min_spend} 才能使用此券` }, 400)
-    discountCents = cents(Number(coupon.discount_amount))
-    if (!validMoney(Number(coupon.discount_amount)) || discountCents >= subtotalCents) return json({ error: '优惠券配置有误' }, 500)
-  }
-
   const dbUser = await env.DB.prepare('SELECT username, phone, wechat_id, whatsapp FROM users WHERE id = ?').bind(user.id).first()
   if (!body.phone && !dbUser?.phone && !dbUser?.wechat_id && !dbUser?.whatsapp) return json({ code: 'CONTACT_REQUIRED' }, 400)
   const rateRow = paymentCurrency === 'HKD' ? await env.DB.prepare("SELECT value FROM settings WHERE key = 'exchange_rate'").first() : null
   const exchangeRate = Number(rateRow?.value || 1.2)
   if (!Number.isFinite(exchangeRate) || exchangeRate <= 0 || exchangeRate > 100) return json({ error: '汇率设置无效' }, 500)
-  const amountCents = subtotalCents - discountCents + cents(deliveryFee)
+  const amountCents = subtotalCents + cents(deliveryFee)
   const paymentAmount = Math.round(amountCents * (paymentCurrency === 'HKD' ? exchangeRate : 1)) / 100
   if (body.expected_cny_total !== undefined && cents(Number(body.expected_cny_total)) !== amountCents) return json({ error: '商品价格已更新，请刷新页面后重新确认金额' }, 409)
   if (body.expected_payment_amount !== undefined && cents(Number(body.expected_payment_amount)) !== cents(paymentAmount)) return json({ error: '汇率或金额已更新，请刷新页面后重新确认金额' }, 409)
@@ -112,8 +100,8 @@ export async function onRequest(context) {
   ).bind(
     orderNo, String(user.id), String(body.customer || dbUser?.username || '').trim(),
     normalizeContactPhone(body.phone || dbUser?.phone || '') || '', String(body.address || '').trim(),
-    'pending', (subtotalCents - discountCents) / 100, deliveryFee, String(body.remark || ''),
-    body.payment_method, 'pending', point?.id || null, discountCents / 100, coupon?.id || null, paymentCurrency, paymentAmount, dbUser?.wechat_id || '', dbUser?.whatsapp || ''
+    'pending', subtotalCents / 100, deliveryFee, String(body.remark || ''),
+    body.payment_method, 'pending', point?.id || null, 0, null, paymentCurrency, paymentAmount, dbUser?.wechat_id || '', dbUser?.whatsapp || ''
   )]
   for (const item of items) {
     statements.push(env.DB.prepare(
@@ -121,14 +109,9 @@ export async function onRequest(context) {
     ).bind(orderNo, item.product_id, item.quantity, item.price, item.variant))
   }
   statements.push(env.DB.prepare('INSERT INTO order_numbers (order_id) VALUES ((SELECT id FROM orders WHERE order_no = ?))').bind(orderNo))
-  if (coupon) {
-    const reserved = await env.DB.prepare("UPDATE coupon_grants SET used_order_no = ?, used_at = datetime('now', '+8 hours') WHERE id = ? AND user_id = ? AND used_order_no IS NULL").bind(orderNo, coupon.id, user.id).run()
-    if (reserved.meta.changes !== 1) return json({ error: '优惠券已被使用，请刷新后重试' }, 409)
-  }
   try {
     await env.DB.batch(statements)
   } catch (error) {
-    if (coupon) await env.DB.prepare('UPDATE coupon_grants SET used_order_no = NULL, used_at = NULL WHERE id = ? AND used_order_no = ?').bind(coupon.id, orderNo).run()
     throw error
   }
   const order = await env.DB.prepare(

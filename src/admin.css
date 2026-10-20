@@ -245,7 +245,6 @@ tr:hover { background: #fafafa; }
 .btn-primary:hover { background: #105536; }
 .main-content { background: #f4f7f2; }
 .card, .stat-card { border: 1px solid var(--admin-line); box-shadow: none; }
-.coupon-review-warning { margin: 10px 0; padding: 9px 11px; background: #fff3e5; border-left: 3px solid #d7782b; color: #754011; font-size: 13px; line-height: 1.5; }
 .duplicate-phone-note { display: block; color: #a75b26; font-size: 11px; }
 .request-list, .announcement-list { display: grid; gap: 12px; }
 .request-card p, .announcement-list p, .announcement-editor p { margin-top: 7px; color: #53645a; font-size: 13px; line-height: 1.5; }

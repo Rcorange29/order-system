@@ -231,16 +231,7 @@ export default function App() {
   const [showHelp, setShowHelp] = useState(false)
   const [showContact, setShowContact] = useState(false)
   const [showRefund, setShowRefund] = useState(false)
-  const [couponData, setCouponData] = useState({ campaigns: [], grants: [], claims: [] })
-  const [couponLoading, setCouponLoading] = useState(false)
-  const [couponError, setCouponError] = useState(false)
-  const [showActivity, setShowActivity] = useState(false)
   const [showBrand, setShowBrand] = useState(false)
-  const [showActivityReturnGuide, setShowActivityReturnGuide] = useState(false)
-  const [activityProofFile, setActivityProofFile] = useState(null)
-  const [returnToActivityAfterLogin, setReturnToActivityAfterLogin] = useState(false)
-  const [claimUploading, setClaimUploading] = useState(false)
-  const [selectedCouponId, setSelectedCouponId] = useState('')
   const [lang, setLang] = useState(() => storage.getItem('lang') || 'zh_CN')
   const [currency, setCurrency] = useState(() => storage.getItem('currency') || '')
   const [paymentCurrency, setPaymentCurrency] = useState('CNY')
@@ -250,7 +241,6 @@ export default function App() {
 
   const t = (key, values) => translate(lang, key, values)
   const content = (record, field) => localizedContent(record, field, lang)
-  const shareText = t('shareCopy', { url: GROUP_BUY_URL })
   const fmt = (rmbPrice) => {
     const n = Number(rmbPrice) || 0
     if (currency === 'HKD') return 'HK$' + (n * exchangeRate).toFixed(2)
@@ -361,24 +351,13 @@ export default function App() {
     fetch(`${API}/categories`).then(r => r.json()).then(setCategories)
     fetch(`${API}/settings`).then(r => r.json()).then(d => setExchangeRate(d.exchange_rate || 1.2)).catch(()=>{})
     if (!storage.getItem('currency')) setShowOnboard(true)
-    if (new URLSearchParams(window.location.search).get('activity') === 'share') setShowActivity(true)
   }, [])
 
   useEffect(() => {
     if (bannerPaused) return
-    const t = setInterval(() => setBannerIdx(i => (i + 1) % 3), 6500)
+    const t = setInterval(() => setBannerIdx(i => (i + 1) % 2), 6500)
     return () => clearInterval(t)
   }, [bannerPaused])
-
-  const loadCoupons = () => {
-    setCouponLoading(true)
-    setCouponError(false)
-    return authFetch(`${API}/coupons`)
-      .then(r => { if (!r.ok) throw new Error(t('copy005')); return r.json() })
-      .then(data => { setCouponData(data); setCouponLoading(false) })
-      .catch(() => { setCouponError(true); setCouponLoading(false) })
-  }
-  useEffect(() => { if (tab === 'coupons' || showActivity || showCheckout) loadCoupons() }, [tab, showActivity, showCheckout, currentUser])
 
   // 加载配送点列表
   useEffect(() => {
@@ -446,59 +425,6 @@ export default function App() {
     }
   }
 
-  const openActivity = () => {
-    setShowActivityReturnGuide(false)
-    setShowActivity(true)
-    const url = new URL(window.location.href)
-    url.searchParams.set('activity', 'share')
-    window.history.replaceState({}, '', url)
-  }
-
-  const closeActivity = () => {
-    if (claimUploading) { showToast(t('copy007')); return }
-    setShowActivity(false)
-    const url = new URL(window.location.href)
-    url.searchParams.delete('activity')
-    window.history.replaceState({}, '', url)
-    const hasClaim = activityCampaign && couponData.claims.some(c => Number(c.campaign_id) === Number(activityCampaign.id) && c.status !== 'rejected')
-    if (!hasClaim) setShowActivityReturnGuide(true)
-  }
-
-  const submitCouponScreenshot = async (file) => {
-    if (!file || !activityCampaign || claimUploading) return
-    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) { showToast(t('copy008')); return }
-    setClaimUploading(true)
-    try {
-      const screenshot = await new Promise((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onerror = () => reject(new Error(t('copy009')))
-        reader.onload = () => {
-          const img = new Image()
-          img.onerror = () => reject(new Error(t('copy010')))
-          img.onload = () => {
-            const canvas = document.createElement('canvas')
-            const scale = Math.min(1, 1400 / Math.max(img.width, img.height))
-            canvas.width = Math.round(img.width * scale)
-            canvas.height = Math.round(img.height * scale)
-            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
-            let data = canvas.toDataURL('image/jpeg', 0.75)
-            if (data.length > 1300000) data = canvas.toDataURL('image/jpeg', 0.5)
-            if (data.length > 1300000) return reject(new Error(t('copy003')))
-            resolve(data)
-          }
-          img.src = reader.result
-        }
-        reader.readAsDataURL(file)
-      })
-      const response = await authFetch(`${API}/coupons`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ campaign_id: activityCampaign.id, screenshot }) })
-      const result = await response.json()
-      if (!response.ok) throw new Error(apiError(t, result))
-      setActivityProofFile(null)
-      await loadCoupons()
-      showToast(t('copy012'))
-    } catch (error) { showToast(error.message) }
-    finally { setClaimUploading(false) }
-  }
 
   const toggleFavorite = (id) => {
     setFavorites(prev => {
@@ -550,12 +476,9 @@ export default function App() {
     })
     .filter(item => item.product)
   const cartTotal = cartItems.reduce((sum, item) => sum + item.variantPrice * item.qty, 0)
-  const selectedCoupon = couponData.grants.find(g => String(g.id) === String(selectedCouponId) && !g.used_order_no && cartTotal >= Number(g.min_spend))
-  const couponDiscount = selectedCoupon ? Number(selectedCoupon.discount_amount) : 0
-  const activityCampaign = couponData.campaigns.find(c => Number(c.id) === 1) || couponData.campaigns[0]
   const currentPoint = deliveryPoints.find(p => p.id == selectedPointId)
   const effectiveFee = deliveryType === 'delivery' ? 30 : 0
-  const checkoutCnyTotal = cartTotal + effectiveFee - couponDiscount
+  const checkoutCnyTotal = cartTotal + effectiveFee
   const checkoutPayAmount = paymentCurrency === 'HKD' ? Math.round(checkoutCnyTotal * exchangeRate * 100) / 100 : checkoutCnyTotal
   const effectiveThreshold = stats?.threshold || 1000
   const effectiveReached = stats ? stats.confirmed_total >= effectiveThreshold : false
@@ -618,7 +541,6 @@ export default function App() {
         expected_payment_amount: checkoutPayAmount,
         delivery_type: deliveryType,
         delivery_point_id: deliveryType === 'pickup' ? selectedPointId : null,
-        coupon_grant_id: selectedCoupon?.id || null,
         items: cartItems.map(item => ({ product_id: item.product.id, quantity: item.qty, variant: item.variantLabel || '' }))
       })
     })
@@ -628,8 +550,6 @@ export default function App() {
       setCart({})
       setShowCheckout(false)
       setRemark('')
-      setSelectedCouponId('')
-      loadCoupons()
       authFetch(`${API}/orders`).then(r => r.ok ? r.json() : []).then(setOrders)
       setPaidOrderNo(displayOrderNo(data))
       setPaidOrderAmount(Number(data.payment_amount ?? (Number(data.total) + Number(data.delivery_fee || 0))))
@@ -656,11 +576,7 @@ export default function App() {
     const { token, ...account } = data
     storage.setItem('currentUser', JSON.stringify(account))
     setCurrentUser(account)
-    if (returnToActivityAfterLogin) {
-      setReturnToActivityAfterLogin(false)
-      setTab('home')
-      openActivity()
-    } else setTab('my')
+    setTab('my')
     showToast(t('copy021'))
   }
 
@@ -676,11 +592,7 @@ export default function App() {
     const { token, ...account } = data
     storage.setItem('currentUser', JSON.stringify(account))
     setCurrentUser(account)
-    if (returnToActivityAfterLogin) {
-      setReturnToActivityAfterLogin(false)
-      setTab('home')
-      openActivity()
-    } else setTab('my')
+    setTab('my')
     showToast(t('copy022'))
   }
 
@@ -726,7 +638,6 @@ export default function App() {
     setPaymentCurrency(currency || 'CNY')
     setPaymentMethod(currency === 'HKD' ? 'fps_transfer' : 'wechat_transfer')
     setShowCart(false)
-    setCouponLoading(true)
     setShowCheckout(true)
   }
 
@@ -861,10 +772,10 @@ export default function App() {
         <>
           <div className="banner">
             <div className={`hero-poster hero-poster-${bannerIdx}`} role="button" tabIndex={0}
-              aria-label={bannerIdx === 0 ? t('copy034') : bannerIdx === 1 ? t('copy035') : t('copy036')}
+              aria-label={bannerIdx === 0 ? t('copy034') : t('copy035')}
               onPointerDown={() => setBannerPaused(true)} onFocus={() => setBannerPaused(true)}
-              onClick={() => { if (bannerIdx === 0) setShowHelp(true); else if (bannerIdx === 1) setShowBrand(true); else openActivity() }}
-              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (bannerIdx === 0) setShowHelp(true); else if (bannerIdx === 1) setShowBrand(true); else openActivity() } }}>
+              onClick={() => { if (bannerIdx === 0) setShowHelp(true); else setShowBrand(true) }}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (bannerIdx === 0) setShowHelp(true); else setShowBrand(true) } }}>
               {bannerIdx === 0 && <>
                 <div className="hero-message">
                   <span className="hero-kicker">{t('inline6')}</span>
@@ -888,22 +799,9 @@ export default function App() {
                 </div>
                 <div className="hero-visual hero-visual-produce" aria-hidden="true"><img src="/images/market-hero.jpg" alt="" /></div>
               </>}
-              {bannerIdx === 2 && <>
-                <div className="hero-message">
-                  <span className="hero-kicker">{t('inline14')}</span>
-                  <h2>{t('inline15')}</h2>
-                  <p>{t('inline16')}</p>
-                  <span className="hero-link">{t('inline17')} <span aria-hidden="true">↗</span></span>
-                </div>
-                <div className="hero-visual hero-visual-coupon" aria-label={lang === 'en' ? `${activityCampaign?.discount_amount || 5} CNY off when spending ${activityCampaign?.min_spend || 15} CNY` : t('copy037', { '0': activityCampaign?.min_spend || 15, '1': activityCampaign?.discount_amount || 5 })}>
-                  <span>{t('inline18')}</span>
-                  <strong><small>¥</small>{activityCampaign?.discount_amount || 5}</strong>
-                  <em>{t('inline19', { '0': activityCampaign?.min_spend || 15 })}</em>
-                </div>
-              </>}
             </div>
             <div className="hero-tabs" aria-label={t('inline20')}>
-              {[t('posterPickup'), t('posterProduce'), t('posterCoupon')].map((label, index) => (
+              {[t('posterPickup'), t('posterProduce')].map((label, index) => (
                 <button type="button" key={label} className={bannerIdx === index ? 'active' : ''} aria-pressed={bannerIdx === index} onClick={() => { setBannerPaused(true); setBannerIdx(index) }}>{label}</button>
               ))}
             </div>
@@ -921,10 +819,6 @@ export default function App() {
             onClick={() => setShowHelp(true)}>
             <span>{t('deliveryRule')}</span>
             <span>{t('details')}</span>
-          </div>
-
-          <div className="activity-strip" onClick={openActivity} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') openActivity() }}>
-            <span>{t('shareStrip', { amount: fmt(activityCampaign?.discount_amount || 5) })}</span><span>{t('copy040')}</span>
           </div>
 
           {/* 凑单进度条 */}
@@ -989,15 +883,6 @@ export default function App() {
         </>
       )}
 
-      {tab === 'coupons' && (
-        <div className="coupon-page">
-          <div className="back-btn" onClick={() => setTab('my')}>{t('copy027')}</div>
-          <h2>{t('copy049')}</h2>
-          {couponData.campaigns.length ? couponData.campaigns.map(c => <div className="coupon-card coupon-action" key={c.id} onClick={openActivity}><strong>{content(c, 'title')}</strong><p>{t('campaignSummary', { min: fmt(c.min_spend), discount: fmt(c.discount_amount) })}</p><small>{t('copy050')}</small></div>) : <div className="coupon-card"><strong>{t('copy051')}</strong></div>}
-          <h3>{t('copy052')}</h3>
-          {!currentUser ? <p className="coupon-empty" onClick={() => setTab('login')}>{t('copy053')}</p> : couponData.grants.length ? couponData.grants.map(g => <div className="coupon-card" key={g.id}><strong>{t('couponValue', { min: fmt(g.min_spend), discount: fmt(g.discount_amount) })}</strong><p>{content(g, 'title')}</p><small>{g.used_order_no ? t('copy054') : t('copy055')} {t('copy056')}{g.granted_at}</small></div>) : <p className="coupon-empty">{t('copy057')}</p>}
-        </div>
-      )}
 
       {tab === 'messages' && (
         <div className="messages-page">
@@ -1130,11 +1015,6 @@ export default function App() {
                 <div className="my-card">
                   <div className="my-menu-item" onClick={() => { markNoticesRead(); setTab('messages') }}>
                     <span className="icon">📣</span><span className="text">{t('copy058')} {unreadNotices.length > 0 && <span className="notice-dot" aria-label={t('copy044', { '0': unreadNotices.length })}>{unreadNotices.length > 99 ? '99+' : unreadNotices.length}</span>}</span><span className="arrow">›</span>
-                  </div>
-                  <div className="my-menu-item" onClick={() => setTab('coupons')}>
-                    <span className="icon">🎟️</span>
-                    <span className="text">{t('coupons')}</span>
-                    <span className="arrow">›</span>
                   </div>
                   <div className="my-menu-item" onClick={() => setTab('favorites')}>
                     <span className="icon">❤️</span>
@@ -1302,17 +1182,6 @@ export default function App() {
               <input value={remark} onChange={e => setRemark(e.target.value)} placeholder={t('copy078')} />
             </div>
             <div className="form-group">
-              <label>{t('copy079')}</label>
-              {couponLoading ? <div className="checkout-coupon-empty">{t('copy080')}</div>
-                : couponError ? <div className="checkout-coupon-empty">{t('copy081')} <button type="button" onClick={loadCoupons}>{t('copy082')}</button></div>
-                  : couponData.grants.some(g => !g.used_order_no && cartTotal >= Number(g.min_spend)) ? <select value={selectedCoupon ? selectedCouponId : ''} onChange={e => setSelectedCouponId(e.target.value)} style={{ width: '100%', padding: 10, border: '1px solid #ddd', background: '#fff' }}>
-                    <option value="">{t('copy083')}</option>
-                    {couponData.grants.filter(g => !g.used_order_no && cartTotal >= Number(g.min_spend)).map(g => <option key={g.id} value={g.id}>{t('couponValue', { min: fmt(g.min_spend), discount: fmt(g.discount_amount) })}</option>)}
-                  </select> : <div className="checkout-coupon-empty">{t('copy084')}</div>}
-              {!couponLoading && !couponError && couponData.grants.some(g => !g.used_order_no && cartTotal < Number(g.min_spend)) && <small style={{ color: '#777' }}>{t('copy085')}</small>}
-              {!couponLoading && !couponError && !couponData.grants.some(g => !g.used_order_no && cartTotal >= Number(g.min_spend)) && <button type="button" className="checkout-activity-link" onClick={openActivity}>{t('joinCoupon', { min: fmt(activityCampaign?.min_spend || 15), discount: fmt(activityCampaign?.discount_amount || 5) })}</button>}
-            </div>
-            <div className="form-group">
               <label>{t('copy086')}</label>
               <div className="payment-currency-choices">
                 <button type="button" className={paymentCurrency === 'CNY' ? 'selected' : ''} onClick={() => { setPaymentCurrency('CNY'); setPaymentMethod('wechat_transfer') }}><span>{t('copy087')}</span><strong>¥{checkoutCnyTotal.toFixed(2)}</strong></button>
@@ -1360,7 +1229,6 @@ export default function App() {
                   {effectiveFee ? formatAmount(paymentCurrency === 'HKD' ? effectiveFee * exchangeRate : effectiveFee, paymentCurrency) : t('freeFee')}
                 </span>
               </div>
-              {couponDiscount > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: 'var(--market-green)' }}><span>{t('copy079')}</span><span>−{formatAmount(paymentCurrency === 'HKD' ? couponDiscount * exchangeRate : couponDiscount, paymentCurrency)}</span></div>}
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0 4px', borderTop: '1px solid #eee', marginTop: 4 }}>
                 <span>{t('copy095')} {paymentCurrency}</span>
                 <span style={{ color: 'var(--market-accent)', fontWeight: 'bold', fontSize: 18 }}>
@@ -1752,38 +1620,7 @@ export default function App() {
         </div>
       )}
 
-      {showActivity && (
-        <div className="checkout-overlay" onClick={closeActivity}>
-          <div className="checkout-panel activity-panel" onClick={e => e.stopPropagation()}>
-            <h3>{t('copy049')}</h3>
-            {activityCampaign && content(activityCampaign, 'details') && <p className="activity-merchant-details">{content(activityCampaign, 'details')}</p>}
-            <p className="activity-intro">{t('copy174')}</p>
-            <div className="activity-rule"><b>{t('likesCoupon', { min: fmt(activityCampaign?.min_spend || 15), discount: fmt(activityCampaign?.discount_amount || 5) })}</b><p>{t('copy175')}</p><p>{t('copy176')}</p><strong className="activity-limit">{t('copy177')}</strong></div>
-            <div className="activity-share"><small>{t('copy178')}</small><p>{shareText}</p><button onClick={() => copyText(shareText, t('copy179'))}>{t('copy180')}</button></div>
-            <p className="activity-return-hint">{t('copy181')}</p>
-            {activityCampaign ? !currentUser ? <button className="btn-submit" style={{ width: '100%', marginTop: 16 }} onClick={() => { setReturnToActivityAfterLogin(true); setShowActivity(false); setTab('login') }}>{t('copy182')}</button> : <>
-              {(() => { const claim = couponData.claims.find(c => Number(c.campaign_id) === Number(activityCampaign.id)); return claim && <p className="activity-status">{claim.status === 'pending' ? t('copy183') : claim.status === 'approved' ? t('copy184') : t('copy185', { '0': claim.admin_note || t('copy186') })}</p> })()}
-              {!couponData.claims.some(c => Number(c.campaign_id) === Number(activityCampaign.id) && c.status !== 'rejected') && <>
-                <label className="activity-upload">{activityProofFile ? t('copy187') : t('copy188')}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={claimUploading} onChange={e => { const file = e.target.files?.[0]; if (file) setActivityProofFile(file); e.target.value = '' }} /></label>
-                {activityProofFile && <><p className="activity-selected">{t('copy130')}{activityProofFile.name}</p><button type="button" className="activity-confirm-upload" disabled={claimUploading} onClick={() => submitCouponScreenshot(activityProofFile)}>{claimUploading ? t('copy132') : t('copy189')}</button></>}
-                <small className="activity-upload-note">{t('copy190')}</small>
-              </>}
-            </> : <p className="activity-status">{t('copy191')}</p>}
-            <button className="btn-cancel" style={{ width: '100%', marginTop: 10 }} onClick={closeActivity}>{t('copy192')}</button>
-          </div>
-        </div>
-      )}
 
-      {showActivityReturnGuide && (
-        <div className="checkout-overlay" onClick={() => setShowActivityReturnGuide(false)}>
-          <div className="checkout-panel activity-guide-panel" onClick={e => e.stopPropagation()}>
-            <h3>{t('copy193')}</h3>
-            <p>{t('copy194')}</p>
-            {activityProofFile && <p className="activity-guide-warning">{t('copy195')}</p>}
-            <button type="button" className="btn-submit" onClick={() => setShowActivityReturnGuide(false)}>{t('copy196')}</button>
-          </div>
-        </div>
-      )}
 
       {showBrand && (
         <div className="checkout-overlay" onClick={() => setShowBrand(false)}>
@@ -2029,7 +1866,6 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast, onRe
           ))}
           <div className="order-detail-summary">
             <div className="row"><span>{t('copy240')}</span><span>{orderFmt(order.items?.reduce((sum, i) => sum + Number(i.price) * Number(i.quantity), 0) || 0)}</span></div>
-            {Number(order.coupon_discount) > 0 && <div className="row"><span>{t('copy079')}</span><span>−{orderFmt(order.coupon_discount)}</span></div>}
             <div className="row"><span>{t('copy071')}</span><span>{orderFmt(order.delivery_fee || 0)}</span></div>
             <div className="row total"><span>{order.payment_status === 'refunded' ? t('copy241') : t('copy242')}</span><span>{orderPaymentText(order)} · {order.payment_currency || 'CNY'}</span></div>
           </div>

@@ -45,8 +45,6 @@ const columns = {
     coupon_grant_id: 'INTEGER'
   },
   order_items: { variant: "TEXT DEFAULT ''" },
-  coupon_campaigns: { min_spend: 'REAL NOT NULL DEFAULT 0', discount_amount: 'REAL NOT NULL DEFAULT 0' },
-  coupon_grants: { used_order_no: 'TEXT', used_at: 'TEXT' }
 }
 
 const statements = [
@@ -56,9 +54,6 @@ const statements = [
   `CREATE TABLE IF NOT EXISTS order_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id INTEGER NOT NULL, user_id TEXT NOT NULL, type TEXT NOT NULL CHECK (type IN ('delivery_upgrade', 'refund')), address TEXT DEFAULT '', status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')), admin_note TEXT DEFAULT '', handled_by INTEGER, created_at TEXT DEFAULT (datetime('now', '+8 hours')), handled_at TEXT, FOREIGN KEY (order_id) REFERENCES orders(id))`,
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_order_requests_pending ON order_requests(order_id) WHERE status = 'pending'`,
   `CREATE TABLE IF NOT EXISTS announcements (id INTEGER PRIMARY KEY AUTOINCREMENT, delivery_point_id INTEGER, title TEXT NOT NULL, content TEXT NOT NULL, is_published INTEGER NOT NULL DEFAULT 1, created_at TEXT DEFAULT (datetime('now', '+8 hours')), FOREIGN KEY (delivery_point_id) REFERENCES delivery_points(id))`,
-  `CREATE TABLE IF NOT EXISTS coupon_campaigns (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, details TEXT NOT NULL DEFAULT '', min_spend REAL NOT NULL DEFAULT 0, discount_amount REAL NOT NULL DEFAULT 0, is_published INTEGER NOT NULL DEFAULT 0, created_at TEXT DEFAULT (datetime('now', '+8 hours')))`,
-  `CREATE TABLE IF NOT EXISTS coupon_grants (id INTEGER PRIMARY KEY AUTOINCREMENT, campaign_id INTEGER NOT NULL, user_id INTEGER NOT NULL, granted_by INTEGER NOT NULL, granted_at TEXT DEFAULT (datetime('now', '+8 hours')), used_order_no TEXT, used_at TEXT, UNIQUE(campaign_id, user_id), FOREIGN KEY (campaign_id) REFERENCES coupon_campaigns(id), FOREIGN KEY (user_id) REFERENCES users(id))`,
-  `CREATE TABLE IF NOT EXISTS coupon_claims (id INTEGER PRIMARY KEY AUTOINCREMENT, campaign_id INTEGER NOT NULL, user_id INTEGER NOT NULL, screenshot TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')), admin_note TEXT DEFAULT '', created_at TEXT DEFAULT (datetime('now', '+8 hours')), reviewed_at TEXT, reviewed_by INTEGER, UNIQUE(campaign_id, user_id), FOREIGN KEY (campaign_id) REFERENCES coupon_campaigns(id), FOREIGN KEY (user_id) REFERENCES users(id))`,
   `CREATE TABLE IF NOT EXISTS delivery_points (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
@@ -73,7 +68,6 @@ const statements = [
 for (const [table, required] of Object.entries(columns)) {
   const existing = new Set(rows(`PRAGMA table_info(${table})`).map(row => row.name))
   if (existing.size === 0) {
-    if (table.startsWith('coupon_')) continue
     throw new Error(`Missing base table: ${table}. Run db:init for a new database.`)
   }
   for (const [name, definition] of Object.entries(required)) {
@@ -82,8 +76,6 @@ for (const [table, required] of Object.entries(columns)) {
 }
 statements.push("INSERT OR IGNORE INTO settings (key, value) VALUES ('exchange_rate', '1.2')")
 statements.push("UPDATE orders SET payment_currency = 'CNY', payment_amount = ROUND(total + COALESCE(delivery_fee, 0), 2) WHERE payment_amount IS NULL AND payment_method IN ('wechat_transfer', 'alipay_transfer')")
-statements.push("INSERT OR IGNORE INTO coupon_campaigns (id, title, details, min_spend, discount_amount, is_published) VALUES (1, '分享团购，集赞领券', '在任意社交媒体分享团购并附网站链接，单篇集满10个赞后上传截图，审核通过领取满¥15减¥5优惠券。包括但不限于朋友圈、小红书、抖音、Facebook、Instagram、Threads、X。每人限领一次，跨平台不重复领取。', 15, 5, 1)")
-statements.push("UPDATE coupon_campaigns SET details = REPLACE(REPLACE(details, '发到朋友圈', '发布到任意社交媒体'), '上传朋友圈截图', '上传社交平台截图') WHERE id = 1")
 statements.push('UPDATE delivery_points SET fee = 0 WHERE fee <> 0')
 statements.push("UPDATE delivery_points SET threshold = 500 WHERE name = '科技大学' AND threshold <> 500")
 // Existing product prices, images, descriptions, units and variants are merchant-owned data.
