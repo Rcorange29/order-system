@@ -749,6 +749,19 @@ body {
 .login-phone-hint { margin: -2px 0 12px; color: #66736a; font-size: 13px; line-height: 1.5; }
 .login-form-error { margin: 0 0 8px; color: #aa3f2a; font-size: 13px; }
 .login-input-group input[aria-invalid="true"] { border-color: #aa3f2a; }
+.login-input-group .phone-prefix-row { display: flex; gap: 8px; align-items: stretch; }
+.login-input-group .phone-prefix-row select {
+  flex: 0 0 86px;
+  padding: 0 8px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 15px;
+  outline: none;
+  background: #fff;
+  color: #333;
+  appearance: auto;
+}
+.login-input-group .phone-prefix-row input { flex: 1 1 auto; }
 .login-input-group .login-form-error { margin: 7px 0 0; line-height: 1.5; }
 .login-btn:disabled { opacity: 0.6; cursor: wait; }
 .login-btn {

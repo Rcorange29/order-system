@@ -12,8 +12,10 @@ export function normalizeWhatsapp(value) {
   if (typeof value !== 'string') return null
   const raw = value.trim().replace(/[\s()-]/g, '')
   if (!raw) return ''
-  const match = raw.match(/^(?:\+?852)?([4-9]\d{7})$/)
-  return match ? `+852${match[1]}` : null
+  let match = raw.match(/^(?:\+?852)?([4-9]\d{7})$/)
+  if (match) return `+852${match[1]}`
+  match = raw.match(/^(?:\+?86)?(1[3-9]\d{9})$/)
+  return match ? `+86${match[1]}` : null
 }
 export function validWechatId(value) {
   return typeof value === 'string' && (!value || /^[A-Za-z][A-Za-z0-9_-]{5,19}$/.test(value))
