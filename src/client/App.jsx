@@ -263,7 +263,7 @@ export default function App() {
   const [showRefund, setShowRefund] = useState(false)
   const [showBrand, setShowBrand] = useState(false)
   const [lang, setLang] = useState(() => storage.getItem('lang') || 'zh_CN')
-  const [currency, setCurrency] = useState(() => storage.getItem('currency') || '')
+  const [currency, setCurrency] = useState(() => storage.getItem('currency') || 'CNY')
   const [paymentCurrency, setPaymentCurrency] = useState('CNY')
   const [exchangeRate, setExchangeRate] = useState(1.2)
   const [showOnboard, setShowOnboard] = useState(false)
@@ -766,8 +766,8 @@ export default function App() {
               const c = currency === 'HKD' ? 'CNY' : 'HKD'
               setCurrency(c); storage.setItem('currency', c)
             }} className="currency-switch">
-              <span className={currency === 'HKD' ? 'active' : ''}>HK$ HKD</span>
               <span className={currency === 'CNY' ? 'active' : ''}>¥ CNY</span>
+              <span className={currency === 'HKD' ? 'active' : ''}>HK$ HKD</span>
             </span>
           </div>
         </div>
@@ -1497,13 +1497,13 @@ export default function App() {
             <h3 style={{ marginBottom: 16 }}>{t('copy135')}</h3>
             <p style={{ fontSize: 13, color: '#777', marginBottom: 20 }}>{t('copy136')}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <button onClick={() => { setCurrency('HKD'); storage.setItem('currency', 'HKD'); setShowOnboard(true) }}
-                style={{ padding: 16, borderRadius: 12, border: '2px solid var(--market-green)', background: 'var(--market-green-soft)', color: 'var(--market-accent)', fontSize: 18, fontWeight: 700, cursor: 'pointer' }}>
-                HK$ HKD
-              </button>
               <button onClick={() => { setCurrency('CNY'); storage.setItem('currency', 'CNY'); setShowOnboard(true) }}
-                style={{ padding: 16, borderRadius: 12, border: '2px solid #ddd', background: '#fff', color: '#333', fontSize: 18, fontWeight: 600, cursor: 'pointer' }}>
+                style={{ padding: 16, borderRadius: 12, border: '2px solid var(--market-green)', background: 'var(--market-green-soft)', color: 'var(--market-accent)', fontSize: 18, fontWeight: 700, cursor: 'pointer' }}>
                 ¥ CNY
+              </button>
+              <button onClick={() => { setCurrency('HKD'); storage.setItem('currency', 'HKD'); setShowOnboard(true) }}
+                style={{ padding: 16, borderRadius: 12, border: '2px solid #ddd', background: '#fff', color: '#333', fontSize: 18, fontWeight: 600, cursor: 'pointer' }}>
+                HK$ HKD
               </button>
             </div>
           </div>
