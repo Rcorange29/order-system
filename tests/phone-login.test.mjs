@@ -38,7 +38,7 @@ test('registration accepts HK and mainland contacts, normalizes numbers, and kee
 })
 test('invalid usernames, contacts and passwords fail before creating an account',async()=>{
   const {sqlite,request}=setup()
-  for(const bad of [{username:'with space'},{wechat_id:'123bad'},{wechat_id:'',phone:'',whatsapp:''},{phone:'+85361234567'},{phone:'+852912345678'},{phone:'+8612800138000'},{whatsapp:'+8613800138000'}])assert.equal((await request(register,{...profile,...bad})).status,400,JSON.stringify(bad))
+  for(const bad of [{username:'with space'},{wechat_id:'123bad'},{wechat_id:'',phone:'',whatsapp:''},{phone:'+85361234567'},{phone:'+852912345678'},{phone:'+8612800138000'},{whatsapp:'+861380013800'},{whatsapp:'+861234567890'}])assert.equal((await request(register,{...profile,...bad})).status,400,JSON.stringify(bad))
   assert.equal((await request(login,{phone:'91234567',password:profile.password})).status,400)
   assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM users').get().n,0)
   sqlite.close()

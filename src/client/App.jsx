@@ -99,7 +99,37 @@ const productNameMap = {
   '百香果': { zh_HK:'百香果', en:'Passion Fruit' },
   '香蕉': { zh_HK:'香蕉', en:'Banana' },
   '蜜瓜': { zh_HK:'蜜瓜', en:'Honeydew' },
-  '西瓜': { zh_HK:'西瓜', en:'Watermelon' }
+  '西瓜': { zh_HK:'西瓜', en:'Watermelon' },
+  '串茄(小番茄)': { zh_HK:'串茄(小番茄)', en:'Cherry Tomatoes on Vine' },
+  '士多啤梨(草莓)': { zh_HK:'士多啤梨(草莓)', en:'Strawberries' },
+  '小唐菜(上海青、油菜)': { zh_HK:'小唐菜(上海青、油菜)', en:'Baby Bok Choy (Shanghai Greens)' },
+  '椰菜(包菜、圆白菜)': { zh_HK:'椰菜(包菜、圓白菜)', en:'Cabbage' },
+  '番薯(红薯)': { zh_HK:'番薯(紅薯)', en:'Sweet Potato' },
+  '白福花(白花菜)': { zh_HK:'白福花(白花菜)', en:'White Cauliflower' },
+  '白菜（旺菜）': { zh_HK:'白菜（旺菜）', en:'Napa Cabbage (Wong Choy)' },
+  '白萝卜(萝卜)': { zh_HK:'白蘿蔔(蘿蔔)', en:'White Radish' },
+  '白蘑菇（口蘑）': { zh_HK:'白蘑菇（口蘑）', en:'White Mushroom' },
+  '白通菜(空心菜)': { zh_HK:'白通菜(空心菜)', en:'Water Spinach' },
+  '節瓜(毛瓜)': { zh_HK:'節瓜(毛瓜)', en:'Hairy Gourd' },
+  '翠玉瓜(西葫芦)': { zh_HK:'翠玉瓜(西葫蘆)', en:'Courgette (Zucchini)' },
+  '胡萝卜（红萝卜）': { zh_HK:'胡蘿蔔（紅蘿蔔）', en:'Carrot' },
+  '蒜头(大蒜)': { zh_HK:'蒜頭(大蒜)', en:'Garlic' },
+  '西洋菜(豆瓣菜)': { zh_HK:'西洋菜(豆瓣菜)', en:'Watercress' },
+  '角瓜(丝瓜)': { zh_HK:'角瓜(絲瓜)', en:'Angled Gourd (Luffa)' },
+  '豆苗(豌豆苗)': { zh_HK:'豆苗(豌豆苗)', en:'Pea Shoots' },
+  '青瓜(黄瓜)': { zh_HK:'青瓜(黃瓜)', en:'Cucumber' },
+  '龍芽葉': { zh_HK:'龍芽葉', en:'Dragon Tooth Leaves' }
+}
+
+// ========== 规格名三语映射 ==========
+const variantLabelMap = {
+  '半磅': { zh_HK:'半磅', en:'Half lb' },
+  '一磅': { zh_HK:'一磅', en:'One lb' },
+  '1条': { zh_HK:'1條', en:'1 pc' },
+  '3条': { zh_HK:'3條', en:'3 pcs' },
+  '5磅': { zh_HK:'5磅', en:'5 lb' },
+  '6磅': { zh_HK:'6磅', en:'6 lb' },
+  '7磅': { zh_HK:'7磅', en:'7 lb' }
 }
 const getProdName = (pname) => pname
 // 实际用组件内的函数
@@ -253,6 +283,11 @@ export default function App() {
     if (lang === 'zh_CN') return pname
     const m = productNameMap[pname]
     return (m && m[lang]) || pname
+  }
+  const vl = (vlabel) => {
+    if (!vlabel || lang === 'zh_CN') return vlabel || ''
+    const m = variantLabelMap[vlabel]
+    return (m && m[lang]) || vlabel
   }
   const cn = (cname) => {
     if (lang === 'zh_CN') return cname
@@ -957,7 +992,7 @@ export default function App() {
                     <span>{t('orderNo')}：{displayOrderNo(o)}</span>
                     <span className="order-status">{statusTxt[o.status] || o.status}</span>
                   </div>
-                  <div className="order-goods">{o.items?.map(i => `${pn(i.product?.name)}${i.variant ? `（${i.variant}）` : ''} x${i.quantity}`).join('，')}</div>
+                  <div className="order-goods">{o.items?.map(i => `${pn(i.product?.name)}${i.variant ? `（${vl(i.variant)}）` : ''} x${i.quantity}`).join('，')}</div>
                   <div className="order-total">{t('orderTotal')}：<span>{orderPaymentText(o)} · {o.payment_currency || 'CNY'}</span></div>
                   {o.status === 'pending' && o.payment_status === 'pending' && o.payment_method !== 'cash_on_delivery' && <button type="button" className="order-upload-link" onClick={e => { e.stopPropagation(); setSelectedOrder(o); setTab('orderDetail') }}>{t('copy061')}</button>}
                 </div>
@@ -975,7 +1010,7 @@ export default function App() {
                 <div className="avatar">👤</div>
                 <div className="info">
                   <div className="name">{currentUser.username}</div>
-                  <div className="phone">{t('usernameLogin')}</div>{currentUser.wechat_id && <div className="phone">{t('wechatId')}: {currentUser.wechat_id}</div>}{currentUser.whatsapp && <div className="phone">WhatsApp: {currentUser.whatsapp}</div>}{currentUser.phone && <div className="phone">{t('phone')}: {currentUser.phone}</div>}
+                  <div className="phone">{t('usernameLogin')}</div>{currentUser.wechat_id && <div className="phone">{t('wechatId')}: {currentUser.wechat_id}</div>}{currentUser.whatsapp && <div className="phone">{t('whatsapp')}: {currentUser.whatsapp}</div>}{currentUser.phone && <div className="phone">{t('phone')}: {currentUser.phone}</div>}
                 </div>
               </div>
               <div className="my-content">
@@ -1076,8 +1111,8 @@ export default function App() {
                 <div className="cart-item" key={itemKey} onClick={() => { setShowCart(false); setSelectedProduct(item.product); setSelectedVariant(null) }} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') { setShowCart(false); setSelectedProduct(item.product); setSelectedVariant(null) } }}>
                   <div className="emoji">{item.product.image ? <img src={item.product.image} alt="" /> : <span className="product-no-image">{pn(item.product.name).replace(/^\[[^\]]+\]/, '').slice(0, 2)}</span>}</div>
                   <div className="detail">
-                    <div className="name">{pn(item.product.name)}{item.variantLabel && <small style={{color:'var(--market-accent)',marginLeft:6,fontSize:12}}>({item.variantLabel})</small>}</div>
-                    <div className="price">{fmt(item.variantPrice)}<small style={{fontSize:11,color:'#999'}}>{item.variantLabel ? `/${item.variantLabel}` : unitText(item.product)}</small></div>
+                    <div className="name">{pn(item.product.name)}{item.variantLabel && <small style={{color:'var(--market-accent)',marginLeft:6,fontSize:12}}>({vl(item.variantLabel)})</small>}</div>
+                    <div className="price">{fmt(item.variantPrice)}<small style={{fontSize:11,color:'#999'}}>{item.variantLabel ? `/${vl(item.variantLabel)}` : unitText(item.product)}</small></div>
                   </div>
                   <div className="qty-control">
                     <button className="qty-btn" onClick={(e) => { e.stopPropagation(); updateQty(itemKey, -1) }}>−</button>
@@ -1298,7 +1333,7 @@ export default function App() {
                                 background: isSel ? 'var(--market-green-soft)' : '#fff',
                                 fontSize: 14, fontWeight: isSel ? 600 : 400,
                               }}>
-                              {v.label} <span style={{color:'var(--market-accent)'}}>{fmt(v.price)}</span>
+                              {vl(v.label)} <span style={{color:'var(--market-accent)'}}>{fmt(v.price)}</span>
                             </div>
                           )
                         })}
@@ -1309,7 +1344,7 @@ export default function App() {
                   {/* 描述 */}
                   {selectedProduct.description && !/^\/[\u4e00-\u9fff\d]+$/.test(selectedProduct.description.trim()) && (
                     <div style={{ padding: '0 16px', borderTop: '8px solid #f7f7f7' }}>
-                      <p style={{ fontSize: 14, color: '#666', lineHeight: 1.6, padding: '12px 0' }}>{selectedProduct.description}</p>
+                      <p style={{ fontSize: 14, color: '#666', lineHeight: 1.6, padding: '12px 0' }}>{content(selectedProduct, 'description')}</p>
                     </div>
                   )}
 
@@ -1529,7 +1564,7 @@ export default function App() {
 
               <div style={{ background: '#f3e5f5', padding: 12, borderRadius: 8, marginBottom: 10 }}>
                 <b>{t('copy148')}</b><br /> {t('copy149')}<br />
-                · WhatsApp：+852 95228191<br /> {t('copy150')}<br /> {t('copy151')} </div>
+                {t('contactWhatsappLine')}<br /> {t('copy150')}<br /> {t('copy151')} </div>
             </div>
 
             <button
@@ -1614,7 +1649,7 @@ export default function App() {
             <h3>{t('copy170')}</h3>
             <p style={{ lineHeight: 1.7, color: '#555', margin: '12px 0' }}>{t('copy171')}</p>
             <div className="after-sale-contact"><span>{t('copy172')}</span><strong>{BOSS_WECHAT}</strong><button onClick={() => copyText(BOSS_WECHAT, t('copy161'))}>{t('copy162')}</button></div>
-            <div className="after-sale-contact"><span>WhatsApp</span><strong>{BOSS_WHATSAPP}</strong><a href="https://wa.me/85295228191" target="_blank" rel="noreferrer">{t('copy173')}</a></div>
+            <div className="after-sale-contact"><span>{t('whatsapp')}</span><strong>{BOSS_WHATSAPP}</strong><a href="https://wa.me/85295228191" target="_blank" rel="noreferrer">{t('copy173')}</a></div>
             <button className="btn-submit" style={{ width: '100%', marginTop: 16 }} onClick={() => setShowRefund(false)}>{t('copy169')}</button>
           </div>
         </div>
@@ -1736,7 +1771,7 @@ function LoginPage({ onLogin, onRegister, onBack, t }) {
         <div className="login-input-group"><label htmlFor="account-confirmation">{t('confirmPassword')}</label><input id="account-confirmation" type="password" autoComplete="new-password" required value={confirmation} onChange={e => setConfirmation(e.target.value)} /></div>
         <p className="login-phone-hint">{t('contactHint')}</p>
         <div className="login-input-group"><label htmlFor="account-wechat_id">{t('wechatId')} <small>{t('preferredContact')}</small></label><input id="account-wechat_id" type="text" maxLength={20} value={profile.wechat_id} onChange={e => update('wechat_id',e.target.value)} placeholder={t('wechatHint')} /></div>
-        <div className="login-input-group"><label htmlFor="account-whatsapp">WhatsApp <small>{t('optional')}</small></label><div className="phone-prefix-row"><select value={whatsappPrefix} onChange={e => { setWhatsappPrefix(e.target.value); setProfile(prev => ({ ...prev, whatsapp: (prev.whatsapp || '').slice(0, e.target.value === '+852' ? 8 : 11) })) }} aria-label={t('countryCode')}><option value="+852">+852</option><option value="+86">+86</option></select><input id="account-whatsapp" type="tel" inputMode="numeric" maxLength={whatsappPrefix === '+852' ? 8 : 11} value={profile.whatsapp} onChange={e => update('whatsapp', digitsOnly(e.target.value, whatsappPrefix === '+852' ? 8 : 11))} placeholder={t(whatsappPrefix === '+852' ? 'phonePh852' : 'phonePh86')} /></div></div>
+        <div className="login-input-group"><label htmlFor="account-whatsapp">{t('whatsapp')} <small>{t('optional')}</small></label><div className="phone-prefix-row"><select value={whatsappPrefix} onChange={e => { setWhatsappPrefix(e.target.value); setProfile(prev => ({ ...prev, whatsapp: (prev.whatsapp || '').slice(0, e.target.value === '+852' ? 8 : 11) })) }} aria-label={t('countryCode')}><option value="+852">+852</option><option value="+86">+86</option></select><input id="account-whatsapp" type="tel" inputMode="numeric" maxLength={whatsappPrefix === '+852' ? 8 : 11} value={profile.whatsapp} onChange={e => update('whatsapp', digitsOnly(e.target.value, whatsappPrefix === '+852' ? 8 : 11))} placeholder={t(whatsappPrefix === '+852' ? 'phonePh852' : 'phonePh86')} /></div></div>
         <div className="login-input-group"><label htmlFor="account-phone">{t('phone')} <small>{t('optional')}</small></label><div className="phone-prefix-row"><select value={phonePrefix} onChange={e => { setPhonePrefix(e.target.value); setProfile(prev => ({ ...prev, phone: (prev.phone || '').slice(0, e.target.value === '+852' ? 8 : 11) })) }} aria-label={t('countryCode')}><option value="+852">+852</option><option value="+86">+86</option></select><input id="account-phone" type="tel" inputMode="numeric" maxLength={phonePrefix === '+852' ? 8 : 11} value={profile.phone} onChange={e => update('phone', digitsOnly(e.target.value, phonePrefix === '+852' ? 8 : 11))} placeholder={t(phonePrefix === '+852' ? 'phonePh852' : 'phonePh86')} /></div></div>
         <p className="login-phone-hint">{t('noSmsHint')}</p>
       </>}
@@ -1745,7 +1780,7 @@ function LoginPage({ onLogin, onRegister, onBack, t }) {
       {mode === 'login' && <button type="button" className="account-text-button" onClick={() => setForgot(true)}>{t('forgotPassword')}</button>}
       <button type="button" className="account-text-button" onClick={onBack}>{t('back')}</button>
     </form>
-    {forgot && <div className="checkout-overlay" onClick={() => setForgot(false)}><div className="checkout-panel" onClick={e => e.stopPropagation()}><h3>{t('forgotPassword')}</h3><p>{t('resetHelp')}</p><p>{t('bossWechat')}: {BOSS_WECHAT}</p><p>WhatsApp: +852 95228191</p><a href="https://wa.me/85295228191" target="_blank" rel="noreferrer">{t('contactOwner')}</a><button type="button" className="btn-submit proof-confirm" onClick={() => setForgot(false)}>{t('gotIt')}</button></div></div>}
+    {forgot && <div className="checkout-overlay" onClick={() => setForgot(false)}><div className="checkout-panel" onClick={e => e.stopPropagation()}><h3>{t('forgotPassword')}</h3><p>{t('resetHelp')}</p><p>{t('bossWechat')}: {BOSS_WECHAT}</p><p>{t('forgotWhatsappLine')}</p><a href="https://wa.me/85295228191" target="_blank" rel="noreferrer">{t('contactOwner')}</a><button type="button" className="btn-submit proof-confirm" onClick={() => setForgot(false)}>{t('gotIt')}</button></div></div>}
   </div>
 }
 
@@ -1878,7 +1913,7 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast, onRe
             <div className="order-detail-goods-item" key={i.id}>
               <div className="emoji">{i.product?.image ? <img src={i.product.image} alt="" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:6}} /> : '🛒'}</div>
               <div className="g-info">
-                <div className="name">{pn(i.product?.name)}{i.variant ? `（${i.variant}）` : ''}</div>
+                <div className="name">{pn(i.product?.name)}{i.variant ? `（${vl(i.variant)}）` : ''}</div>
                 <div className="price">{orderFmt(i.price)}</div>
               </div>
               <div className="qty">x{i.quantity}</div>
