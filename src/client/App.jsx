@@ -238,6 +238,8 @@ export default function App() {
   const [remark, setRemark] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('wechat_transfer')
   const [showPaymentQR, setShowPaymentQR] = useState(false)
+  const [qrZoom, setQrZoom] = useState(false)
+  const [qrSwitching, setQrSwitching] = useState(false)
   const [paidOrderNo, setPaidOrderNo] = useState('')
   const [paidOrderAmount, setPaidOrderAmount] = useState(0)
   const [paidOrderCurrency, setPaidOrderCurrency] = useState('CNY')
@@ -597,6 +599,26 @@ export default function App() {
     }
     } catch { showToast(t('connectionFailed')) }
     finally { setOrderSubmitting(false) }
+  }
+
+  const switchPaymentMethod = async method => {
+    if (method === paymentMethod || qrSwitching || !lastOrderId) return
+    setQrSwitching(true)
+    try {
+      const res = await authFetch(`${API}/orders/${lastOrderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payment_method: method })
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        showToast(apiError(t, data))
+        return
+      }
+      setPaymentMethod(method)
+      showToast(t('copy155'))
+    } catch { showToast(t('connectionFailed')) }
+    finally { setQrSwitching(false) }
   }
 
   const handleLogin = async (username, password) => {
@@ -1408,6 +1430,26 @@ export default function App() {
             <h3>{paymentMethod === 'wechat_transfer' ? t('copy103') : paymentMethod === 'alipay_transfer' ? t('copy104') : t('copy105')}</h3>
             <div style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>{t('copy106')}{paidOrderNo}</div>
             <div className="payment-due">{t('copy107')} {formatAmount(paidOrderAmount, paidOrderCurrency)}<small>{paidOrderCurrency === 'HKD' ? t('copy108') : t('copy109', { '0': paymentMethod === 'wechat_transfer' ? t('copy091') : t('copy092') })}</small></div>
+
+            {/* 支付方式切换 */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
+              {[['wechat_transfer', t('copy091'), '#07c160'], ['alipay_transfer', t('copy092'), '#1677ff'], ['fps_transfer', t('copy093'), '#722ed1']].map(([method, label, color]) => (
+                <button
+                  key={method}
+                  disabled={qrSwitching}
+                  onClick={() => switchPaymentMethod(method)}
+                  style={{
+                    fontSize: 13, padding: '7px 14px', borderRadius: 20, cursor: 'pointer',
+                    border: paymentMethod === method ? `2px solid ${color}` : '1px solid #ddd',
+                    background: paymentMethod === method ? color : '#fff',
+                    color: paymentMethod === method ? '#fff' : '#555',
+                    fontWeight: paymentMethod === method ? 600 : 400,
+                    opacity: qrSwitching ? 0.6 : 1
+                  }}
+                >{label}</button>
+              ))}
+            </div>
+
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
               {paymentMethod === 'fps_transfer' ? (
                 <div style={{ width: 220, height: 220, margin: '0 auto', background: '#f9f0ff', border: '2px solid #722ed1', borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -1417,24 +1459,25 @@ export default function App() {
                 </div>
               ) : (
                 <div style={{ position: 'relative', display: 'inline-block' }}>
-                  <img src={paymentMethod === 'wechat_transfer' ? '/images/pay/wechat.jpg' : '/images/pay/alipay.jpg'} alt={t('copy111')} style={{ width: 220, borderRadius: 12, border: `2px solid ${paymentMethod === 'wechat_transfer' ? '#07c160' : '#1677ff'}`, display: 'block' }} />
+                  <img
+                    src={paymentMethod === 'wechat_transfer' ? '/images/pay/wechat.jpg' : '/images/pay/alipay.jpg'}
+                    alt={t('copy111')}
+                    onClick={() => setQrZoom(true)}
+                    style={{ width: 220, borderRadius: 12, border: `2px solid ${paymentMethod === 'wechat_transfer' ? '#07c160' : '#1677ff'}`, display: 'block', cursor: 'zoom-in' }}
+                  />
                   <div style={{ position: 'absolute', left: 8, bottom: 8, background: 'rgba(0,0,0,0.55)', color: '#fff', fontSize: 11, padding: '3px 8px', borderRadius: 10 }}>{t('copy112')}</div>
                 </div>
               )}
               <div style={{ fontSize: 14, marginTop: 10, fontWeight: 600, color: paymentMethod === 'wechat_transfer' ? '#07c160' : paymentMethod === 'alipay_transfer' ? '#1677ff' : '#722ed1' }}>
                 {paymentMethod === 'wechat_transfer' ? t('copy113') : paymentMethod === 'alipay_transfer' ? t('copy114') : t('copy115')}
               </div>
+              {paymentMethod !== 'fps_transfer' && (
+                <div style={{ fontSize: 12, color: '#999', marginTop: 6 }}>{t('copy116')}</div>
+              )}
             </div>
 
-            {/* 操作按钮：保存图片 / 打开对应App / 复制账号 */}
+            {/* 操作按钮：打开对应App / 复制账号 */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-              {paymentMethod !== 'fps_transfer' && (
-                <a
-                  href={paymentMethod === 'wechat_transfer' ? '/images/pay/wechat.jpg' : '/images/pay/alipay.jpg'}
-                  download={paymentMethod === 'wechat_transfer' ? 'wechat-pay.jpg' : 'alipay-pay.jpg'}
-                  style={{ fontSize: 13, padding: '8px 14px', borderRadius: 20, border: `1px solid ${paymentMethod === 'wechat_transfer' ? '#07c160' : '#1677ff'}`, color: paymentMethod === 'wechat_transfer' ? '#07c160' : '#1677ff', background: '#fff', textDecoration: 'none', cursor: 'pointer' }}
-                >{t('copy116')}</a>
-              )}
               {paymentMethod === 'wechat_transfer' && (
                 <a href="weixin://" style={{ fontSize: 13, padding: '8px 14px', borderRadius: 20, border: '1px solid #07c160', color: '#fff', background: '#07c160', textDecoration: 'none', cursor: 'pointer' }}>{t('copy117')}</a>
               )}
@@ -1455,6 +1498,18 @@ export default function App() {
             <div style={{ display: 'flex', gap: 10 }}>
               <button className="btn-cancel" style={{ flex: 1 }} onClick={() => { setShowPaymentQR(false); setTab('myOrders') }}>{t('copy127')}</button>
               <button className="btn-submit" style={{ flex: 1 }} onClick={() => { setShowPaymentQR(false); setShowUploadProof(true) }}>{t('copy128')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 收款码放大 */}
+      {qrZoom && (
+        <div className="checkout-overlay" style={{ zIndex: 6000 }} onClick={() => setQrZoom(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ textAlign: 'center' }}>
+            <img src={paymentMethod === 'wechat_transfer' ? '/images/pay/wechat.jpg' : '/images/pay/alipay.jpg'} alt={t('copy111')} style={{ maxWidth: '92vw', maxHeight: '82vh', borderRadius: 12 }} />
+            <div style={{ marginTop: 14 }}>
+              <button className="btn-cancel" onClick={() => setQrZoom(false)} style={{ color: '#fff', borderColor: '#fff', background: 'rgba(0,0,0,0.45)', padding: '8px 22px', borderRadius: 20 }}>✕</button>
             </div>
           </div>
         </div>
@@ -1846,10 +1901,30 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast, onRe
   const [proofUploading, setProofUploading] = useState(false)
   const [deliveryAddress, setDeliveryAddress] = useState('')
   const [showPaymentDetails, setShowPaymentDetails] = useState(false)
+  const [payMethod, setPayMethod] = useState(order.payment_method)
+  const [qrSwitching, setQrSwitching] = useState(false)
+  const [qrZoom, setQrZoom] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const cnyDue = Number(order.total) + Number(order.delivery_fee || 0)
   const orderRate = order.payment_currency === 'HKD' && order.payment_amount != null && cnyDue > 0 ? Number(order.payment_amount) / cnyDue : 1
   const orderFmt = amount => formatAmount(Number(amount) * orderRate, order.payment_currency || 'CNY')
+  const switchPay = async method => {
+    if (method === payMethod || qrSwitching) return
+    setQrSwitching(true)
+    try {
+      const res = await authFetch(`${API}/orders/${order.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payment_method: method })
+      })
+      const data = await res.json()
+      if (!res.ok) { showToast(apiError(t, data)); return }
+      setPayMethod(method)
+      showToast(t('copy156'))
+      await onRefresh()
+    } catch { showToast(t('connectionFailed')) }
+    finally { setQrSwitching(false) }
+  }
   const submitRequest = async (type) => {
     if (submitting) return
     if (type === 'delivery_upgrade' && deliveryAddress.trim().length < 5) {
@@ -1955,10 +2030,35 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast, onRe
         <div className="checkout-panel payment-detail-panel" onClick={e => e.stopPropagation()}>
           <h3>{t('copy264')}</h3><p>{t('copy106')}{displayOrderNo(order)}</p>
           <div className="payment-due">{t('copy242')} {orderPaymentText(order)}</div>
-          {order.payment_method === 'fps_transfer' ? <div className="fps-pay-number">{t('copy265')}<br /><strong>95480721</strong></div> :
-            <img className="payment-detail-qr" src={order.payment_method === 'wechat_transfer' ? '/images/pay/wechat.jpg' : '/images/pay/alipay.jpg'} alt={t('copy111')} />}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {[['wechat_transfer', t('copy091'), '#07c160'], ['alipay_transfer', t('copy092'), '#1677ff'], ['fps_transfer', t('copy093'), '#722ed1']].map(([method, label, color]) => (
+              <button
+                key={method}
+                disabled={qrSwitching}
+                onClick={() => switchPay(method)}
+                style={{
+                  fontSize: 13, padding: '7px 14px', borderRadius: 20, cursor: 'pointer',
+                  border: payMethod === method ? `2px solid ${color}` : '1px solid #ddd',
+                  background: payMethod === method ? color : '#fff',
+                  color: payMethod === method ? '#fff' : '#555',
+                  fontWeight: payMethod === method ? 600 : 400,
+                  opacity: qrSwitching ? 0.6 : 1
+                }}
+              >{label}</button>
+            ))}
+          </div>
+          {payMethod === 'fps_transfer' ? <div className="fps-pay-number">{t('copy265')}<br /><strong>95480721</strong></div> :
+            <img className="payment-detail-qr" style={{ cursor: 'zoom-in' }} src={payMethod === 'wechat_transfer' ? '/images/pay/wechat.jpg' : '/images/pay/alipay.jpg'} alt={t('copy111')} onClick={() => setQrZoom(true)} />}
           <p>{t('copy266')}{BOSS_WECHAT}。</p>
           <button className="btn-submit proof-confirm" onClick={() => setShowPaymentDetails(false)}>{t('copy267')}</button>
+        </div>
+      </div>}
+      {qrZoom && <div className="checkout-overlay" style={{ zIndex: 6000 }} onClick={() => setQrZoom(false)}>
+        <div onClick={e => e.stopPropagation()} style={{ textAlign: 'center' }}>
+          <img src={payMethod === 'wechat_transfer' ? '/images/pay/wechat.jpg' : '/images/pay/alipay.jpg'} alt={t('copy111')} style={{ maxWidth: '92vw', maxHeight: '82vh', borderRadius: 12 }} />
+          <div style={{ marginTop: 14 }}>
+            <button className="btn-cancel" onClick={() => setQrZoom(false)} style={{ color: '#fff', borderColor: '#fff', background: 'rgba(0,0,0,0.45)', padding: '8px 22px', borderRadius: 20 }}>✕</button>
+          </div>
         </div>
       </div>}
     </div>
