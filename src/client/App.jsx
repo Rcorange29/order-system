@@ -299,9 +299,18 @@ export default function App() {
   const [showOnboard, setShowOnboard] = useState(false)
   const [onboardStep, setOnboardStep] = useState(0)
 
-  // 浏览量统计：页面打开即静默上报一次（登录与否都计），不影响用户端任何体验
+  // 浏览量统计：页面打开即静默上报一次（登录与否都计），不影响用户端任何体验；
+  // 设备当日首次打开额外标记 visitor=1（访客数 UV，当天去重）
   useEffect(() => {
-    try { fetch(`${API}/track-view`, { method: 'POST', keepalive: true }).catch(() => {}) } catch {}
+    try {
+      const today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10)
+      let firstVisit = false
+      try {
+        const key = `v_${today}`
+        if (!storage.getItem(key)) { storage.setItem(key, '1'); firstVisit = true }
+      } catch { firstVisit = true }
+      fetch(`${API}/track-view`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitor: firstVisit ? 1 : 0 }), keepalive: true }).catch(() => {})
+    } catch {}
   }, [])
 
   const t = (key, values) => translate(lang, key, values)

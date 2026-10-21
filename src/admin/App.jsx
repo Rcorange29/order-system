@@ -190,7 +190,7 @@ function AdminLogin({ onLogin, showToast }) {
 function Dashboard({ products, orders, categories, pageViews }) {
   const totalSales = orders.reduce((s, o) => s + (o.payment_status === 'confirmed' ? Number(o.total) + Number(o.delivery_fee || 0) : 0), 0)
   const pendingCount = orders.filter(o => o.status === 'awaiting_confirmation').length
-  const views = pageViews || { today: 0, total: 0, recent: [] }
+  const views = pageViews || { today: 0, visitors: 0, total: 0, total_visitors: 0, recent: [] }
   const maxRecent = Math.max(1, ...views.recent.map(r => r.count))
   return (
     <div>
@@ -201,19 +201,22 @@ function Dashboard({ products, orders, categories, pageViews }) {
         <div className="stat-card"><div className="label">待确认收款</div><div className="value orange">{pendingCount}</div></div>
         <div className="stat-card"><div className="label">累计销售额</div><div className="value">¥{totalSales.toFixed(2)}</div></div>
         <div className="stat-card"><div className="label">今日浏览量</div><div className="value green">{views.today}</div></div>
-        <div className="stat-card"><div className="label">累计浏览量</div><div className="value blue">{views.total}</div></div>
+        <div className="stat-card"><div className="label">今日访客数</div><div className="value blue">{views.visitors}</div></div>
+        <div className="stat-card"><div className="label">累计浏览量</div><div className="value">{views.total}</div></div>
+        <div className="stat-card"><div className="label">累计访客数</div><div className="value">{views.total_visitors}</div></div>
       </div>
       <div className="card">
-        <h3 style={{ marginBottom: 16 }}>最近浏览量（近 14 天，打开即计数，登录与否都计入）</h3>
+        <h3 style={{ marginBottom: 16 }}>最近浏览量（近 14 天；柱顶为打开次数，柱底小字为访客数）</h3>
         {views.recent.length === 0 ? (
           <p style={{ color: '#999' }}>暂无数据，网站每被打开一次会自动记录。</p>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 120, padding: '8px 4px', overflowX: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 140, padding: '8px 4px', overflowX: 'auto' }}>
             {views.recent.map(r => (
               <div key={r.view_date} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 28 }}>
                 <span style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>{r.count}</span>
                 <div style={{ width: 18, height: Math.max(3, Math.round(90 * r.count / maxRecent)), background: 'var(--market-green, #2f9e44)', borderRadius: '4px 4px 0 0' }} />
-                <span style={{ fontSize: 10, color: '#999', marginTop: 4 }}>{r.view_date.slice(5)}</span>
+                <span style={{ fontSize: 10, color: '#2f9e44', marginTop: 2 }}>{r.visitors || 0}访</span>
+                <span style={{ fontSize: 10, color: '#999', marginTop: 2 }}>{r.view_date.slice(5)}</span>
               </div>
             ))}
           </div>
