@@ -3,6 +3,7 @@ import { normalizeContactPhone, validateProfile } from '../../functions/api/_con
 import { translate, localizedContent, apiError } from './i18n.js'
 import useVisualViewport from '../useVisualViewport.js'
 import { storage, readStoredArray } from '../storage.js'
+import { usePersistentCart } from './cart.js'
 
 const API = '/api'
 const BOSS_WECHAT = 'jennybabi1988'
@@ -228,7 +229,7 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState(null)
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
-  const [cart, setCart] = useState({})
+  const { cart, setCart, adoptGuest, clearGuest } = usePersistentCart(currentUser)
   const [showCart, setShowCart] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
   const [orderSubmitting, setOrderSubmitting] = useState(false)
@@ -520,19 +521,20 @@ export default function App() {
     showToast(t('copy015'))
   }
 
-  const cartCount = Object.values(cart).reduce((a, b) => a + b, 0)
   const cartItems = Object.entries(cart)
     .map(([key, qty]) => {
       const [pidStr, vLabel] = key.split('::')
       const product = products.find(p => p.id === Number(pidStr))
-      if (!product) return null
+      if (!product || product.is_active === false) return null
       let variants = []
       try { variants = product.variants ? JSON.parse(product.variants) : [] } catch(e) {}
       const variant = vLabel ? variants.find(v => v.label === vLabel) : null
+      if (vLabel && !variant) return null
       const price = variant ? variant.price : product.price
       return { product, qty, variantLabel: vLabel || '', variantPrice: price }
     })
-    .filter(item => item.product)
+    .filter(Boolean)
+  const cartCount = cartItems.reduce((sum, item) => sum + item.qty, 0)
   const cartTotal = cartItems.reduce((sum, item) => sum + item.variantPrice * item.qty, 0)
   const currentPoint = deliveryPoints.find(p => p.id == selectedPointId)
   const effectiveFee = deliveryType === 'delivery' ? 30 : 0
@@ -637,7 +639,7 @@ export default function App() {
         return
       }
       setPaymentMethod(method)
-      showToast(t('copy155'))
+      showToast(t('paymentMethodUpdated'))
     } catch { showToast(t('connectionFailed')) }
     finally { setQrSwitching(false) }
   }
@@ -653,6 +655,7 @@ export default function App() {
     storage.setItem('token', data.token)
     const { token, ...account } = data
     storage.setItem('currentUser', JSON.stringify(account))
+    adoptGuest(account)
     setCurrentUser(account)
     setTab('my')
     showToast(t('copy021'))
@@ -669,6 +672,7 @@ export default function App() {
     storage.setItem('token', data.token)
     const { token, ...account } = data
     storage.setItem('currentUser', JSON.stringify(account))
+    adoptGuest(account)
     setCurrentUser(account)
     setTab('my')
     showToast(t('copy022'))
@@ -678,7 +682,7 @@ export default function App() {
     storage.removeItem('token')
     storage.removeItem('currentUser')
     setCurrentUser(null)
-    setCart({})
+    clearGuest()
     setTab('home')
     showToast(t('copy023'))
   }
@@ -725,7 +729,7 @@ export default function App() {
   }
 
   if (tab === 'orderDetail' && selectedOrder) {
-    return <><OrderDetailPage order={selectedOrder} onBack={() => setTab('myOrders')} pn={pn} fmt={fmt} t={t} statusTxt={statusTxt} showToast={showToast} onRefresh={async () => {
+    return <><OrderDetailPage order={selectedOrder} onBack={() => setTab('myOrders')} pn={pn} vl={vl} copyText={copyText} fmt={fmt} t={t} statusTxt={statusTxt} showToast={showToast} onRefresh={async () => {
       const [response, detailResponse] = await Promise.all([authFetch(`${API}/orders`), authFetch(`${API}/orders/${selectedOrder.id}`)])
       if (response.ok) {
         const next = await response.json()
@@ -814,7 +818,7 @@ export default function App() {
           </div>
         </div>
         )}
-        {(tab === 'category' || search) && (
+        {(tab === 'category' || (tab === 'home' && search)) && (
         <>
         <div className="category-search-label">{t('inline2')}</div>
         <form className="search-box" role="search" onSubmit={e => { e.preventDefault(); setSearch(searchInput.trim()); if (searchInput.trim()) saveSearchHistory(searchInput.trim()); setActiveCategory(null); setTab('category') }}>
@@ -1450,7 +1454,7 @@ export default function App() {
           <div className="checkout-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 340, textAlign: 'center' }}>
             <h3>{paymentMethod === 'wechat_transfer' ? t('copy103') : paymentMethod === 'alipay_transfer' ? t('copy104') : t('copy105')}</h3>
             <div style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>{t('copy106')}{paidOrderNo}</div>
-            <div className="payment-due">{t('copy107')} {formatAmount(paidOrderAmount, paidOrderCurrency)}<small>{paidOrderCurrency === 'HKD' ? t('copy108') : t('copy109', { '0': paymentMethod === 'wechat_transfer' ? t('copy091') : t('copy092') })}</small></div>
+            <div className="payment-due">{t('copy107')} {formatAmount(paidOrderAmount, paidOrderCurrency)}<small>{t('paymentSelection', { currency: paidOrderCurrency, method: t(`payment_${paymentMethod}`) })}</small></div>
 
             {/* 支付方式切换 */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -1672,7 +1676,7 @@ export default function App() {
                 🎯 <b>{t('ustThreshold', { threshold: fmt(500) })}</b><br/>
                 {t('ustDelivery', { threshold: fmt(500) })}<br/> {t('copy155')} </div>
             </div>
-            <button className="btn-submit" style={{ width: '100%' }} onClick={() => setUstBenefit(false)}> {t('copy156')} </button>
+            <button className="btn-submit" style={{ width: '100%' }} onClick={() => setUstBenefit(false)}> {t('ustBenefitConfirm')} </button>
           </div>
         </div>
       )}
@@ -1929,7 +1933,7 @@ function AddressEditPage({ t, addr, onSave, onBack }) {
 }
 
 /* ========== 订单详情页 ========== */
-function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast, onRefresh }) {
+export function OrderDetailPage({ order, onBack, pn, vl, copyText, fmt, t, statusTxt, showToast, onRefresh }) {
   const [proofFile, setProofFile] = useState(null)
   const [proofUploading, setProofUploading] = useState(false)
   const [deliveryAddress, setDeliveryAddress] = useState('')
@@ -1953,7 +1957,7 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast, onRe
       const data = await res.json()
       if (!res.ok) { showToast(apiError(t, data)); return }
       setPayMethod(method)
-      showToast(t('copy156'))
+      showToast(t('paymentMethodUpdated'))
       await onRefresh()
     } catch { showToast(t('connectionFailed')) }
     finally { setQrSwitching(false) }

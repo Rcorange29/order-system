@@ -438,6 +438,9 @@ export const langPack = {
     "unit:/份": "/份",
     "unit:/个（4磅）": "/个（4磅）",
     "unit:/半磅": "/半磅",
+    "paymentSelection": "付款币种：{currency} · 收款方式：{method}",
+    "paymentMethodUpdated": "已切换支付方式",
+    "ustBenefitConfirm": "知道了，开始购物",
     "noActiveOffers": "暂无进行中的活动"
   },
   "zh_HK": {
@@ -878,6 +881,9 @@ export const langPack = {
     "unit:/份": "/份",
     "unit:/个（4磅）": "/個（4磅）",
     "unit:/半磅": "/半磅",
+    "paymentSelection": "付款貨幣：{currency} · 收款方式：{method}",
+    "paymentMethodUpdated": "已切換付款方式",
+    "ustBenefitConfirm": "知道了，開始選購",
     "noActiveOffers": "暫時沒有進行中的活動"
   },
   "en": {
@@ -1318,6 +1324,9 @@ export const langPack = {
     "unit:/份": "/portion",
     "unit:/个（4磅）": "/each (4 lb)",
     "unit:/半磅": "/½ lb",
+    "paymentSelection": "Currency: {currency} · Payment method: {method}",
+    "paymentMethodUpdated": "Payment method updated",
+    "ustBenefitConfirm": "Got it, start shopping",
     "noActiveOffers": "No active offers right now"
   }
 }
