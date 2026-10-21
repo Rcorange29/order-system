@@ -190,20 +190,39 @@ async function uploadProofFile(file, orderId, t) {
     reader.readAsDataURL(file)
   })
   let screenshot = original
-  if (file.size > 1024 * 1024) {
+  if (file.size > 60 * 1024) {
     screenshot = await new Promise((resolve, reject) => {
       const image = new Image()
       image.onerror = () => reject(new Error(t('copy002')))
       image.onload = () => {
-        const canvas = document.createElement('canvas')
-        const scale = Math.min(1, 1600 / Math.max(image.width, image.height))
-        canvas.width = Math.max(1, Math.round(image.width * scale))
-        canvas.height = Math.max(1, Math.round(image.height * scale))
-        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height)
-        for (const quality of [0.82, 0.68, 0.5]) {
-          const compressed = canvas.toDataURL('image/jpeg', quality)
-          if (compressed.length < 1300000) return resolve(compressed)
+        let width = image.width, height = image.height
+        const maxEdge = 900
+        if (Math.max(width, height) > maxEdge) {
+          const scale = maxEdge / Math.max(width, height)
+          width = Math.max(1, Math.round(width * scale))
+          height = Math.max(1, Math.round(height * scale))
         }
+        let canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        canvas.getContext('2d').drawImage(image, 0, 0, width, height)
+        const MAX_B64 = 79000
+        let b64 = null
+        for (let round = 0; round < 3 && !b64; round++) {
+          for (const quality of [0.7, 0.5, 0.35]) {
+            const compressed = canvas.toDataURL('image/jpeg', quality)
+            if (compressed.length < MAX_B64) { b64 = compressed; break }
+          }
+          if (!b64) {
+            width = Math.max(1, Math.round(width * 0.6))
+            height = Math.max(1, Math.round(height * 0.6))
+            canvas = document.createElement('canvas')
+            canvas.width = width
+            canvas.height = height
+            canvas.getContext('2d').drawImage(image, 0, 0, width, height)
+          }
+        }
+        if (b64) return resolve(b64)
         reject(new Error(t('copy003')))
       }
       image.src = original
@@ -2095,21 +2114,28 @@ export function OrderDetailPage({ order, onBack, pn, vl, copyText, fmt, t, statu
           <h3>{t('copy264')}</h3><p>{t('copy106')}{displayOrderNo(order)}</p>
           <div className="payment-due">{t('copy242')} {orderPaymentText(order)}</div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-            {[['wechat_transfer', t('copy091'), '#07c160'], ['alipay_transfer', t('copy092'), '#1677ff'], ['fps_transfer', t('copy093'), '#722ed1']].map(([method, label, color]) => (
-              <button
-                key={method}
-                disabled={qrSwitching}
-                onClick={() => switchPay(method)}
-                style={{
-                  fontSize: 13, padding: '7px 14px', borderRadius: 20, cursor: 'pointer',
-                  border: payMethod === method ? `2px solid ${color}` : '1px solid #ddd',
-                  background: payMethod === method ? color : '#fff',
-                  color: payMethod === method ? '#fff' : '#555',
-                  fontWeight: payMethod === method ? 600 : 400,
-                  opacity: qrSwitching ? 0.6 : 1
-                }}
-              >{label}</button>
-            ))}
+            {[
+              ['wechat_transfer', t('copy091'), '#07c160', 'CNY'],
+              ['alipay_transfer', t('copy092'), '#1677ff', 'CNY'],
+              ['fps_transfer', t('copy093'), '#722ed1', 'HKD']
+            ].map(([method, label, color, allowedCur]) => {
+              const allowed = allowedCur === (order.payment_currency || 'CNY')
+              return (
+                <button
+                  key={method}
+                  disabled={qrSwitching || !allowed}
+                  onClick={() => switchPay(method)}
+                  style={{
+                    fontSize: 13, padding: '7px 14px', borderRadius: 20, cursor: qrSwitching || !allowed ? 'not-allowed' : 'pointer',
+                    border: payMethod === method ? `2px solid ${color}` : '1px solid #ddd',
+                    background: payMethod === method && allowed ? color : '#fff',
+                    color: payMethod === method && allowed ? '#fff' : (allowed ? '#555' : '#aaa'),
+                    fontWeight: payMethod === method ? 600 : 400,
+                    opacity: qrSwitching || !allowed ? 0.45 : 1
+                  }}
+                >{label}{!allowed && <span style={{ display: 'block', fontSize: 10, lineHeight: 1.2 }}>{allowedCur === 'HKD' ? t('copy276') : t('copy275')}</span>}</button>
+              )
+            })}
           </div>
           {payMethod === 'fps_transfer' ? <div className="fps-pay-number">{t('copy265')}<br /><strong>95480721</strong></div> :
             <img className="payment-detail-qr" style={{ cursor: 'zoom-in' }} src={payMethod === 'wechat_transfer' ? '/images/pay/wechat.jpg' : '/images/pay/alipay.jpg'} alt={t('copy111')} onClick={() => setQrZoom(true)} />}

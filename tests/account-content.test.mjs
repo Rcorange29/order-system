@@ -47,9 +47,9 @@ test('customer can switch payment method of own unpaid order freely; ownership a
  const placed=await(await call(orders,'POST',body,account.token)).json()
  assert.equal((await call(orderDetail,'PATCH',{payment_method:'alipay_transfer'},account.token,placed.id)).status,200)
  assert.equal(sqlite.prepare('SELECT payment_method FROM orders WHERE id=?').get(placed.id).payment_method,'alipay_transfer')
- // 三种方式自由切换，不再受币种限制
- assert.equal((await call(orderDetail,'PATCH',{payment_method:'fps_transfer'},account.token,placed.id)).status,200)
- assert.equal(sqlite.prepare('SELECT payment_method FROM orders WHERE id=?').get(placed.id).payment_method,'fps_transfer')
+ // 币种与支付渠道对应：CNY 订单不能切转数快，切回微信/支付宝可
+ assert.equal((await call(orderDetail,'PATCH',{payment_method:'fps_transfer'},account.token,placed.id)).status,400)
+ assert.equal(sqlite.prepare('SELECT payment_method FROM orders WHERE id=?').get(placed.id).payment_method,'alipay_transfer')
  assert.equal((await call(orderDetail,'PATCH',{payment_method:'wechat_transfer'},account.token,placed.id)).status,200)
  const other=await(await call(register,'POST',{username:'other_payer',password:'CustomerTest!123',wechat_id:'other_wx',phone:'',whatsapp:''})).json()
  assert.equal((await call(orderDetail,'PATCH',{payment_method:'wechat_transfer'},other.token,placed.id)).status,403)
