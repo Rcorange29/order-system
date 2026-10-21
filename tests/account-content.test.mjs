@@ -4,6 +4,7 @@ import {setupDatabase} from './helpers/d1.mjs'
 import {hashPassword} from '../functions/api/_utils.js'
 import {onRequest as register} from '../functions/api/register.js'
 import {onRequest as orders} from '../functions/api/orders.js'
+import {onRequest as orderDetail} from '../functions/api/orders/[id].js'
 import {onRequest as upload} from '../functions/api/orders/upload-proof.js'
 import {onRequest as adminOrder} from '../functions/api/admin/orders/[id].js'
 import {onRequest as announcement} from '../functions/api/announcements.js'
@@ -36,6 +37,20 @@ test('paid group orders support both manual refund and home delivery upgrade wit
  for(const[id,type]of [[1,'refund'],[2,'delivery_upgrade']]){assert.equal((await call(serviceRequest,'POST',{order_id:id,type,address:'Room 123, HKUST'},'buyer-token')).status,201);assert.equal((await call(manageRequest,'PUT',{id,decision:'approve'})).status,200)}
  const refunded=sqlite.prepare('SELECT * FROM orders WHERE id=1').get();assert.equal(refunded.payment_status,'refunded');assert.equal(refunded.status,'cancelled')
  const upgraded=sqlite.prepare('SELECT * FROM orders WHERE id=2').get();assert.equal(upgraded.payment_amount,72);assert.equal(upgraded.delivery_fee,30);assert.equal(upgraded.delivery_point_id,null);assert.equal(upgraded.contact_wechat_id,'student_wx')
+ sqlite.close()
+})
+test('customer can switch payment method of own unpaid order; currency rule and ownership enforced',async()=>{
+ const{sqlite,call}=await setup()
+ const account=await(await call(register,'POST',{username:'switch_payer',password:'CustomerTest!123',wechat_id:'switch_wx',phone:'',whatsapp:''})).json()
+ sqlite.exec("INSERT INTO products(id,name,price,unit,is_active) VALUES(1,'QA produce',15,'/pack',1)")
+ const body={items:[{product_id:1,quantity:2}],delivery_type:'pickup',delivery_point_id:2,payment_method:'wechat_transfer',payment_currency:'CNY',expected_payment_amount:30,expected_cny_total:30}
+ const placed=await(await call(orders,'POST',body,account.token)).json()
+ assert.equal((await call(orderDetail,'PATCH',{payment_method:'alipay_transfer'},account.token,placed.id)).status,200)
+ assert.equal(sqlite.prepare('SELECT payment_method FROM orders WHERE id=?').get(placed.id).payment_method,'alipay_transfer')
+ assert.equal((await call(orderDetail,'PATCH',{payment_method:'fps_transfer'},account.token,placed.id)).status,400)
+ const other=await(await call(register,'POST',{username:'other_payer',password:'CustomerTest!123',wechat_id:'other_wx',phone:'',whatsapp:''})).json()
+ assert.equal((await call(orderDetail,'PATCH',{payment_method:'wechat_transfer'},other.token,placed.id)).status,403)
+ assert.equal((await call(orderDetail,'PATCH',{payment_method:'invalid_pay'},account.token,placed.id)).status,400)
  sqlite.close()
 })
 test('merchant translations save independently, public APIs include all languages and blank translations fall back per field',async()=>{

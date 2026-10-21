@@ -1,4 +1,4 @@
-import { getAuthUser, json, cors, readBody } from '../_utils'
+import { getAuthUser, json, cors, readBody } from '../_utils.js'
 
 const PAYMENT_METHODS = new Set(['wechat_transfer', 'alipay_transfer', 'fps_transfer'])
 
