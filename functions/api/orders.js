@@ -85,7 +85,7 @@ export async function onRequest(context) {
   const deliveryFee = point ? 0 : 30
 
   const dbUser = await env.DB.prepare('SELECT username, phone, wechat_id, whatsapp FROM users WHERE id = ?').bind(user.id).first()
-  if (!body.phone && !dbUser?.phone && !dbUser?.wechat_id && !dbUser?.whatsapp) return json({ code: 'CONTACT_REQUIRED' }, 400)
+  if (!body.phone && !dbUser?.phone && !dbUser?.wechat_id) return json({ code: 'CONTACT_REQUIRED' }, 400)
   const rateRow = paymentCurrency === 'HKD' ? await env.DB.prepare("SELECT value FROM settings WHERE key = 'exchange_rate'").first() : null
   const exchangeRate = Number(rateRow?.value || 1.2)
   if (!Number.isFinite(exchangeRate) || exchangeRate <= 0 || exchangeRate > 100) return json({ error: '汇率设置无效' }, 500)

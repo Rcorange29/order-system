@@ -1723,7 +1723,6 @@ function LoginPage({ onLogin, onRegister, onBack, t }) {
   const [mode, setMode] = useState('login')
   const [profile, setProfile] = useState({ username: '', wechat_id: '', whatsapp: '', phone: '' })
   const [phonePrefix, setPhonePrefix] = useState('+852')
-  const [whatsappPrefix, setWhatsappPrefix] = useState('+852')
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [error, setError] = useState('')
@@ -1739,7 +1738,7 @@ function LoginPage({ onLogin, onRegister, onBack, t }) {
     if (mode === 'register') {
       const contactProfile = {
         ...profile,
-        whatsapp: profile.whatsapp ? whatsappPrefix + profile.whatsapp : '',
+        whatsapp: '',
         phone: profile.phone ? phonePrefix + profile.phone : ''
       }
       const result = validateProfile(contactProfile)
@@ -1771,7 +1770,6 @@ function LoginPage({ onLogin, onRegister, onBack, t }) {
         <div className="login-input-group"><label htmlFor="account-confirmation">{t('confirmPassword')}</label><input id="account-confirmation" type="password" autoComplete="new-password" required value={confirmation} onChange={e => setConfirmation(e.target.value)} /></div>
         <p className="login-phone-hint">{t('contactHint')}</p>
         <div className="login-input-group"><label htmlFor="account-wechat_id">{t('wechatId')} <small>{t('preferredContact')}</small></label><input id="account-wechat_id" type="text" maxLength={20} value={profile.wechat_id} onChange={e => update('wechat_id',e.target.value)} placeholder={t('wechatHint')} /></div>
-        <div className="login-input-group"><label htmlFor="account-whatsapp">{t('whatsapp')} <small>{t('optional')}</small></label><div className="phone-prefix-row"><select value={whatsappPrefix} onChange={e => { setWhatsappPrefix(e.target.value); setProfile(prev => ({ ...prev, whatsapp: (prev.whatsapp || '').slice(0, e.target.value === '+852' ? 8 : 11) })) }} aria-label={t('countryCode')}><option value="+852">+852</option><option value="+86">+86</option></select><input id="account-whatsapp" type="tel" inputMode="numeric" maxLength={whatsappPrefix === '+852' ? 8 : 11} value={profile.whatsapp} onChange={e => update('whatsapp', digitsOnly(e.target.value, whatsappPrefix === '+852' ? 8 : 11))} placeholder={t(whatsappPrefix === '+852' ? 'phonePh852' : 'phonePh86')} /></div></div>
         <div className="login-input-group"><label htmlFor="account-phone">{t('phone')} <small>{t('optional')}</small></label><div className="phone-prefix-row"><select value={phonePrefix} onChange={e => { setPhonePrefix(e.target.value); setProfile(prev => ({ ...prev, phone: (prev.phone || '').slice(0, e.target.value === '+852' ? 8 : 11) })) }} aria-label={t('countryCode')}><option value="+852">+852</option><option value="+86">+86</option></select><input id="account-phone" type="tel" inputMode="numeric" maxLength={phonePrefix === '+852' ? 8 : 11} value={profile.phone} onChange={e => update('phone', digitsOnly(e.target.value, phonePrefix === '+852' ? 8 : 11))} placeholder={t(phonePrefix === '+852' ? 'phonePh852' : 'phonePh86')} /></div></div>
         <p className="login-phone-hint">{t('noSmsHint')}</p>
       </>}

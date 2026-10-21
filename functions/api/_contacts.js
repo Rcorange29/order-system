@@ -22,12 +22,12 @@ export function validWechatId(value) {
 }
 export function validateProfile(body) {
   if (typeof body.username !== 'string' || !/^[A-Za-z0-9_\u4e00-\u9fff.@+-]{2,40}$/.test(body.username.trim())) return { error: '用户名需为2–40位中文、字母、数字或 _ . @ + -，不能含空格', code: 'INVALID_USERNAME' }
-  if (typeof body.wechat_id !== 'string' || typeof body.whatsapp !== 'string' || typeof body.phone !== 'string') return { error: '请填写完整的联系方式字段，未使用的可留空', code: 'INVALID_CONTACT_FIELDS' }
+  if (typeof body.wechat_id !== 'string' || (body.whatsapp !== undefined && typeof body.whatsapp !== 'string') || typeof body.phone !== 'string') return { error: '请检查联系方式，未使用的项可留空', code: 'INVALID_CONTACT_FIELDS' }
   const wechat_id = body.wechat_id.trim()
   if (!validWechatId(wechat_id)) return { error: '微信号需为6–20位，字母或数字开头，只含字母、数字、下划线或短横线', code: 'INVALID_WECHAT' }
-  const whatsapp = normalizeWhatsapp(body.whatsapp)
+  const whatsapp = normalizeWhatsapp(body.whatsapp ?? '')
   const phone = normalizeContactPhone(body.phone)
-  if (whatsapp === null || phone === null) return { error: '号码仅支持香港8位手机号码（+852）', code: 'INVALID_PHONE' }
-  if (!wechat_id && !whatsapp && !phone) return { error: '微信号、WhatsApp、手机号至少填写一项', code: 'CONTACT_REQUIRED' }
+  if (whatsapp === null || phone === null) return { error: '号码仅支持 +852 香港8位手机号，或 +86 内地11位手机号', code: 'INVALID_PHONE' }
+  if (!wechat_id && !phone) return { error: '微信号或手机号码至少填写一项', code: 'CONTACT_REQUIRED' }
   return { value: { username: body.username.trim().toLowerCase(), wechat_id, whatsapp, phone } }
 }

@@ -34,6 +34,8 @@ test('registration accepts HK and mainland contacts, normalizes numbers, and kee
     const account=await response.json();assert.equal(account.phone,expected);assert.equal(account.whatsapp,'')
     assert.equal((await request(login,{username:expected,password:profile.password})).status,401)
   }
+  const noWhatsapp=await request(register,{username:'wx_only_user',wechat_id:'only_wx',phone:'',password:'TestOnly!123'});assert.equal(noWhatsapp.status,201)
+  const noWhatsappBody=await noWhatsapp.json();assert.equal(noWhatsappBody.wechat_id,'only_wx')
   sqlite.close()
 })
 test('invalid usernames, contacts and passwords fail before creating an account',async()=>{
