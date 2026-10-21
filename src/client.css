@@ -1231,9 +1231,29 @@ body { background: var(--market-paper); color: var(--market-ink); }
 .delivery-rule-strip {
   display: flex; justify-content: space-between; gap: 8px; align-items: center;
   margin: 0; padding: 6px 15px; background: #f2f5f0; color: var(--market-green);
-  font-size: 11px; cursor: pointer;
+  font-size: 11px; cursor: pointer; position: relative;
 }
 .delivery-rule-strip span:last-child { flex: 0 0 auto; }
+.delivery-rule-strip.pulse { animation: rule-pulse 0.9s ease-in-out 3; }
+@keyframes rule-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(22, 119, 255, 0); }
+  50% { box-shadow: 0 0 0 7px rgba(22, 119, 255, 0.38); }
+}
+.notice-bubble {
+  position: absolute; top: -38px; right: 8px; z-index: 50;
+  background: #1677ff; color: #fff; font-size: 12px; line-height: 1.5;
+  padding: 8px 12px; border-radius: 10px; white-space: normal; max-width: 240px;
+  animation: bubble-in 0.35s ease-out, bubble-out 0.4s ease-in 3s forwards;
+}
+.notice-bubble::after {
+  content: ''; position: absolute; left: 18px; bottom: -6px;
+  width: 10px; height: 10px; background: #1677ff; transform: rotate(45deg);
+  border-radius: 2px;
+}
+@keyframes bubble-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes bubble-out { from { opacity: 1; } to { opacity: 0; } }
+.order-guide-in-help-list p { font-size: 12px; line-height: 1.7; margin: 0 0 8px; color: #555; }
+.order-guide-in-help-list b { color: #333; }
 .group-buy-banner {
   margin: 0; padding: 7px 15px; border: 0; border-bottom: 1px solid var(--market-line);
   border-radius: 0; background: #fff;

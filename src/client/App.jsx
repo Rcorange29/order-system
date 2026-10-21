@@ -256,6 +256,8 @@ export default function App() {
   const [deliveryType, setDeliveryType] = useState('pickup')
   const [ustBenefit, setUstBenefit] = useState(false)
   const [showIntro, setShowIntro] = useState(false)
+  const [authChecked, setAuthChecked] = useState(false)
+  const [noticeMoved, setNoticeMoved] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [selectedVariant, setSelectedVariant] = useState(null)
   const [favorites, setFavorites] = useState(() => readStoredArray('favorites'))
@@ -332,12 +334,19 @@ export default function App() {
 
   useEffect(() => { document.documentElement.lang = lang === 'zh_HK' ? 'zh-HK' : lang === 'en' ? 'en' : 'zh-CN'; document.title = t('welcome') }, [lang])
 
-  // 首次进入显示新手指引 + 注意事项
+  // 新手指引：仅在未登录且首次访问时显示；已登录用户（老用户）永远不再弹
   useEffect(() => {
-    if (!storage.getItem('intro_read')) {
-      setShowOnboard(true)
-    }
-  }, [])
+    if (!authChecked) return
+    if (currentUser) return
+    if (!storage.getItem('intro_read')) setShowOnboard(true)
+  }, [authChecked, currentUser])
+
+  // 动画提示结束后复位，避免重复播放
+  useEffect(() => {
+    if (!noticeMoved) return
+    const timer = setTimeout(() => setNoticeMoved(false), 3600)
+    return () => clearTimeout(timer)
+  }, [noticeMoved])
 
   // 初始化：用本地 token 调用 /api/me 验证登录状态
   useEffect(() => {
@@ -351,7 +360,9 @@ export default function App() {
       }).catch(() => {
         storage.removeItem('token')
         storage.removeItem('currentUser')
-      })
+      }).finally(() => setAuthChecked(true))
+    } else {
+      setAuthChecked(true)
     }
   }, [])
 
@@ -872,10 +883,11 @@ export default function App() {
           )}
 
           {/* 配送规则小横幅 */}
-          <div className="delivery-rule-strip"
+          <div className={`delivery-rule-strip${noticeMoved ? ' pulse' : ''}`}
             onClick={() => setShowHelp(true)}>
             <span>{t('deliveryRule')}</span>
             <span>{t('details')}</span>
+            {noticeMoved && <span className="notice-bubble">{t('copy212')}</span>}
           </div>
 
           {/* 凑单进度条 */}
@@ -1628,6 +1640,7 @@ export default function App() {
               onClick={() => {
                 storage.setItem('intro_read', '1')
                 setShowIntro(false)
+                setNoticeMoved(true)
               }}
             > {t('copy152')} </button>
           </div>
@@ -1735,6 +1748,16 @@ export default function App() {
               <section><h4>{t('copy206')}</h4><p>{t('deliveryFeeRule', { threshold: fmt(effectiveThreshold), fee: fmt(30) })}</p></section>
               <section><h4>{t('copy072')}</h4><p>{t('pointThresholds', { ust: fmt(500), other: fmt(1000) })}</p></section>
               <section><h4>{t('copy207')}</h4><p>{t('copy208')}</p></section>
+              <section className="order-guide-in-help">
+                <h4>{t('copy211')}</h4>
+                <div className="order-guide-in-help-list">
+                  <p><b>{t('copy139')}</b>{t('copy140')}{t('copy141')}</p>
+                  <p><b>{t('copy142')}</b>{t('introPickup', { threshold: fmt(effectiveThreshold) })}{t('copy143')}{fmt(30)}{t('introUpgrade', { fee: fmt(30) })}</p>
+                  <p><b>{t('copy144')}</b>{t('copy145')}</p>
+                  <p><b>{t('copy146')}</b>{t('copy147')}</p>
+                  <p><b>{t('copy148')}</b>{t('copy149')}<br />{t('copy150')}<br />{t('copy151')}</p>
+                </div>
+              </section>
             </div>
             <button type="button" className="rule-close-btn" onClick={() => setShowHelp(false)}>{t('copy201')}</button>
           </div>
