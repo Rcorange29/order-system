@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-const fields = [['username', '用户名'], ['wechat_id', '微信ID'], ['whatsapp', 'WhatsApp'], ['phone', '手机号']]
+const fields = [['username', '用户名'], ['wechat_id', '微信号'], ['whatsapp', 'WhatsApp'], ['phone', '手机号']]
 const orderNo = order => String(order.public_no ?? order.id).padStart(2, '0')
 const money = value => `¥${Number(value || 0).toFixed(2)}`
 const statusNames = { pending:'待付款', awaiting_confirmation:'待确认', paid:'拼团中', shipped:'已发货', completed:'已完成', cancelled:'已取消' }
@@ -55,7 +55,7 @@ export default function UserManage({ users, authFetch, reload, showToast, onOpen
   return <section>
     <div className="page-header"><h2>用户管理</h2><span>共 {users.length} 位注册用户</span></div>
     <div className="card">
-      <div className="toolbar"><input aria-label="搜索用户" placeholder="用户名、微信ID、WhatsApp或手机号" value={search} onChange={e => setSearch(e.target.value)} /><select aria-label="账号状态筛选" value={status} onChange={e => setStatus(e.target.value)}><option value="">全部账号状态</option><option value="active">正常</option><option value="disabled">已停用</option></select></div>
+      <div className="toolbar"><input aria-label="搜索用户" placeholder="用户名、微信号、WhatsApp或手机号" value={search} onChange={e => setSearch(e.target.value)} /><select aria-label="账号状态筛选" value={status} onChange={e => setStatus(e.target.value)}><option value="">全部账号状态</option><option value="active">正常</option><option value="disabled">已停用</option></select></div>
       <p className="user-help">累计消费以人民币统计，仅计已确认收款且未取消、未退款的订单（含运费）。订单数包含所有状态。</p>
       <div className="user-table-scroll"><table><thead><tr><th>ID</th>{fields.map(([key,label]) => <th key={key}>{label}</th>)}<th>注册时间</th><th>下单笔数</th><th>累计消费 CNY</th><th>账号状态</th><th>密码</th><th>操作</th></tr></thead>
         <tbody>{filtered.map(user => <tr key={user.id}><td>{user.id}</td>{fields.map(([key]) => <td key={key}>{user[key] || '—'}</td>)}<td>{user.created_at}</td><td>{user.order_count}</td><td>{money(user.total_spent)}</td><td><span className={`tag ${user.account_status === 'disabled' ? 'tag-cancelled' : 'tag-completed'}`}>{user.account_status === 'disabled' ? '已停用' : '正常'}</span>{!!user.is_admin && <small> 管理员</small>}</td><td>{user.has_password ? '已设置' : '未设置'}</td><td><button className="btn btn-default btn-sm" onClick={() => open(user)}>管理 / 订单</button></td></tr>)}</tbody>
@@ -73,7 +73,7 @@ export default function UserManage({ users, authFetch, reload, showToast, onOpen
           <form onSubmit={e => {e.preventDefault();save('profile',form)}}>
             <fieldset disabled={busy} className="user-fieldset"><legend>账号和联系方式</legend>
               {fields.map(([key,label]) => <div className="form-row" key={key}><label htmlFor={`user-${key}`}>{label}</label><input id={`user-${key}`} autoComplete="off" value={form[key] || ''} readOnly={key === 'username' && detail.user.username === 'jchengat'} maxLength={key === 'username' ? 40 : key === 'wechat_id' ? 20 : 32} onChange={e => setForm({...form,[key]:e.target.value})} placeholder={key === 'wechat_id' ? '微信号，非微信昵称' : key === 'whatsapp' || key === 'phone' ? '+852 91234567 或 +86 13800138000' : '用户名'} /></div>)}
-              <p className="user-help">至少填写一项联系方式。号码和微信ID仅检查格式，不代表已验证归属。顾客使用用户名和密码登录，英文字母不区分大小写。修改联系方式不会更改登录用户名；修改用户名会使旧登录失效。历史订单的收货信息需在对应订单单独修改。</p>
+              <p className="user-help">至少填写一项联系方式。号码和微信号仅检查格式，不代表已验证归属。顾客使用用户名和密码登录，英文字母不区分大小写。修改联系方式不会更改登录用户名；修改用户名会使旧登录失效。历史订单的收货信息需在对应订单单独修改。</p>
               <button className="btn btn-primary" type="submit">{busy ? '正在保存…' : '保存账号与联系方式'}</button>
             </fieldset>
           </form>

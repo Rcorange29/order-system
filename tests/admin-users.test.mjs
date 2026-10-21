@@ -106,7 +106,7 @@ test('disabling blocks both new logins and previously issued tokens; enabling re
 
 test('admin identity/privileges are protected, and invalid or duplicate profiles never save',async()=>{
   const {sqlite,call}=setup();const before=sqlite.prepare('SELECT * FROM users WHERE id=2').get()
-  for(const body of [{...profile,phone:'+85361234567'},{...profile,wechat_id:'123bad'},{...profile,wechat_id:'',whatsapp:'',phone:''},{...profile,is_admin:1},{...profile,username:'a space'}])assert.equal((await call(user,'PATCH',body)).status,400)
+  for(const body of [{...profile,phone:'+85361234567'},{...profile,wechat_id:'ab'},{...profile,wechat_id:'',whatsapp:'',phone:''},{...profile,is_admin:1},{...profile,username:'a space'}])assert.equal((await call(user,'PATCH',body)).status,400)
   assert.deepEqual(sqlite.prepare('SELECT * FROM users WHERE id=2').get(),before)
   assert.equal((await call(user,'PATCH',{...profile,username:'other_user'})).status,409)
   assert.equal((await call(user,'PATCH',{action:'status',account_status:'disabled'},'admin-token',1)).status,409)

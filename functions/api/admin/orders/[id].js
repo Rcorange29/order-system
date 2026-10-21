@@ -32,7 +32,7 @@ export async function onRequest(context) {
       if (typeof body[key] !== 'string' || body[key].length > limits[key]) return json({ error: '收货信息格式或长度无效' }, 400)
       let value = body[key].trim()
       if (key === 'customer' && !value) return json({ error: '收货人不能为空' }, 400)
-      if (key === 'contact_wechat_id' && !validWechatId(value)) return json({ error: '微信ID格式无效' }, 400)
+      if (key === 'contact_wechat_id' && !validWechatId(value)) return json({ error: '微信号格式无效' }, 400)
       if (['phone', 'contact_whatsapp'].includes(key) && value !== String(order[key] || '')) {
         value = normalizeContactPhone(value)
         if (value === null) return json({ error: '联系电话仅支持+852香港手机号或+86内地手机号' }, 400)
