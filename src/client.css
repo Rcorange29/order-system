@@ -676,7 +676,7 @@ body {
 
 .toast {
   position: fixed;
-  top: calc(var(--app-viewport-top, 0px) + var(--app-viewport-height, 100vh) * 0.5);
+  top: calc(var(--app-viewport-top, 0px) + var(--app-viewport-height, 100vh) * 0.18);
   left: 50%;
   transform: translate(-50%, -50%);
   background: rgba(0,0,0,0.75);

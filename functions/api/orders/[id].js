@@ -16,8 +16,6 @@ export async function onRequest(context) {
     if (!order) return json({ error: '订单不存在' }, 404)
     if (order.user_id !== String(user.id)) return json({ error: '无权修改该订单' }, 403)
     if (!['pending', 'paid'].includes(order.payment_status)) return json({ error: '该订单已完成付款，无法更改支付方式' }, 409)
-    if (order.payment_currency === 'HKD' && ['wechat_transfer', 'alipay_transfer'].includes(body.payment_method)) return json({ error: '微信和支付宝仅支持人民币付款，请改选转数快' }, 400)
-    if (order.payment_currency === 'CNY' && body.payment_method === 'fps_transfer') return json({ error: '转数快仅支持港币付款，请改选微信或支付宝' }, 400)
     await env.DB.prepare("UPDATE orders SET payment_method = ?, updated_at = datetime('now', '+8 hours') WHERE id = ?").bind(body.payment_method, id).run()
     return json({ ok: true, payment_method: body.payment_method })
   }

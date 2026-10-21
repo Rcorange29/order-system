@@ -39,7 +39,7 @@ test('paid group orders support both manual refund and home delivery upgrade wit
  const upgraded=sqlite.prepare('SELECT * FROM orders WHERE id=2').get();assert.equal(upgraded.payment_amount,72);assert.equal(upgraded.delivery_fee,30);assert.equal(upgraded.delivery_point_id,null);assert.equal(upgraded.contact_wechat_id,'student_wx')
  sqlite.close()
 })
-test('customer can switch payment method of own unpaid order; currency rule and ownership enforced',async()=>{
+test('customer can switch payment method of own unpaid order freely; ownership and invalid method enforced',async()=>{
  const{sqlite,call}=await setup()
  const account=await(await call(register,'POST',{username:'switch_payer',password:'CustomerTest!123',wechat_id:'switch_wx',phone:'',whatsapp:''})).json()
  sqlite.exec("INSERT INTO products(id,name,price,unit,is_active) VALUES(1,'QA produce',15,'/pack',1)")
@@ -47,7 +47,10 @@ test('customer can switch payment method of own unpaid order; currency rule and 
  const placed=await(await call(orders,'POST',body,account.token)).json()
  assert.equal((await call(orderDetail,'PATCH',{payment_method:'alipay_transfer'},account.token,placed.id)).status,200)
  assert.equal(sqlite.prepare('SELECT payment_method FROM orders WHERE id=?').get(placed.id).payment_method,'alipay_transfer')
- assert.equal((await call(orderDetail,'PATCH',{payment_method:'fps_transfer'},account.token,placed.id)).status,400)
+ // 三种方式自由切换，不再受币种限制
+ assert.equal((await call(orderDetail,'PATCH',{payment_method:'fps_transfer'},account.token,placed.id)).status,200)
+ assert.equal(sqlite.prepare('SELECT payment_method FROM orders WHERE id=?').get(placed.id).payment_method,'fps_transfer')
+ assert.equal((await call(orderDetail,'PATCH',{payment_method:'wechat_transfer'},account.token,placed.id)).status,200)
  const other=await(await call(register,'POST',{username:'other_payer',password:'CustomerTest!123',wechat_id:'other_wx',phone:'',whatsapp:''})).json()
  assert.equal((await call(orderDetail,'PATCH',{payment_method:'wechat_transfer'},other.token,placed.id)).status,403)
  assert.equal((await call(orderDetail,'PATCH',{payment_method:'invalid_pay'},account.token,placed.id)).status,400)

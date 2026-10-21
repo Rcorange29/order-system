@@ -43,8 +43,6 @@ export async function onRequest(context) {
   if (!PAYMENT_METHODS.has(body.payment_method)) return json({ error: '请选择微信、支付宝或转数快付款' }, 400)
   const paymentCurrency = body.payment_currency || 'CNY'
   if (!['CNY', 'HKD'].includes(paymentCurrency)) return json({ error: '付款币种无效' }, 400)
-  if (paymentCurrency === 'HKD' && ['wechat_transfer', 'alipay_transfer'].includes(body.payment_method)) return json({ error: '微信和支付宝仅支持人民币付款，请改选转数快' }, 400)
-  if (paymentCurrency === 'CNY' && body.payment_method === 'fps_transfer') return json({ error: '转数快仅支持港币付款，请改选微信或支付宝' }, 400)
   if (!['pickup', 'delivery'].includes(body.delivery_type)) return json({ error: '配送方式无效' }, 400)
 
   let point = null
