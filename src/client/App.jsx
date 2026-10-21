@@ -174,6 +174,12 @@ function authFetch(url, options = {}) {
   return fetch(url, { ...options, headers })
 }
 
+// 微信内置浏览器 localStorage 可能失效，intro_read 双写 cookie 保证跨会话记忆
+const introReadCookie = () => document.cookie.split(';').some(s => s.trim().startsWith('intro_read=1'))
+const setIntroReadCookie = () => {
+  try { document.cookie = 'intro_read=1; max-age=31536000; path=/; SameSite=Lax' } catch {}
+}
+
 async function uploadProofFile(file, orderId, t) {
   if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return t('copy001')
   const original = await new Promise((resolve, reject) => {
@@ -336,9 +342,9 @@ export default function App() {
 
   // 新手指引：仅在未登录且首次访问时显示；已登录用户（老用户）永远不再弹
   useEffect(() => {
-    if (!authChecked) return
+    if (authChecked !== true) return
     if (currentUser) return
-    if (!storage.getItem('intro_read')) setShowOnboard(true)
+    if (!storage.getItem('intro_read') && !introReadCookie()) setShowOnboard(true)
   }, [authChecked, currentUser])
 
   // 动画提示结束后复位，避免重复播放
@@ -351,19 +357,24 @@ export default function App() {
   // 初始化：用本地 token 调用 /api/me 验证登录状态
   useEffect(() => {
     const token = storage.getItem('token')
-    if (token) {
-      authFetch(`${API}/me`).then(r => {
+    if (!token) { setAuthChecked(true); return }
+    authFetch(`${API}/me`)
+      .then(r => {
         if (r.ok) return r.json()
-        throw new Error('invalid token')
-      }).then(user => {
-        setCurrentUser(user)
-      }).catch(() => {
-        storage.removeItem('token')
-        storage.removeItem('currentUser')
-      }).finally(() => setAuthChecked(true))
-    } else {
-      setAuthChecked(true)
-    }
+        throw Object.assign(new Error('me-failed'), { status: r.status })
+      })
+      .then(user => { setCurrentUser(user); setAuthChecked(true) })
+      .catch(e => {
+        if (e.status === 401) {
+          // 明确未登录：清理本地登录态
+          storage.removeItem('token')
+          storage.removeItem('currentUser')
+          setAuthChecked(true)
+        } else {
+          // 网络/服务异常：登录状态未知，不打扰用户，也不弹新手指引
+          setAuthChecked('error')
+        }
+      })
   }, [])
 
   // 登录后加载地址和订单
@@ -398,7 +409,6 @@ export default function App() {
     fetch(`${API}/products`).then(r => r.json()).then(setProducts)
     fetch(`${API}/categories`).then(r => r.json()).then(setCategories)
     fetch(`${API}/settings`).then(r => r.json()).then(d => setExchangeRate(d.exchange_rate || 1.2)).catch(()=>{})
-    if (!storage.getItem('currency')) setShowOnboard(true)
   }, [])
 
   useEffect(() => {
@@ -1557,8 +1567,8 @@ export default function App() {
       )}
 
       {/* 新手指引弹窗 */}
-      {/* 首次进入选择币种 */}
-      {!currency && (
+      {/* 首次进入选择币种（仅未登录访客首次可见；已登录用户不再显示） */}
+      {!currency && authChecked === true && !currentUser && (
         <div className="checkout-overlay" style={{ zIndex: 6000 }}>
           <div className="checkout-panel" style={{ maxWidth: 380, textAlign: 'center', padding: 24 }}>
             <h3 style={{ marginBottom: 16 }}>{t('copy135')}</h3>
@@ -1639,6 +1649,7 @@ export default function App() {
               style={{ width: '100%', padding: 14, marginTop: 8 }}
               onClick={() => {
                 storage.setItem('intro_read', '1')
+                setIntroReadCookie()
                 setShowIntro(false)
                 setNoticeMoved(true)
               }}
