@@ -804,13 +804,12 @@ export default function App() {
             {Object.entries({ zh_CN:'简', zh_HK:'繁', en:'EN' }).map(([k,v]) => (
               <span key={k} onClick={() => switchLang(k)} className={`header-option ${lang === k ? 'active' : ''}`}>{v}</span>
             ))}
-            <span className="display-currency-label">{t('inline1')}</span>
             <span onClick={() => {
               const c = currency === 'HKD' ? 'CNY' : 'HKD'
               setCurrency(c); storage.setItem('currency', c)
             }} className="currency-switch">
               <span className={currency === 'CNY' ? 'active' : ''}>¥ CNY</span>
-              <span className={currency === 'HKD' ? 'active' : ''}>HK$ HKD</span>
+              <span className={currency === 'HKD' ? 'active' : ''}>$HKD</span>
             </span>
           </div>
         </div>
@@ -1580,7 +1579,7 @@ export default function App() {
               </button>
               <button onClick={() => { setCurrency('HKD'); storage.setItem('currency', 'HKD'); setShowOnboard(true) }}
                 style={{ padding: 16, borderRadius: 12, border: '2px solid #ddd', background: '#fff', color: '#333', fontSize: 18, fontWeight: 600, cursor: 'pointer' }}>
-                HK$ HKD
+                $HKD
               </button>
             </div>
           </div>
