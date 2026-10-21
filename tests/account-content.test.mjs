@@ -54,6 +54,12 @@ test('customer can switch payment method of own unpaid order freely; ownership a
  const other=await(await call(register,'POST',{username:'other_payer',password:'CustomerTest!123',wechat_id:'other_wx',phone:'',whatsapp:''})).json()
  assert.equal((await call(orderDetail,'PATCH',{payment_method:'wechat_transfer'},other.token,placed.id)).status,403)
  assert.equal((await call(orderDetail,'PATCH',{payment_method:'invalid_pay'},account.token,placed.id)).status,400)
+ // 待付款订单可自行取消；非待付款或他人订单不可
+ assert.equal((await call(orderDetail,'PATCH',{action:'cancel'},account.token,placed.id)).status,200)
+ assert.equal(sqlite.prepare('SELECT status FROM orders WHERE id=?').get(placed.id).status,'cancelled')
+ const paid=await(await call(orders,'POST',{items:[{product_id:1,quantity:2}],delivery_type:'pickup',delivery_point_id:2,payment_method:'wechat_transfer',payment_currency:'CNY',expected_payment_amount:30,expected_cny_total:30})).json()
+ sqlite.prepare("UPDATE orders SET status='awaiting_confirmation', payment_status='paid' WHERE id=?").run(Number(paid.id))
+ assert.equal((await call(orderDetail,'PATCH',{action:'cancel'},account.token,paid.id)).status,409)
  sqlite.close()
 })
 test('merchant translations save independently, public APIs include all languages and blank translations fall back per field',async()=>{

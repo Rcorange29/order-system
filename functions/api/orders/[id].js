@@ -11,6 +11,14 @@ export async function onRequest(context) {
 
   if (request.method === 'PATCH') {
     const body = await readBody(request)
+    if (body.action === 'cancel') {
+      const order = await env.DB.prepare('SELECT id, user_id, status, payment_status FROM orders WHERE id = ?').bind(id).first()
+      if (!order) return json({ error: '订单不存在' }, 404)
+      if (order.user_id !== String(user.id)) return json({ error: '无权操作该订单' }, 403)
+      if (order.status !== 'pending' || order.payment_status !== 'pending') return json({ error: '该订单不在待付款阶段，无法自行取消，请联系老板' }, 409)
+      await env.DB.prepare("UPDATE orders SET status = 'cancelled', updated_at = datetime('now', '+8 hours') WHERE id = ? AND status = 'pending'").bind(id).run()
+      return json({ ok: true, status: 'cancelled' })
+    }
     if (!PAYMENT_METHODS.has(body.payment_method)) return json({ error: '请选择微信、支付宝或转数快付款' }, 400)
     const order = await env.DB.prepare('SELECT id, user_id, payment_status, payment_currency FROM orders WHERE id = ?').bind(id).first()
     if (!order) return json({ error: '订单不存在' }, 404)

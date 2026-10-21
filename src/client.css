@@ -1360,6 +1360,10 @@ body { background: var(--market-paper); color: var(--market-ink); }
 .after-sale-contact span { color: #697269; min-width: 74px; }
 .after-sale-contact strong { flex: 1; }
 .after-sale-contact button, .after-sale-contact a { padding: 5px 9px; background: #fff; border: 1px solid #bbcbbd; color: var(--market-green); text-decoration: none; border-radius: 4px; cursor: pointer; }
+.order-cancel-action { text-align: center; }
+.btn-cancel-order { width: 100%; padding: 12px; border: 1px solid #e04b3a; color: #e04b3a; background: #fff; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+.btn-cancel-order:disabled { opacity: 0.6; cursor: not-allowed; }
+.after-sale-contact-card .after-sale-contact:first-of-type { border-top: 0; }
 
 /* Phone-first hierarchy: store, offers, delivery progress, then eight products. */
 .top-bar { padding: 13px 16px 12px; }

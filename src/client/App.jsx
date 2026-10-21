@@ -1980,6 +1980,20 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast, onRe
     } catch { showToast(t('copy229')) }
     finally { setSubmitting(false) }
   }
+  const cancelOrder = async () => {
+    if (!window.confirm(t('copy269'))) return
+    setSubmitting(true)
+    try {
+      const response = await authFetch(`${API}/orders/${order.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel' })
+      })
+      const data = await response.json()
+      showToast(response.ok ? t('copy270') : apiError(t, data))
+      if (response.ok) await onRefresh()
+    } catch { showToast(t('connectionFailed')) }
+    finally { setSubmitting(false) }
+  }
   return (
     <div>
       <div className="back-btn" onClick={onBack}>{t('copy027')}</div>
@@ -2056,6 +2070,19 @@ function OrderDetailPage({ order, onBack, pn, fmt, t, statusTxt, showToast, onRe
               <button disabled={submitting} onClick={() => submitRequest('delivery_upgrade')}>{t('upgradeFee', { fee: orderFmt(30) })}</button>
               <button disabled={submitting} className="secondary" onClick={() => submitRequest('refund')}>{t('copy263')}</button>
             </div>
+          </div>
+        )}
+        {order.status === 'pending' && (
+          <div className="order-detail-card order-cancel-action">
+            <button className="btn-cancel-order" disabled={submitting} onClick={cancelOrder}>{t('copy268')}</button>
+          </div>
+        )}
+        {!['pending', 'cancelled'].includes(order.status) && (
+          <div className="order-detail-card after-sale-contact-card">
+            <h4>{t('copy271')}</h4>
+            <p>{t('copy272')}</p>
+            <div className="after-sale-contact"><span>{t('copy172')}</span><strong>{BOSS_WECHAT}</strong><button onClick={() => copyText(BOSS_WECHAT, t('copy161'))}>{t('copy162')}</button></div>
+            <div className="after-sale-contact"><span>{t('whatsapp')}</span><strong>{BOSS_WHATSAPP}</strong><a href="https://wa.me/85295228191" target="_blank" rel="noreferrer">{t('copy173')}</a></div>
           </div>
         )}
       </div>
