@@ -299,6 +299,11 @@ export default function App() {
   const [showOnboard, setShowOnboard] = useState(false)
   const [onboardStep, setOnboardStep] = useState(0)
 
+  // 浏览量统计：页面打开即静默上报一次（登录与否都计），不影响用户端任何体验
+  useEffect(() => {
+    try { fetch(`${API}/track-view`, { method: 'POST', keepalive: true }).catch(() => {}) } catch {}
+  }, [])
+
   const t = (key, values) => translate(lang, key, values)
   const content = (record, field) => localizedContent(record, field, lang)
   const fmt = (rmbPrice) => {

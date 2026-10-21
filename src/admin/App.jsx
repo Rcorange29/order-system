@@ -31,6 +31,7 @@ export default function App() {
   const [users, setUsers] = useState([])
   const [serviceRequests, setServiceRequests] = useState([])
   const [announcements, setAnnouncements] = useState([])
+  const [pageViews, setPageViews] = useState({ today: 0, total: 0, recent: [] })
   const [toast, setToast] = useState('')
 
   const reload = () => {
@@ -40,6 +41,7 @@ export default function App() {
     authFetch(`${API}/admin/users`).then(r => { if (!r.ok) throw new Error('无法读取用户'); return r.json() }).then(setUsers).catch(() => showToast('无法读取用户列表，请重试或重新登录'))
     authFetch(`${API}/admin/order-requests`).then(r => r.ok ? r.json() : []).then(setServiceRequests)
     authFetch(`${API}/announcements?all=1`).then(r => r.ok ? r.json() : []).then(setAnnouncements)
+    authFetch(`${API}/admin/page-views`).then(r => r.ok ? r.json() : null).then(d => d && setPageViews(d)).catch(() => {})
   }
 
   useEffect(() => {
@@ -101,7 +103,7 @@ export default function App() {
         </div>
       </div>
       <div className="main-content">
-        {page === 'dashboard' && <Dashboard products={products} orders={orders} categories={categories} />}
+        {page === 'dashboard' && <Dashboard products={products} orders={orders} categories={categories} pageViews={pageViews} />}
         {page === 'products' && <ProductManage products={products} categories={categories} reload={reload} showToast={showToast} />}
         {page === 'orders' && <OrderManage orders={orders} reload={reload} showToast={showToast} initialOrderId={orderToOpen} />}
         {page === 'requests' && <RequestManage requests={serviceRequests} reload={reload} showToast={showToast} />}
@@ -185,9 +187,11 @@ function AdminLogin({ onLogin, showToast }) {
 }
 
 /* ========== 仪表盘 ========== */
-function Dashboard({ products, orders, categories }) {
+function Dashboard({ products, orders, categories, pageViews }) {
   const totalSales = orders.reduce((s, o) => s + (o.payment_status === 'confirmed' ? Number(o.total) + Number(o.delivery_fee || 0) : 0), 0)
   const pendingCount = orders.filter(o => o.status === 'awaiting_confirmation').length
+  const views = pageViews || { today: 0, total: 0, recent: [] }
+  const maxRecent = Math.max(1, ...views.recent.map(r => r.count))
   return (
     <div>
       <div className="page-header"><h2>数据概览</h2></div>
@@ -196,6 +200,24 @@ function Dashboard({ products, orders, categories }) {
         <div className="stat-card"><div className="label">订单总数</div><div className="value blue">{orders.length}</div></div>
         <div className="stat-card"><div className="label">待确认收款</div><div className="value orange">{pendingCount}</div></div>
         <div className="stat-card"><div className="label">累计销售额</div><div className="value">¥{totalSales.toFixed(2)}</div></div>
+        <div className="stat-card"><div className="label">今日浏览量</div><div className="value green">{views.today}</div></div>
+        <div className="stat-card"><div className="label">累计浏览量</div><div className="value blue">{views.total}</div></div>
+      </div>
+      <div className="card">
+        <h3 style={{ marginBottom: 16 }}>最近浏览量（近 14 天，打开即计数，登录与否都计入）</h3>
+        {views.recent.length === 0 ? (
+          <p style={{ color: '#999' }}>暂无数据，网站每被打开一次会自动记录。</p>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 120, padding: '8px 4px', overflowX: 'auto' }}>
+            {views.recent.map(r => (
+              <div key={r.view_date} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 28 }}>
+                <span style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>{r.count}</span>
+                <div style={{ width: 18, height: Math.max(3, Math.round(90 * r.count / maxRecent)), background: 'var(--market-green, #2f9e44)', borderRadius: '4px 4px 0 0' }} />
+                <span style={{ fontSize: 10, color: '#999', marginTop: 4 }}>{r.view_date.slice(5)}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       <div className="card">
         <h3 style={{ marginBottom: 16 }}>最近订单</h3>
