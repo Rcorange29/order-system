@@ -1512,7 +1512,7 @@ export default function App() {
               {paymentMethod === 'fps_transfer' ? (
                 <div style={{ width: 220, height: 220, margin: '0 auto', background: '#f9f0ff', border: '2px solid #722ed1', borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                   <div style={{ fontSize: 44 }}>💱</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, marginTop: 10, color: '#722ed1' }}>95480721</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, marginTop: 10, color: '#722ed1' }}>95228191</div>
                   <div style={{ fontSize: 12, color: '#666', marginTop: 6 }}>{t('copy110')}</div>
                 </div>
               ) : (
@@ -1543,14 +1543,14 @@ export default function App() {
                 <a href="alipay://" style={{ fontSize: 13, padding: '8px 14px', borderRadius: 20, border: '1px solid #1677ff', color: '#fff', background: '#1677ff', textDecoration: 'none', cursor: 'pointer' }}>{t('copy118')}</a>
               )}
               {paymentMethod === 'fps_transfer' && (
-                <button onClick={() => copyText('95480721', t('copy119'))} style={{ fontSize: 13, padding: '8px 14px', borderRadius: 20, border: '1px solid #722ed1', color: '#fff', background: '#722ed1', cursor: 'pointer' }}>{t('copy120')}</button>
+                <button onClick={() => copyText('95228191', t('copy119'))} style={{ fontSize: 13, padding: '8px 14px', borderRadius: 20, border: '1px solid #722ed1', color: '#fff', background: '#722ed1', cursor: 'pointer' }}>{t('copy120')}</button>
               )}
             </div>
 
             <div style={{ background: '#fff8e1', padding: 10, borderRadius: 8, fontSize: 12, color: '#f57c00', marginBottom: 16, textAlign: 'left', lineHeight: 1.7 }}>
               {paymentMethod === 'wechat_transfer' && <>{t('copy121')}<br />{t('copy122')}</>}
               {paymentMethod === 'alipay_transfer' && <>{t('copy123')}<br />{t('copy122')}</>}
-              {paymentMethod === 'fps_transfer' && <>{t('copy124')} <b>95480721</b>{t('copy125')}</>}
+              {paymentMethod === 'fps_transfer' && <>{t('copy124')} <b>95228191</b>{t('copy125')}</>}
               <br />{t('copy126')}<b>{BOSS_WECHAT}</b>。
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
@@ -2151,7 +2151,7 @@ export function OrderDetailPage({ order, onBack, pn, vl, copyText, fmt, t, statu
               )
             })}
           </div>
-          {payMethod === 'fps_transfer' ? <div className="fps-pay-number">{t('copy265')}<br /><strong>95480721</strong></div> :
+          {payMethod === 'fps_transfer' ? <div className="fps-pay-number">{t('copy265')}<br /><strong>95228191</strong></div> :
             <img className="payment-detail-qr" style={{ cursor: 'zoom-in' }} src={payMethod === 'wechat_transfer' ? '/images/pay/wechat.jpg' : '/images/pay/alipay.jpg'} alt={t('copy111')} onClick={() => setQrZoom(true)} />}
           <p>{t('copy266')}{BOSS_WECHAT}。</p>
           <button className="btn-submit proof-confirm" onClick={() => setShowPaymentDetails(false)}>{t('copy267')}</button>
