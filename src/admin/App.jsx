@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import useVisualViewport from '../useVisualViewport.js'
 import UserManage from './UserManage.jsx'
-import { buildPackingListCsv } from './packingList.js'
+import { buildPackingListHtml } from './packingList.js'
 
 const API = '/api'
 const displayOrderNo = order => String(order?.public_no ?? order?.id ?? '').padStart(2, '0')
@@ -651,17 +651,17 @@ function OrderManage({ orders, reload, showToast, initialOrderId }) {
 
   const filtered = orders.filter(o => (!statusFilter || o.status === statusFilter) && (!search || `${displayOrderNo(o)} ${o.order_no} ${o.customer} ${o.phone}`.toLowerCase().includes(search.toLowerCase())))
 
-  // 一键导出配货表：逐单明细（每单一个区块，商品逐行列出），当前筛选结果，不含已取消/已完成订单
+  // 一键导出配货单：可打印 HTML，每个订单一个大格子、按自提点分组，当前筛选结果，不含已取消/已完成
   const exportPackingList = () => {
-    const { csv, orders: n, itemRows } = buildPackingListCsv(filtered, { statusFilter, statusText })
+    const html = buildPackingListHtml(filtered, { statusFilter, statusText })
+    const n = filtered.filter(o => o.status !== 'cancelled' && o.status !== 'completed').length
     if (n === 0) { showToast('当前没有可导出的订单'); return }
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `配货表_${new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10)}.csv`
-    a.click()
-    URL.revokeObjectURL(a.href)
-    showToast(`已导出配货表（${n} 单，${itemRows} 个商品条目）`)
+    const win = window.open('', '_blank')
+    if (!win) { showToast('浏览器拦截了弹窗，请允许后再试'); return }
+    win.document.open()
+    win.document.write(html)
+    win.document.close()
+    win.focus()
   }
 
   return (
@@ -674,7 +674,7 @@ function OrderManage({ orders, reload, showToast, initialOrderId }) {
             <option value="">全部状态</option>
             {Object.entries(statusText).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
-          <button className="btn btn-primary" onClick={exportPackingList}>📥 导出配货表</button>
+          <button className="btn btn-primary" onClick={exportPackingList}>🖨 打印配货单</button>
         </div>
         <table>
           <thead><tr><th>订单号</th><th>客户</th><th>电话</th><th>商品</th><th>金额</th><th>支付方式</th><th>支付状态</th><th>状态</th><th>下单时间</th><th>操作</th></tr></thead>
