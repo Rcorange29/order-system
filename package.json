@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 3000",
-    "build": "vite build",
+    "build": "vite build && cp _headers dist/_headers",
     "test": "node --test tests/*.test.mjs",
     "preview": "vite preview",
     "deploy": "npm run build && wrangler pages deploy dist",
