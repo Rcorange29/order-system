@@ -651,9 +651,9 @@ function OrderManage({ orders, reload, showToast, initialOrderId }) {
 
   const filtered = orders.filter(o => (!statusFilter || o.status === statusFilter) && (!search || `${displayOrderNo(o)} ${o.order_no} ${o.customer} ${o.phone}`.toLowerCase().includes(search.toLowerCase())))
 
-  // 一键导出配货表：商品 × 自提点矩阵，当前筛选结果，不含已取消/已完成订单
+  // 一键导出配货表：逐单明细（每单一个区块，商品逐行列出），当前筛选结果，不含已取消/已完成订单
   const exportPackingList = () => {
-    const { csv, rows, points, orders: n } = buildPackingListCsv(filtered, { statusFilter, statusText })
+    const { csv, orders: n, itemRows } = buildPackingListCsv(filtered, { statusFilter, statusText })
     if (n === 0) { showToast('当前没有可导出的订单'); return }
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
     const a = document.createElement('a')
@@ -661,7 +661,7 @@ function OrderManage({ orders, reload, showToast, initialOrderId }) {
     a.download = `配货表_${new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10)}.csv`
     a.click()
     URL.revokeObjectURL(a.href)
-    showToast(`已导出配货表（${rows} 种商品，${points} 个自提点）`)
+    showToast(`已导出配货表（${n} 单，${itemRows} 个商品条目）`)
   }
 
   return (
