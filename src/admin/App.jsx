@@ -51,6 +51,7 @@ export default function App() {
         if (r.ok) return r.json()
         throw new Error('auth failed')
       }).then(u => {
+        if (!u || !u.is_admin) throw new Error('not admin')
         setAdminUser(u)
         reload()
       }).catch(() => {
