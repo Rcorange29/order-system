@@ -1,4 +1,5 @@
 import { json, cors } from './_utils.js'
+import { activeSchedule } from './_delivery-schedule.js'
 
 export async function onRequest(context) {
   const { request, env } = context
@@ -30,12 +31,15 @@ export async function onRequest(context) {
   const summary = await env.DB.prepare(sql).bind(...params).first()
 
   const total = summary?.confirmed_total || 0
+  const groupFormed = activeSchedule(point)
   return json({
     confirmed_total: total,
     confirmed_count: summary?.confirmed_count || 0,
     threshold,
     remaining: Math.max(0, threshold - total),
     reached: total >= threshold,
+    group_formed: groupFormed,
+    delivery_date: groupFormed ? point.delivery_date : null,
     delivery_fee: 0,
     point_name: point?.name || null
   })

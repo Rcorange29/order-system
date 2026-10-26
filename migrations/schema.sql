@@ -104,7 +104,9 @@ CREATE TABLE IF NOT EXISTS delivery_points (
   fee REAL DEFAULT 0,
   threshold REAL DEFAULT 1000,
   sort_order INTEGER DEFAULT 0,
-  is_active INTEGER DEFAULT 1
+  is_active INTEGER DEFAULT 1,
+  group_formed INTEGER NOT NULL DEFAULT 0 CHECK (group_formed IN (0, 1)),
+  delivery_date TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS order_requests (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

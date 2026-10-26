@@ -239,7 +239,7 @@ tr:hover { background: #fafafa; }
   font-size: 14px;
 }
 
-:root { --admin-green: #176b46; --admin-line: #dfe8df; }
+:root { --admin-green: #176b46; --admin-line: #dfe8df; --admin-muted: #596d61; }
 .sidebar { background: #17372b; }
 .sidebar .menu-item.active, .btn-primary { background: var(--admin-green); }
 .btn-primary:hover { background: #105536; }
@@ -291,3 +291,13 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 
 .merchant-language-fields { border:1px solid var(--admin-line); border-radius:8px; padding:14px; margin:14px 0; }
 .merchant-language-fields legend { font-weight:600; padding:0 6px; }
+.delivery-schedule-settings { max-width: 760px; margin-top: 24px; }
+.delivery-schedule-settings h3 { margin: 0 0 8px; }
+.delivery-schedule-settings > p { color: var(--admin-muted); line-height: 1.6; margin: 0 0 16px; }
+.delivery-schedule-row { border-top: 1px solid var(--admin-line); padding: 16px 0; }
+.delivery-schedule-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.delivery-schedule-heading span { color: var(--admin-green); font-size: 14px; }
+.delivery-schedule-actions { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
+.delivery-schedule-actions label { display: grid; gap: 5px; font-size: 13px; color: var(--admin-muted); }
+.delivery-schedule-actions input { min-height: 40px; border: 1px solid var(--admin-line); border-radius: 6px; padding: 7px 10px; font: inherit; }
+.delivery-schedule-actions .btn { min-height: 40px; }

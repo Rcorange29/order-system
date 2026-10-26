@@ -842,14 +842,42 @@ function CategoryManage({ categories, reload, showToast }) {
 
 function SettingsPage({ authFetch, showToast }) {
   const [rate, setRate] = useState(1.2)
+  const [points, setPoints] = useState([])
+  const [dates, setDates] = useState({})
+  const [savingPoint, setSavingPoint] = useState(null)
+  const todayHK = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10)
   useEffect(() => {
     authFetch(`${API}/admin/settings`).then(r => r.json()).then(d => setRate(d.exchange_rate || 1.2)).catch(()=>{})
+    authFetch(`${API}/delivery-points`).then(r => r.json()).then(data => {
+      if (!Array.isArray(data)) throw new Error('无法读取服务点')
+      setPoints(data)
+      setDates(Object.fromEntries(data.map(point => [point.id, point.delivery_date || ''])))
+    }).catch(() => showToast('无法读取服务点，请刷新后重试'))
   }, [])
   const save = async () => {
     const r = await authFetch(`${API}/admin/settings`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ exchange_rate: parseFloat(rate) }) })
     const d = await r.json()
     if (d.ok) showToast('已保存，用户端实时生效')
     else showToast('保存失败')
+  }
+  const saveSchedule = async (point, groupFormed) => {
+    const deliveryDate = dates[point.id] || ''
+    if (groupFormed && (!deliveryDate || deliveryDate < todayHK)) {
+      showToast('请先选择今天或以后的配送日期')
+      return
+    }
+    setSavingPoint(point.id)
+    try {
+      const response = await authFetch(`${API}/admin/delivery-schedule`, {
+        method: 'POST', body: { delivery_point_id: point.id, group_formed: groupFormed, delivery_date: groupFormed ? deliveryDate : '' }
+      })
+      const result = await response.json()
+      if (!response.ok) { showToast(result.error || '保存失败'); return }
+      setPoints(previous => previous.map(item => item.id === point.id
+        ? { ...item, group_formed: groupFormed ? 1 : 0, delivery_date: result.delivery_date } : item))
+      showToast(groupFormed ? '已发布配送日期，顾客端即将显示' : '已恢复凑单进度')
+    } catch { showToast('网络错误，请重试') }
+    finally { setSavingPoint(null) }
   }
   return (
     <div>
@@ -868,6 +896,21 @@ function SettingsPage({ authFetch, showToast }) {
           <button onClick={save} style={{ padding: '8px 20px', background: '#ff4444', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>保存</button>
         </div>
       </div>
+      <section className="delivery-schedule-settings card" aria-label="服务点配送安排">
+        <h3>服务点成团与配送日期</h3>
+        <p>各服务点独立设置。确认已收款的待配送订单达到该点门槛后，选择日期并发布；顾客首页的进度条会改成“已成团，将于指定日期配送”。日期过后自动恢复进度显示。具体取货时间仍请在配送公告和群里通知。</p>
+        {points.map(point => {
+          const active = Boolean(point.group_formed && point.delivery_date && point.delivery_date >= todayHK)
+          return <div className="delivery-schedule-row" key={point.id}>
+            <div className="delivery-schedule-heading"><strong>{point.name}</strong><span>{active ? `已成团 · ${point.delivery_date} 配送` : point.group_formed ? '原定日期已过 · 显示实时进度' : `凑单中 · 满 ¥${point.threshold} 起送`}</span></div>
+            <div className="delivery-schedule-actions">
+              <label>配送日期（香港时间）<input type="date" min={todayHK} value={dates[point.id] || ''} onChange={event => setDates(previous => ({ ...previous, [point.id]: event.target.value }))} /></label>
+              <button type="button" className="btn btn-primary" disabled={savingPoint !== null} onClick={() => saveSchedule(point, true)}>发布“已成团”</button>
+              {Boolean(point.group_formed) && <button type="button" className="btn btn-default" disabled={savingPoint !== null} onClick={() => saveSchedule(point, false)}>恢复进度条</button>}
+            </div>
+          </div>
+        })}
+      </section>
     </div>
   )
 }

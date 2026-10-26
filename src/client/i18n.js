@@ -445,6 +445,9 @@ export const langPack = {
     "paymentSelection": "付款币种：{currency} · 收款方式：{method}",
     "paymentMethodUpdated": "已切换支付方式",
     "ustBenefitConfirm": "知道了，开始购物",
+    "groupScheduled": "已成团",
+    "groupDeliveryDate": "将于 {date} 配送",
+    "groupScheduleNotice": "具体取货时间请留意网站公告和群通知。",
     "noActiveOffers": "暂无进行中的活动"
   },
   "zh_HK": {
@@ -892,6 +895,9 @@ export const langPack = {
     "paymentSelection": "付款貨幣：{currency} · 收款方式：{method}",
     "paymentMethodUpdated": "已切換付款方式",
     "ustBenefitConfirm": "知道了，開始選購",
+    "groupScheduled": "已成團",
+    "groupDeliveryDate": "將於 {date} 配送",
+    "groupScheduleNotice": "實際取貨時間請留意網站公告及群組通知。",
     "noActiveOffers": "暫時沒有進行中的活動"
   },
   "en": {
@@ -1339,6 +1345,9 @@ export const langPack = {
     "paymentSelection": "Currency: {currency} · Payment method: {method}",
     "paymentMethodUpdated": "Payment method updated",
     "ustBenefitConfirm": "Got it, start shopping",
+    "groupScheduled": "Group order confirmed",
+    "groupDeliveryDate": "Delivery scheduled for {date}",
+    "groupScheduleNotice": "Check site updates and your group chat for the pickup time.",
     "noActiveOffers": "No active offers right now"
   }
 }

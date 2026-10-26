@@ -10,6 +10,12 @@ const BOSS_WECHAT = 'jennybabi1988'
 const displayOrderNo = order => String(order?.public_no ?? order?.id ?? '').padStart(2, '0')
 const formatAmount = (amount, currency) => `${currency === 'HKD' ? 'HK$' : '¥'}${Number(amount || 0).toFixed(2)}`
 const orderPaymentText = order => formatAmount(order.payment_amount ?? (Number(order.total) + Number(order.delivery_fee || 0)), order.payment_currency || 'CNY')
+const formatScheduleDate = (iso, lang) => {
+  if (!iso) return ''
+  if (lang === 'en') return iso
+  const [year, month, day] = iso.split('-')
+  return year + '年' + Number(month) + '月' + Number(day) + '日'
+}
 const BOSS_WHATSAPP = '+85295228191'
 const GROUP_BUY_URL = 'https://jennyfresh.com/'
 // ========== 商品名三语映射 ==========
@@ -575,6 +581,7 @@ export default function App() {
   const checkoutPayAmount = paymentCurrency === 'HKD' ? Math.round(checkoutCnyTotal * exchangeRate * 100) / 100 : checkoutCnyTotal
   const effectiveThreshold = stats?.threshold || 1000
   const effectiveReached = stats ? stats.confirmed_total >= effectiveThreshold : false
+  const deliveryDateText = formatScheduleDate(stats?.delivery_date, lang)
   const unreadNotices = announcements.filter(n => !seenNoticeIds.includes(n.id))
   const unpaidOrders = orders.filter(o => o.status === 'pending' && o.payment_status === 'pending' && o.payment_method !== 'cash_on_delivery')
   const noticeStorageKey = `seenNotices_${currentUser?.id || 'guest'}_${selectedPointId || 'all'}`
@@ -937,7 +944,14 @@ export default function App() {
           </div>
 
           {/* 凑单进度条 */}
-          {stats && (
+          {stats && (stats.group_formed ? (
+            <div className="group-buy-banner group-buy-scheduled" role="status">
+              <span className="group-buy-label">{dn(deliveryPoints.find(p => p.id == selectedPointId)?.name) || t('groupBuyBanner')}</span>
+              <strong>{t('groupScheduled')}</strong>
+              <p>{t('groupDeliveryDate', { date: deliveryDateText })}</p>
+              <small>{t('groupScheduleNotice')}</small>
+            </div>
+          ) : (
             <div className="group-buy-banner">
               <div className="group-buy-row">
                 <span className="group-buy-label">{dn(deliveryPoints.find(p => p.id == selectedPointId)?.name) || t('groupBuyBanner')}</span>
@@ -959,7 +973,7 @@ export default function App() {
               </div>
               <p className="group-buy-explain">{t('copy042')}</p>
             </div>
-          )}
+          ))}
 
           <section className="notice-board notice-board-home" aria-label={t('copy043')} onClick={() => { markNoticesRead(); setTab('messages') }}>
             <div className="notice-board-heading"><span>{t('copy043')} {unreadNotices.length > 0 && <span className="notice-dot" aria-label={t('copy044', { '0': unreadNotices.length })}>{unreadNotices.length > 99 ? '99+' : unreadNotices.length}</span>}</span><small>{t('copy045')}</small></div>
@@ -1204,7 +1218,10 @@ export default function App() {
               })}
             </div>
             {/* 凑单推荐 */}
-            {deliveryType === 'pickup' && stats && !effectiveReached && (
+            {deliveryType === 'pickup' && stats?.group_formed && (
+              <div className="cart-scheduled" role="status"><strong>{t('groupScheduled')}</strong> · {t('groupDeliveryDate', { date: deliveryDateText })}</div>
+            )}
+            {deliveryType === 'pickup' && stats && !effectiveReached && !stats.group_formed && (
               <div className="cart-recommend">
                 <div className="cart-recommend-title">
                   {t('buyExtra')}

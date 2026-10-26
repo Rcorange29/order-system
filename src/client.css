@@ -1383,6 +1383,11 @@ body { background: var(--market-paper); color: var(--market-ink); }
 .banner-sub { font-size: 13px; line-height: 1.45; }
 .delivery-rule-strip { padding: 12px 16px; font-size: 14px; font-weight: 650; }
 .group-buy-banner { padding: 17px 16px 15px; }
+.group-buy-scheduled { display: grid; gap: 6px; border-color: var(--market-green); background: var(--market-green-soft); }
+.group-buy-scheduled strong { color: var(--market-green); font-size: 20px; line-height: 1.2; }
+.group-buy-scheduled p { margin: 0; font-size: 16px; font-weight: 700; }
+.group-buy-scheduled small { color: var(--market-muted); font-size: 13px; line-height: 1.5; }
+.cart-scheduled { margin: 12px 16px; padding: 12px; border-radius: 8px; background: var(--market-green-soft); color: var(--market-green); font-size: 14px; line-height: 1.5; }
 .group-buy-row { margin-bottom: 10px; }
 .group-buy-label { font-size: 17px; }
 .group-buy-remain, .group-buy-reached { font-size: 15px; }
