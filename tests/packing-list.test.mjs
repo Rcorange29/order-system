@@ -22,6 +22,10 @@ test('one service point per sheet, one block per order, and no prices or payment
   assert.match(html, /商品及规格/)
   assert.match(html, /小番茄.*500g/)
   assert.match(html, /鸡蛋.*10只装/)
+  assert.match(html, /max-width: 170mm/)
+  assert.match(html, /@page \{ size: A4 portrait/)
+  assert.equal((html.match(/class="item-check"/g) || []).length, 2)
+  assert.match(html, /class="num">×2/)
   assert.doesNotMatch(html, /苹果|订单 01|¥|单价|小计|合计|收款状态|付款方式/)
 })
 

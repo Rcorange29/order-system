@@ -22,7 +22,7 @@ export function buildPackingListHtml(orders, { pointId, pointName = '', delivery
   }
   const sorted = [...active].sort((a, b) => Number(a.public_no ?? a.id) - Number(b.public_no ?? b.id))
   const blocks = sorted.map(order => {
-    const rows = (order.items || []).map(item => `<tr><td>${esc(item.product?.name || '未知商品')}${item.variant ? `<span class="variant">（${esc(item.variant)}）</span>` : ''}</td><td class="num">${esc(item.quantity)}</td></tr>`).join('')
+    const rows = (order.items || []).map(item => `<tr><td><span class="item-check" aria-hidden="true"></span>${esc(item.product?.name || '未知商品')}${item.variant ? `<span class="variant">（${esc(item.variant)}）</span>` : ''}</td><td class="num">×${esc(item.quantity)}</td></tr>`).join('')
     return `<div class="order-block">
   <div class="order-head"><span class="check-box" aria-hidden="true"></span><strong>订单 ${esc(displayOrderNo(order))}</strong><span class="contact">— ${contact(order)}</span></div>
   <table><thead><tr><th>商品及规格</th><th class="num">数量</th></tr></thead>
@@ -33,21 +33,24 @@ export function buildPackingListHtml(orders, { pointId, pointName = '', delivery
   return `<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><title>${esc(pointName)}${displayDate ? ` · ${displayDate}` : ''}配货单</title>
 <style>
-  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; margin: 16px; color: #222; }
-  .sheet-header { text-align: center; margin-bottom: 14px; }
-  .sheet-header h1 { font-size: 21px; margin: 0 0 4px; }
-  .sheet-header .meta { color: #666; font-size: 12px; }
-  .order-block { border: 1px solid #555; border-radius: 6px; padding: 9px 11px; margin-bottom: 10px; break-inside: avoid; page-break-inside: avoid; }
-  .order-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 15px; margin-bottom: 7px; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; max-width: 170mm; margin: 18px auto; padding: 0 8px; color: #222; }
+  .sheet-header { text-align: center; margin-bottom: 10px; }
+  .sheet-header h1 { font-size: 19px; margin: 0 0 3px; }
+  .sheet-header .meta { color: #666; font-size: 11px; }
+  .order-block { border: 1px solid #555; border-radius: 5px; padding: 7px 9px; margin-bottom: 8px; break-inside: avoid; page-break-inside: avoid; }
+  .order-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 14px; margin-bottom: 5px; }
   .check-box { display: inline-block; width: 15px; height: 15px; border: 1.5px solid #333; flex: none; }
-  .contact { font-size: 13px; overflow-wrap: anywhere; }
+  .contact { font-size: 12px; overflow-wrap: anywhere; }
   table { width: 100%; border-collapse: collapse; }
-  th, td { border-top: 1px solid #ddd; padding: 5px 7px; text-align: left; font-size: 13px; }
+  th, td { border-top: 1px solid #ddd; padding: 4px 6px; text-align: left; font-size: 13px; line-height: 1.35; }
   th { background: #f4f4f4; }
-  .num { text-align: right; white-space: nowrap; width: 72px; font-weight: 700; }
+  tbody tr:nth-child(even) { background: #fafafa; }
+  .item-check { display: inline-block; width: 12px; height: 12px; border: 1px solid #777; margin-right: 7px; vertical-align: -1px; }
+  .num { text-align: center; white-space: nowrap; width: 58px; font-weight: 700; font-size: 14px; border-left: 1px solid #e5e5e5; }
   .variant { color: #555; }
   .empty { color: #888; text-align: center; }
-  @media print { .no-print { display: none; } body { margin: 8px; } }
+  @page { size: A4 portrait; margin: 10mm; }
+  @media print { .no-print { display: none; } body { max-width: 170mm; margin: 0 auto; padding: 0; } }
 </style></head>
 <body>
   <div class="no-print" style="text-align:center;margin-bottom:10px;color:#888;font-size:12px">按 Ctrl/Cmd + P 打印，或另存为 PDF</div>
