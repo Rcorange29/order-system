@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import useVisualViewport from '../useVisualViewport.js'
 import UserManage from './UserManage.jsx'
-import { buildPackingListHtml } from './packingList.js'
+import { buildPackingListHtml, getPackableOrders } from './packingList.js'
 
 const API = '/api'
 const displayOrderNo = order => String(order?.public_no ?? order?.id ?? '').padStart(2, '0')
@@ -593,6 +593,8 @@ function ProductManage({ products, categories, reload, showToast }) {
 /* ========== 订单管理 ========== */
 function OrderManage({ orders, reload, showToast, initialOrderId }) {
   const [statusFilter, setStatusFilter] = useState('')
+  const [pointFilter, setPointFilter] = useState('')
+  const [deliveryPoints, setDeliveryPoints] = useState([])
   const [search, setSearch] = useState('')
   const [detail, setDetail] = useState(null)
 
@@ -602,6 +604,11 @@ function OrderManage({ orders, reload, showToast, initialOrderId }) {
   const [deliveryError, setDeliveryError] = useState('')
   const requestSequence = useRef(0)
   useEffect(() => () => { requestSequence.current++ }, [])
+  useEffect(() => {
+    authFetch(`${API}/delivery-points`).then(r => r.json()).then(data => {
+      if (Array.isArray(data)) setDeliveryPoints(data)
+    }).catch(() => {})
+  }, [])
   const viewDetail = async (id) => {
     const sequence = ++requestSequence.current
     setEditingDelivery(false); setDeliveryError('')
@@ -650,13 +657,22 @@ function OrderManage({ orders, reload, showToast, initialOrderId }) {
     if (response.ok) reload()
   }
 
-  const filtered = orders.filter(o => (!statusFilter || o.status === statusFilter) && (!search || `${displayOrderNo(o)} ${o.order_no} ${o.customer} ${o.phone}`.toLowerCase().includes(search.toLowerCase())))
+  const pointOptions = [...new Map(orders.filter(o => o.delivery_point_id != null).map(o => [String(o.delivery_point_id), o.delivery_point_name || `服务点 ${o.delivery_point_id}`])).entries()]
+    .sort((a, b) => a[1].localeCompare(b[1], 'zh-Hans-CN'))
+  if (orders.some(o => o.delivery_point_id == null)) pointOptions.push(['home', '送货到家'])
+  const filtered = orders.filter(o => (!statusFilter || o.status === statusFilter)
+    && (!pointFilter || (pointFilter === 'home' ? o.delivery_point_id == null : String(o.delivery_point_id) === pointFilter))
+    && (!search || `${displayOrderNo(o)} ${o.order_no} ${o.customer} ${o.phone}`.toLowerCase().includes(search.toLowerCase())))
 
-  // 一键导出配货单：可打印 HTML，每个订单一个大格子、按自提点分组，当前筛选结果，不含已取消/已完成
+  // 当前服务点单独打印；只有已确认收款、尚待配送的订单可进入配货单。
   const exportPackingList = () => {
-    const html = buildPackingListHtml(filtered, { statusFilter, statusText })
-    const n = filtered.filter(o => o.status !== 'cancelled' && o.status !== 'completed').length
-    if (n === 0) { showToast('当前没有可导出的订单'); return }
+    if (!pointFilter) { showToast('请先选择配货服务点'); return }
+    if (!getPackableOrders(filtered, pointFilter).length) { showToast('该服务点当前没有已确认收款、待配送的订单'); return }
+    const pointName = pointOptions.find(([id]) => id === pointFilter)?.[1] || '配货'
+    const todayHK = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10)
+    const schedule = deliveryPoints.find(point => String(point.id) === pointFilter)
+    const deliveryDate = schedule?.group_formed && schedule.delivery_date >= todayHK ? schedule.delivery_date : ''
+    const html = buildPackingListHtml(filtered, { pointId: pointFilter, pointName, deliveryDate })
     const win = window.open('', '_blank')
     if (!win) { showToast('浏览器拦截了弹窗，请允许后再试'); return }
     win.document.open()
@@ -674,6 +690,10 @@ function OrderManage({ orders, reload, showToast, initialOrderId }) {
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
             <option value="">全部状态</option>
             {Object.entries(statusText).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+          <select aria-label="配货服务点" value={pointFilter} onChange={e => setPointFilter(e.target.value)}>
+            <option value="">全部服务点（打印前请选择）</option>
+            {pointOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
           </select>
           <button className="btn btn-primary" onClick={exportPackingList}>🖨 打印配货单</button>
         </div>
