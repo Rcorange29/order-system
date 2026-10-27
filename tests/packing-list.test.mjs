@@ -76,11 +76,13 @@ test('customer remarks appear on the correct order and are escaped', () => {
   assert.doesNotMatch(html, /<果>/)
 })
 
-test('staff note starts empty in each new slip and remains visible when printed', () => {
+test('staff note starts empty and is omitted from print until filled', () => {
   const orders = [order(1, 2, [item('苹果', '', 1)])]
   for (const html of [build(orders), build(orders)]) {
+    assert.match(html, /<section class="staff-note" data-empty="true"><div class="staff-note-title">注意事项<\/div>/)
     assert.match(html, /<div class="staff-note-input" contenteditable="plaintext-only"[^>]*><\/div>/)
-    assert.match(html, /@media print \{[^}]*staff-note-hint \{ display: none; \}/)
+    assert.match(html, /@media print \{[^}]*\.staff-note\[data-empty="true"\] \{ display: none; \}/)
+    assert.match(html, /note\.dataset\.empty = input\.textContent\.trim\(\) \? 'false' : 'true'/)
     assert.match(html, /重新打开配货单后此处为空/)
   }
 })

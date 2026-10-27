@@ -57,16 +57,26 @@ export function buildPackingListHtml(orders, { pointId, pointName = '', delivery
   .variant { color: #555; }
   .empty { color: #888; text-align: center; }
   @page { size: A4 portrait; margin: 10mm; }
-  @media print { .no-print, .staff-note-hint { display: none; } .staff-note-input:empty::before { content: ''; } body { max-width: 170mm; margin: 0 auto; padding: 0; } }
+  @media print { .no-print, .staff-note-hint, .staff-note[data-empty="true"] { display: none; } .staff-note-input:empty::before { content: ''; } body { max-width: 170mm; margin: 0 auto; padding: 0; } }
 </style></head>
 <body>
   <div class="no-print" style="text-align:center;margin-bottom:10px;color:#888;font-size:12px">按 Ctrl/Cmd + P 打印，或另存为 PDF</div>
   <div class="sheet-header"><h1>${esc(pointName)}${displayDate ? `｜${esc(displayDate)}` : ''}配货单｜共 ${active.length} 单</h1>
     <div class="meta">仅含已确认收款、尚待配送的订单 · 生成时间 ${esc(now)}</div></div>
-  <section class="staff-note"><div class="staff-note-title">给员工的注意事项</div>
-    <div class="staff-note-input" contenteditable="plaintext-only" role="textbox" aria-label="给员工的注意事项" data-placeholder="在这里输入本次配货的注意事项"></div>
-    <div class="staff-note-hint">可直接输入；打印或另存 PDF 时会一起显示。重新打开配货单后此处为空。</div>
+  <section class="staff-note" data-empty="true"><div class="staff-note-title">注意事项</div>
+    <div class="staff-note-input" contenteditable="plaintext-only" role="textbox" aria-label="注意事项" data-placeholder="在这里输入本次配货的注意事项"></div>
+    <div class="staff-note-hint">有内容时会随打印或 PDF 一起显示；未填写则不打印。重新打开配货单后此处为空。</div>
   </section>
   ${blocks.join('\n')}
+  <script>
+    (() => {
+      const note = document.querySelector('.staff-note')
+      const input = note.querySelector('.staff-note-input')
+      const sync = () => { note.dataset.empty = input.textContent.trim() ? 'false' : 'true' }
+      input.addEventListener('input', sync)
+      window.addEventListener('beforeprint', sync)
+      sync()
+    })()
+  </script>
 </body></html>`
 }
