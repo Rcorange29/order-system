@@ -25,6 +25,7 @@ export function buildPackingListHtml(orders, { pointId, pointName = '', delivery
     const rows = (order.items || []).map(item => `<tr><td><span class="item-check" aria-hidden="true"></span>${esc(item.product?.name || '未知商品')}${item.variant ? `<span class="variant">（${esc(item.variant)}）</span>` : ''}</td><td class="num">×${esc(item.quantity)}</td></tr>`).join('')
     return `<div class="order-block">
   <div class="order-head"><span class="check-box" aria-hidden="true"></span><strong>订单 ${esc(displayOrderNo(order))}</strong><span class="contact">— ${contact(order)}</span></div>
+  ${order.remark?.trim() ? `<div class="order-remark"><strong>顾客备注：</strong>${esc(order.remark.trim())}</div>` : ''}
   <table><thead><tr><th>商品及规格</th><th class="num">数量</th></tr></thead>
   <tbody>${rows || '<tr><td colspan="2" class="empty">（无商品）</td></tr>'}</tbody></table>
 </div>`
@@ -37,10 +38,16 @@ export function buildPackingListHtml(orders, { pointId, pointName = '', delivery
   .sheet-header { text-align: center; margin-bottom: 10px; }
   .sheet-header h1 { font-size: 19px; margin: 0 0 3px; }
   .sheet-header .meta { color: #666; font-size: 11px; }
+  .staff-note { border: 1px solid #777; border-radius: 5px; padding: 7px 9px; margin-bottom: 10px; break-inside: avoid; page-break-inside: avoid; }
+  .staff-note-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+  .staff-note-input { min-height: 38px; font-size: 13px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; outline: none; }
+  .staff-note-input:empty::before { content: attr(data-placeholder); color: #888; }
+  .staff-note-hint { color: #777; font-size: 11px; margin-top: 4px; }
   .order-block { border: 1px solid #555; border-radius: 5px; padding: 7px 9px; margin-bottom: 8px; break-inside: avoid; page-break-inside: avoid; }
   .order-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 14px; margin-bottom: 5px; }
   .check-box { display: inline-block; width: 15px; height: 15px; border: 1.5px solid #333; flex: none; }
   .contact { font-size: 12px; overflow-wrap: anywhere; }
+  .order-remark { border-left: 3px solid #555; background: #f3f3f3; margin: 0 0 6px; padding: 5px 7px; font-size: 12px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
   table { width: 100%; border-collapse: collapse; }
   th, td { border-top: 1px solid #ddd; padding: 4px 6px; text-align: left; font-size: 13px; line-height: 1.35; }
   th { background: #f4f4f4; }
@@ -50,12 +57,16 @@ export function buildPackingListHtml(orders, { pointId, pointName = '', delivery
   .variant { color: #555; }
   .empty { color: #888; text-align: center; }
   @page { size: A4 portrait; margin: 10mm; }
-  @media print { .no-print { display: none; } body { max-width: 170mm; margin: 0 auto; padding: 0; } }
+  @media print { .no-print, .staff-note-hint { display: none; } .staff-note-input:empty::before { content: ''; } body { max-width: 170mm; margin: 0 auto; padding: 0; } }
 </style></head>
 <body>
   <div class="no-print" style="text-align:center;margin-bottom:10px;color:#888;font-size:12px">按 Ctrl/Cmd + P 打印，或另存为 PDF</div>
   <div class="sheet-header"><h1>${esc(pointName)}${displayDate ? `｜${esc(displayDate)}` : ''}配货单｜共 ${active.length} 单</h1>
     <div class="meta">仅含已确认收款、尚待配送的订单 · 生成时间 ${esc(now)}</div></div>
+  <section class="staff-note"><div class="staff-note-title">给员工的注意事项</div>
+    <div class="staff-note-input" contenteditable="plaintext-only" role="textbox" aria-label="给员工的注意事项" data-placeholder="在这里输入本次配货的注意事项"></div>
+    <div class="staff-note-hint">可直接输入；打印或另存 PDF 时会一起显示。重新打开配货单后此处为空。</div>
+  </section>
   ${blocks.join('\n')}
 </body></html>`
 }

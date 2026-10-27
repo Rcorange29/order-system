@@ -64,6 +64,27 @@ test('many items remain inside one order block and customer text is escaped', ()
   assert.doesNotMatch(html, /<unsafe&name>/)
 })
 
+test('customer remarks appear on the correct order and are escaped', () => {
+  const html = build([
+    order(1, 2, [item('苹果', '', 1)], { remark: '轻放\n不要压坏 <果>' }),
+    order(2, 2, [item('鸡蛋', '', 1)]),
+  ])
+  const first = html.indexOf('订单 01')
+  const second = html.indexOf('订单 02')
+  assert.match(html.slice(first, second), /顾客备注：<\/strong>轻放\n不要压坏 &lt;果&gt;/)
+  assert.doesNotMatch(html.slice(second), /顾客备注/)
+  assert.doesNotMatch(html, /<果>/)
+})
+
+test('staff note starts empty in each new slip and remains visible when printed', () => {
+  const orders = [order(1, 2, [item('苹果', '', 1)])]
+  for (const html of [build(orders), build(orders)]) {
+    assert.match(html, /<div class="staff-note-input" contenteditable="plaintext-only"[^>]*><\/div>/)
+    assert.match(html, /@media print \{[^}]*staff-note-hint \{ display: none; \}/)
+    assert.match(html, /重新打开配货单后此处为空/)
+  }
+})
+
 test('home delivery prints separately from pickup points', () => {
   const orders = [order(1, null, [item('苹果', '', 2)]), order(2, 2, [item('鸡蛋', '', 1)])]
   const html = buildPackingListHtml(orders, { pointId: 'home', pointName: '送货到家' })
