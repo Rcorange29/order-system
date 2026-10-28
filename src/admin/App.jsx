@@ -662,6 +662,17 @@ function OrderManage({ orders, reload, showToast, initialOrderId, canManage }) {
     } catch (error) { showToast(error.message || '归档失败') }
     finally { setBatchBusy(false) }
   }
+  const unlockBatch = async batch => {
+    if (!window.confirm(`解除 ${batch.point_name} ${batch.delivery_date} 的批次锁定？已生成的快照报告将删除，订单返回待处理列表，方便处理退款或更正。`)) return
+    setBatchBusy(true)
+    try {
+      const response = await authFetch(`${API}/admin/delivery-batches/${batch.id}`, { method: 'DELETE' })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || '解除锁定失败')
+      setSelectedBatch(null); setPointFilter(batch.point_key); reload(); loadBatches(); showToast('已解除锁定，订单可继续处理')
+    } catch (error) { showToast(error.message || '解除锁定失败') }
+    finally { setBatchBusy(false) }
+  }
   const viewDetail = async (id) => {
     const sequence = ++requestSequence.current
     setEditingDelivery(false); setDeliveryError('')
@@ -754,7 +765,7 @@ function OrderManage({ orders, reload, showToast, initialOrderId, canManage }) {
         {!!archivedGroups.length && <div style={{ marginBottom: 12 }}><h4 style={{ margin: '8px 0' }}>已配送档案</h4>{archivedGroups.map(group => <details key={group.name} open={group.batches.some(batch => batch.id === selectedBatch)} style={{ border: '1px solid #ddd', borderRadius: 6, padding: '7px 10px', marginBottom: 6 }}><summary style={{ cursor: 'pointer', fontWeight: 600 }}>📁 {group.name} · {group.batches.length} 批</summary><div className="action-btns" style={{ flexWrap: 'wrap', paddingTop: 8 }}>{group.batches.map(batch => <button key={batch.id} className={`btn ${selectedBatch === batch.id ? 'btn-primary' : 'btn-default'}`} onClick={() => { setSelectedBatch(batch.id); setStatusFilter(''); setPointFilter('') }}>{batch.delivery_date} 送货订单 · {batch.order_count} 单</button>)}</div></details>)}</div>}
         {selectedBatch ? (() => {
           const batch = batches.find(item => item.id === selectedBatch)
-          return batch && <div className="action-btns" style={{ flexWrap: 'wrap' }}><strong>{batch.point_name}｜{batch.delivery_date} 配送｜{batch.order_count} 单</strong><button className="btn btn-primary" onClick={() => openReport(batch)}>导出本次收款报告（含凭证）</button>{canManage && batch.status === 'locked' && <button disabled={batchBusy} className="btn btn-default" onClick={() => archiveBatch(batch)}>配送完成，整批归档</button>}</div>
+          return batch && <div className="action-btns" style={{ flexWrap: 'wrap' }}><strong>{batch.point_name}｜{batch.delivery_date} 配送｜{batch.order_count} 单</strong><button className="btn btn-primary" onClick={() => openReport(batch)}>导出本次收款报告（含凭证）</button>{canManage && batch.status === 'locked' && <><button disabled={batchBusy} className="btn btn-default" onClick={() => archiveBatch(batch)}>配送完成，整批归档</button><button disabled={batchBusy} className="btn btn-default" onClick={() => unlockBatch(batch)}>解除锁定以更正</button></>}</div>
         })() : canManage && !showUnbatchedHistory && <p className="user-help">锁定新批次：先在下方选择配货服务点，再选日期。锁定后可一键导出收款报告。</p>}
       </div>
       <div className="card">

@@ -2,7 +2,7 @@ import { getAdminUser, json, cors } from '../../_utils.js'
 
 export async function onRequest({ request, env, params }) {
   if (request.method === 'OPTIONS') return cors()
-  if (!['GET', 'PATCH'].includes(request.method)) return json({ error: 'Method not allowed' }, 405)
+  if (!['GET', 'PATCH', 'DELETE'].includes(request.method)) return json({ error: 'Method not allowed' }, 405)
   const admin = await getAdminUser(request, env)
   if (!admin) return json({ error: '需要管理员权限' }, 403)
   const id = Number(params.id)
@@ -15,6 +15,14 @@ export async function onRequest({ request, env, params }) {
     return json({ batch, orders })
   }
   if (batch.status !== 'locked') return json({ error: '这个批次已经归档' }, 409)
+  if (request.method === 'DELETE') {
+    await env.DB.batch([
+      env.DB.prepare('UPDATE orders SET delivery_batch_id = NULL WHERE delivery_batch_id = ?').bind(id),
+      env.DB.prepare('DELETE FROM delivery_batch_orders WHERE batch_id = ?').bind(id),
+      env.DB.prepare('DELETE FROM delivery_batches WHERE id = ? AND status = ?').bind(id, 'locked')
+    ])
+    return json({ ok: true })
+  }
   const total = await env.DB.prepare('SELECT COUNT(*) AS count FROM delivery_batch_orders WHERE batch_id = ?').bind(id).first()
   const ready = await env.DB.prepare("SELECT COUNT(*) AS count FROM orders WHERE delivery_batch_id = ? AND status = 'paid' AND payment_status = 'confirmed'").bind(id).first()
   if (!Number(total.count) || Number(total.count) !== Number(ready.count)) return json({ error: '批次订单状态已变化，请先核对' }, 409)

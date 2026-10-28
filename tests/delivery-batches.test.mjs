@@ -48,9 +48,22 @@ test('lock snapshots only confirmed orders, protects them, then archives and ret
   assert.equal((await call(batchDetail,'PATCH',{},'owner-token',batch.id,`/api/admin/delivery-batches/${batch.id}`)).status,200)
   assert.equal(sqlite.prepare('SELECT status FROM orders WHERE id=1').get().status,'shipped')
   assert.equal(sqlite.prepare('SELECT status FROM delivery_batches WHERE id=?').get(batch.id).status,'archived')
+  assert.equal((await call(batchDetail,'DELETE',null,'owner-token',batch.id,`/api/admin/delivery-batches/${batch.id}`)).status,409)
   assert.equal((await call(order,'PUT',{status:'completed'},'owner-token',1,'/api/admin/orders/1')).status,200)
   const after=await (await call(batchDetail,'GET',null,'owner-token',batch.id,`/api/admin/delivery-batches/${batch.id}`)).json()
   assert.equal(after.orders[0].status,'paid')
+  sqlite.close()
+})
+
+test('owner can unlock a not-yet-delivered batch to correct orders, while Jenny cannot', async () => {
+  const {sqlite,call}=fixture()
+  const created=await (await call(batches,'POST',{point_key:'2',delivery_date:'2026-10-29'},'owner-token',1,'/api/admin/delivery-batches')).json()
+  const path=`/api/admin/delivery-batches/${created.id}`
+  assert.equal((await call(batchDetail,'DELETE',null,'editor-token',created.id,path)).status,403)
+  assert.equal((await call(batchDetail,'DELETE',null,'owner-token',created.id,path)).status,200)
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM delivery_batches').get().count,0)
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM delivery_batch_orders').get().count,0)
+  assert.equal(sqlite.prepare('SELECT delivery_batch_id FROM orders WHERE id=1').get().delivery_batch_id,null)
   sqlite.close()
 })
 
