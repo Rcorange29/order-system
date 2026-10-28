@@ -23,6 +23,7 @@ export async function onRequest(context) {
     if (!admin) return json({ error: '需要管理员权限' }, 403)
     const order = await env.DB.prepare('SELECT * FROM orders WHERE id = ?').bind(id).first()
     if (!order) return json({ error: 'not found' }, 404)
+    if (order.delivery_batch_id) return json({ error: '订单已锁定在配送批次，不能修改收货资料' }, 409)
     const body = await readBody(request)
     const limits = { customer: 80, phone: 32, contact_wechat_id: 20, contact_whatsapp: 32, address: 500, remark: 1000 }
     if (Object.keys(body).some(key => !Object.hasOwn(limits, key))) return json({ error: '这里只能修改收货人、联系方式、地址和备注' }, 400)
@@ -51,6 +52,9 @@ export async function onRequest(context) {
     const body = await readBody(request)
     const order = await env.DB.prepare('SELECT * FROM orders WHERE id = ?').bind(id).first()
     if (!order) return json({ error: 'not found' }, 404)
+    if (order.delivery_batch_id && !(order.status === 'shipped' && body.status === 'completed' && Object.keys(body).every(key => key === 'status'))) {
+      return json({ error: '订单已锁定在配送批次；归档后仅可标记完成' }, 409)
+    }
     const validStatuses = new Set(['pending', 'awaiting_confirmation', 'paid', 'shipped', 'completed', 'cancelled'])
     const validPayments = new Set(['pending', 'paid', 'confirmed', 'refunded'])
     const nextStatus = body.status ?? order.status
@@ -88,6 +92,8 @@ export async function onRequest(context) {
   if (request.method === 'DELETE') {
     const admin = await getAdminUser(request, env)
     if (!admin) return json({ error: '需要管理员权限' }, 403)
+    const order = await env.DB.prepare('SELECT delivery_batch_id FROM orders WHERE id = ?').bind(id).first()
+    if (order?.delivery_batch_id) return json({ error: '已归入配送批次的订单不能删除' }, 409)
     const pending = await env.DB.prepare("SELECT id FROM order_requests WHERE order_id = ? AND status = 'pending'").bind(id).first()
     if (pending) return json({ error: '请先处理这笔订单的配送或退款申请' }, 409)
     await env.DB.batch([

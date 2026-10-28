@@ -11,9 +11,10 @@ export async function onRequest({ request, env }) {
   if (!Number.isInteger(id) || id < 1 || !['delivery_upgrade', 'refund'].includes(body.type)) {
     return json({ error: '申请内容无效' }, 400)
   }
-  const order = await env.DB.prepare('SELECT id, status, payment_status, delivery_point_id FROM orders WHERE id = ? AND user_id = ?')
+  const order = await env.DB.prepare('SELECT id, status, payment_status, delivery_point_id, delivery_batch_id FROM orders WHERE id = ? AND user_id = ?')
     .bind(id, String(user.id)).first()
   if (!order) return json({ error: '订单不存在' }, 404)
+  if (order.delivery_batch_id) return json({ error: '此订单已纳入本次配送，请联系客服处理后续变更' }, 409)
   if (order.status !== 'paid' || order.payment_status !== 'confirmed' || !order.delivery_point_id) {
     return json({ error: '只有已付款、待统一配送的自取订单可申请' }, 409)
   }

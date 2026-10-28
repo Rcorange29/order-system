@@ -22,10 +22,11 @@ export async function onRequest({ request, env }) {
   if (!Number.isInteger(id) || id < 1 || !['approve', 'reject'].includes(decision)) return json({ error: '处理内容无效' }, 400)
 
   const entry = await env.DB.prepare(
-    `SELECT r.*, o.status AS order_status, o.payment_status, o.delivery_point_id
+    `SELECT r.*, o.status AS order_status, o.payment_status, o.delivery_point_id, o.delivery_batch_id
      FROM order_requests r JOIN orders o ON o.id = r.order_id WHERE r.id = ?`
   ).bind(id).first()
   if (!entry) return json({ error: '申请不存在' }, 404)
+  if (entry.delivery_batch_id) return json({ error: '订单已锁定在配送批次，请联系主管理员另行处理' }, 409)
   if (entry.status !== 'pending') return json({ error: '申请已处理' }, 409)
   if (entry.order_status !== 'paid' || entry.payment_status !== 'confirmed' || !entry.delivery_point_id) {
     return json({ error: '订单状态已变化，请重新核对' }, 409)

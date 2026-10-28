@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import useVisualViewport from '../useVisualViewport.js'
 import UserManage from './UserManage.jsx'
 import { buildPackingListHtml, getPackableOrders } from './packingList.js'
+import { buildCollectionReportHtml } from './collectionReport.js'
 
 const API = '/api'
 const displayOrderNo = order => String(order?.public_no ?? order?.id ?? '').padStart(2, '0')
@@ -194,16 +195,22 @@ function AdminLogin({ onLogin, showToast }) {
 function Dashboard({ products, orders, categories, pageViews }) {
   const totalSales = orders.reduce((s, o) => s + (o.payment_status === 'confirmed' ? Number(o.total) + Number(o.delivery_fee || 0) : 0), 0)
   const pendingCount = orders.filter(o => o.status === 'awaiting_confirmation').length
+  const groupingCount = orders.filter(o => o.status === 'paid' && !o.delivery_batch_id).length
+  const lockedCount = orders.filter(o => o.status === 'paid' && o.delivery_batch_id).length
+  const priority = order => order.status === 'awaiting_confirmation' ? 0 : order.status === 'paid' ? 1 : 2
+  const prioritizedOrders = [...orders].sort((a, b) => priority(a) - priority(b) || Number(b.id) - Number(a.id))
   const views = pageViews || { today: 0, visitors: 0, total: 0, total_visitors: 0, recent: [] }
   const maxRecent = Math.max(1, ...views.recent.map(r => r.count))
   return (
     <div>
       <div className="page-header"><h2>数据概览</h2></div>
       <div className="stats-grid">
-        <div className="stat-card"><div className="label">商品总数</div><div className="value green">{products.length}</div></div>
+        <div className="stat-card"><div className="label">待审核订单</div><div className="value orange">{pendingCount}</div></div>
+        <div className="stat-card"><div className="label">拼团中</div><div className="value green">{groupingCount}</div></div>
+        <div className="stat-card"><div className="label">已锁定待配送</div><div className="value blue">{lockedCount}</div></div>
         <div className="stat-card"><div className="label">订单总数</div><div className="value blue">{orders.length}</div></div>
-        <div className="stat-card"><div className="label">待确认收款</div><div className="value orange">{pendingCount}</div></div>
         <div className="stat-card"><div className="label">累计销售额</div><div className="value">¥{totalSales.toFixed(2)}</div></div>
+        <div className="stat-card"><div className="label">商品总数</div><div className="value green">{products.length}</div></div>
         <div className="stat-card"><div className="label">今日浏览量</div><div className="value green">{views.today}</div></div>
         <div className="stat-card"><div className="label">今日访客数</div><div className="value blue">{views.visitors}</div></div>
         <div className="stat-card"><div className="label">累计浏览量</div><div className="value">{views.total}</div></div>
@@ -227,11 +234,11 @@ function Dashboard({ products, orders, categories, pageViews }) {
         )}
       </div>
       <div className="card">
-        <h3 style={{ marginBottom: 16 }}>最近订单</h3>
+        <h3 style={{ marginBottom: 16 }}>待处理与最近订单</h3>
         <table>
           <thead><tr><th>订单号</th><th>客户</th><th>金额</th><th>状态</th><th>时间</th></tr></thead>
           <tbody>
-            {orders.slice(0, 5).map(o => (
+            {prioritizedOrders.slice(0, 5).map(o => (
               <tr key={o.id}>
                 <td>{displayOrderNo(o)}</td>
                 <td>{o.customer}</td>
@@ -599,6 +606,11 @@ function OrderManage({ orders, reload, showToast, initialOrderId, canManage }) {
   const [deliveryPoints, setDeliveryPoints] = useState([])
   const [search, setSearch] = useState('')
   const [detail, setDetail] = useState(null)
+  const [batches, setBatches] = useState([])
+  const [selectedBatch, setSelectedBatch] = useState(null)
+  const [showUnbatchedHistory, setShowUnbatchedHistory] = useState(false)
+  const [batchDate, setBatchDate] = useState('')
+  const [batchBusy, setBatchBusy] = useState(false)
 
   const [editingDelivery, setEditingDelivery] = useState(false)
   const [deliveryForm, setDeliveryForm] = useState({})
@@ -611,6 +623,45 @@ function OrderManage({ orders, reload, showToast, initialOrderId, canManage }) {
       if (Array.isArray(data)) setDeliveryPoints(data)
     }).catch(() => {})
   }, [])
+  const loadBatches = () => authFetch(`${API}/admin/delivery-batches`).then(r => r.ok ? r.json() : []).then(setBatches).catch(() => showToast('读取配送批次失败'))
+  useEffect(() => { loadBatches() }, [orders])
+  const openReport = async batch => {
+    const win = window.open('', '_blank')
+    if (!win) { showToast('请允许弹出窗口后再导出报告'); return }
+    win.document.write('<p style="font-family:sans-serif;padding:20px">正在生成收款报告…</p>')
+    try {
+      const response = await authFetch(`${API}/admin/delivery-batches/${batch.id}`)
+      if (!response.ok) throw new Error('收款报告读取失败')
+      const report = await response.json()
+      win.document.open(); win.document.write(buildCollectionReportHtml(report)); win.document.close(); win.focus()
+    } catch { win.close(); showToast('收款报告读取失败，请重试') }
+  }
+  const lockBatch = async () => {
+    if (!pointFilter || !batchDate) { showToast('先选择服务点和配送日期'); return }
+    const candidates = getPackableOrders(orders.filter(order => !order.delivery_batch_id), pointFilter)
+    if (!candidates.length) { showToast('此服务点暂无可锁定订单'); return }
+    const name = pointOptions.find(([id]) => id === pointFilter)?.[1] || '服务点'
+    if (!window.confirm(`锁定 ${name} ${batchDate} 配送的 ${candidates.length} 笔订单？锁定后商品和收款资料将保存快照，订单不能删除或修改。`)) return
+    setBatchBusy(true)
+    try {
+      const response = await authFetch(`${API}/admin/delivery-batches`, { method: 'POST', body: { point_key: pointFilter, delivery_date: batchDate } })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || '锁定失败')
+      setSelectedBatch(data.id); setStatusFilter(''); reload(); loadBatches(); showToast('批次已锁定，请点击“导出本次收款报告”')
+    } catch (error) { showToast(error.message || '锁定失败') }
+    finally { setBatchBusy(false) }
+  }
+  const archiveBatch = async batch => {
+    if (!window.confirm(`确认 ${batch.point_name} ${batch.delivery_date} 的 ${batch.order_count} 单均已配送？归档后整批订单将标记为“已发货”。`)) return
+    setBatchBusy(true)
+    try {
+      const response = await authFetch(`${API}/admin/delivery-batches/${batch.id}`, { method: 'PATCH', body: {} })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || '归档失败')
+      reload(); loadBatches(); showToast('已配送并归档')
+    } catch (error) { showToast(error.message || '归档失败') }
+    finally { setBatchBusy(false) }
+  }
   const viewDetail = async (id) => {
     const sequence = ++requestSequence.current
     setEditingDelivery(false); setDeliveryError('')
@@ -662,7 +713,13 @@ function OrderManage({ orders, reload, showToast, initialOrderId, canManage }) {
   const pointOptions = [...new Map(orders.filter(o => o.delivery_point_id != null).map(o => [String(o.delivery_point_id), o.delivery_point_name || `服务点 ${o.delivery_point_id}`])).entries()]
     .sort((a, b) => a[1].localeCompare(b[1], 'zh-Hans-CN'))
   if (orders.some(o => o.delivery_point_id == null)) pointOptions.push(['home', '送货到家'])
-  const filtered = orders.filter(o => (!statusFilter || o.status === statusFilter)
+  const archivedGroups = Object.values(batches.filter(batch => batch.status === 'archived').reduce((groups, batch) => {
+    const group = groups[batch.point_key] || (groups[batch.point_key] = { name: batch.point_name, batches: [] })
+    group.batches.push(batch)
+    return groups
+  }, {}))
+  const filtered = orders.filter(o => (selectedBatch ? Number(o.delivery_batch_id) === selectedBatch : !o.delivery_batch_id && (showUnbatchedHistory ? ['shipped', 'completed', 'cancelled'].includes(o.status) : !['shipped', 'completed', 'cancelled'].includes(o.status)))
+    && (!statusFilter || o.status === statusFilter)
     && (!pointFilter || (pointFilter === 'home' ? o.delivery_point_id == null : String(o.delivery_point_id) === pointFilter))
     && (!search || `${displayOrderNo(o)} ${o.order_no} ${o.customer} ${o.phone}`.toLowerCase().includes(search.toLowerCase())))
 
@@ -673,7 +730,7 @@ function OrderManage({ orders, reload, showToast, initialOrderId, canManage }) {
     const pointName = pointOptions.find(([id]) => id === pointFilter)?.[1] || '配货'
     const todayHK = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10)
     const schedule = deliveryPoints.find(point => String(point.id) === pointFilter)
-    const deliveryDate = schedule?.group_formed && schedule.delivery_date >= todayHK ? schedule.delivery_date : ''
+    const deliveryDate = selectedBatch ? batches.find(item => item.id === selectedBatch)?.delivery_date || '' : schedule?.group_formed && schedule.delivery_date >= todayHK ? schedule.delivery_date : ''
     const html = buildPackingListHtml(filtered, { pointId: pointFilter, pointName, deliveryDate })
     const win = window.open('', '_blank')
     if (!win) { showToast('浏览器拦截了弹窗，请允许后再试'); return }
@@ -686,6 +743,20 @@ function OrderManage({ orders, reload, showToast, initialOrderId, canManage }) {
   return (
     <div>
       <div className="page-header"><h2>订单管理</h2></div>
+      <div className="card" style={{ marginBottom: 14 }}>
+        <h3>配送批次</h3>
+        <p className="user-help">按服务点及配送日期锁定本次订单；收款报告保存锁定时的金额、商品与付款凭证。配送后整批归档，历史记录仍可查看和导出。</p>
+        <div className="action-btns" style={{ flexWrap: 'wrap', marginBottom: 12 }}>
+          <button className={`btn ${selectedBatch === null && !showUnbatchedHistory ? 'btn-primary' : 'btn-default'}`} onClick={() => { setSelectedBatch(null); setShowUnbatchedHistory(false); setStatusFilter(''); setPointFilter('') }}>当前待处理订单</button>
+          <button className={`btn ${selectedBatch === null && showUnbatchedHistory ? 'btn-primary' : 'btn-default'}`} onClick={() => { setSelectedBatch(null); setShowUnbatchedHistory(true); setStatusFilter(''); setPointFilter('') }}>未归批历史订单</button>
+          {batches.filter(batch => batch.status === 'locked').map(batch => <button key={batch.id} className={`btn ${selectedBatch === batch.id ? 'btn-primary' : 'btn-default'}`} onClick={() => { setSelectedBatch(batch.id); setStatusFilter(''); setPointFilter(batch.point_key) }}>📦 {batch.point_name} · {batch.delivery_date} · {batch.order_count} 单 · 待配送</button>)}
+        </div>
+        {!!archivedGroups.length && <div style={{ marginBottom: 12 }}><h4 style={{ margin: '8px 0' }}>已配送档案</h4>{archivedGroups.map(group => <details key={group.name} open={group.batches.some(batch => batch.id === selectedBatch)} style={{ border: '1px solid #ddd', borderRadius: 6, padding: '7px 10px', marginBottom: 6 }}><summary style={{ cursor: 'pointer', fontWeight: 600 }}>📁 {group.name} · {group.batches.length} 批</summary><div className="action-btns" style={{ flexWrap: 'wrap', paddingTop: 8 }}>{group.batches.map(batch => <button key={batch.id} className={`btn ${selectedBatch === batch.id ? 'btn-primary' : 'btn-default'}`} onClick={() => { setSelectedBatch(batch.id); setStatusFilter(''); setPointFilter('') }}>{batch.delivery_date} 送货订单 · {batch.order_count} 单</button>)}</div></details>)}</div>}
+        {selectedBatch ? (() => {
+          const batch = batches.find(item => item.id === selectedBatch)
+          return batch && <div className="action-btns" style={{ flexWrap: 'wrap' }}><strong>{batch.point_name}｜{batch.delivery_date} 配送｜{batch.order_count} 单</strong><button className="btn btn-primary" onClick={() => openReport(batch)}>导出本次收款报告（含凭证）</button>{canManage && batch.status === 'locked' && <button disabled={batchBusy} className="btn btn-default" onClick={() => archiveBatch(batch)}>配送完成，整批归档</button>}</div>
+        })() : canManage && !showUnbatchedHistory && <p className="user-help">锁定新批次：先在下方选择配货服务点，再选日期。锁定后可一键导出收款报告。</p>}
+      </div>
       <div className="card">
         <div className="toolbar">
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索订单号、客户或电话" />
@@ -693,11 +764,12 @@ function OrderManage({ orders, reload, showToast, initialOrderId, canManage }) {
             <option value="">全部状态</option>
             {Object.entries(statusText).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
-          <select aria-label="配货服务点" value={pointFilter} onChange={e => setPointFilter(e.target.value)}>
+          <select aria-label="配货服务点" value={pointFilter} onChange={e => { setPointFilter(e.target.value); const point = deliveryPoints.find(item => String(item.id) === e.target.value); if (point?.delivery_date) setBatchDate(point.delivery_date) }}>
             <option value="">全部服务点（打印前请选择）</option>
             {pointOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
           </select>
-          <button className="btn btn-primary" onClick={exportPackingList}>🖨 打印配货单</button>
+          {!selectedBatch && !showUnbatchedHistory && canManage && <><label>配送日期 <input type="date" aria-label="本批配送日期" value={batchDate} onChange={e => setBatchDate(e.target.value)} /></label><button className="btn btn-primary" disabled={batchBusy} onClick={lockBatch}>锁定本批订单</button></>}
+          {!showUnbatchedHistory && (!selectedBatch || batches.find(item => item.id === selectedBatch)?.status === 'locked') && <button className="btn btn-default" onClick={exportPackingList}>🖨 打印配货单</button>}
         </div>
         <table>
           <thead><tr><th>订单号</th><th>客户</th><th>电话</th><th>商品</th><th>金额</th><th>支付方式</th><th>支付状态</th><th>状态</th><th>下单时间</th><th>操作</th></tr></thead>
@@ -716,7 +788,7 @@ function OrderManage({ orders, reload, showToast, initialOrderId, canManage }) {
                   </span>
                 </td>
                 <td>
-                  <select disabled={!canManage} value={o.status} onChange={e => updateStatus(o.id, e.target.value)} style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #d9d9d9' }}>
+                  <select disabled={!canManage || !!o.delivery_batch_id} value={o.status} onChange={e => updateStatus(o.id, e.target.value)} style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #d9d9d9' }}>
                     {Object.entries(statusText).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </td>
@@ -724,10 +796,11 @@ function OrderManage({ orders, reload, showToast, initialOrderId, canManage }) {
                 <td>
                   <div className="action-btns">
                     <button className="btn btn-default btn-sm" onClick={() => viewDetail(o.id)}>详情</button>
-                    {canManage && (o.payment_method === 'wechat_transfer' || o.payment_method === 'alipay_transfer' || o.payment_method === 'fps_transfer') && o.payment_status !== 'confirmed' && (
+                    {canManage && !o.delivery_batch_id && (o.payment_method === 'wechat_transfer' || o.payment_method === 'alipay_transfer' || o.payment_method === 'fps_transfer') && o.payment_status !== 'confirmed' && (
                       <button className="btn btn-primary btn-sm" onClick={() => confirmPayment(o.id)}>确认收款</button>
                     )}
-                    {canManage && <button className="btn btn-danger btn-sm" onClick={() => del(o.id)}>删除</button>}
+                    {canManage && o.delivery_batch_id && o.status === 'shipped' && <button className="btn btn-default btn-sm" onClick={() => updateStatus(o.id, 'completed')}>标记完成</button>}
+                    {canManage && !o.delivery_batch_id && <button className="btn btn-danger btn-sm" onClick={() => del(o.id)}>删除</button>}
                   </div>
                 </td>
               </tr>
@@ -750,7 +823,7 @@ function OrderManage({ orders, reload, showToast, initialOrderId, canManage }) {
               <div className="form-row"><label>地址</label><div>{detail.address}</div></div>
               <div className="form-row"><label>备注</label><div>{detail.remark || '无'}</div></div>
               {(detail.contact_wechat_id || detail.contact_whatsapp) && <div className="user-help">微信号：{detail.contact_wechat_id || '—'} · WhatsApp：{detail.contact_whatsapp || '—'}</div>}
-              {canManage && (editingDelivery ? <form onSubmit={saveDelivery} className="user-section">
+              {canManage && !detail.delivery_batch_id && (editingDelivery ? <form onSubmit={saveDelivery} className="user-section">
                 <h4>修改收货信息与备注</h4><p className="user-help">仅修改这笔订单，不会改变金额、收款状态、商品或自取点。</p>
                 {Object.entries({customer:'收货人',phone:'联系电话',contact_wechat_id:'微信号',contact_whatsapp:'WhatsApp',address:'收货地址 / 自取说明',remark:'订单备注'}).map(([key,label]) => <div className="form-row" key={key}><label htmlFor={`order-edit-${key}`}>{label}</label>{['address','remark'].includes(key) ? <textarea id={`order-edit-${key}`} disabled={deliveryBusy} value={deliveryForm[key]} maxLength={key === 'remark' ? 1000 : 500} onChange={e => setDeliveryForm({...deliveryForm,[key]:e.target.value})} /> : <input id={`order-edit-${key}`} disabled={deliveryBusy} value={deliveryForm[key]} onChange={e => setDeliveryForm({...deliveryForm,[key]:e.target.value})} />}</div>)}
                 {deliveryError && <p className="user-form-error" role="alert">{deliveryError}</p>}

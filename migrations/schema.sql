@@ -67,8 +67,28 @@ CREATE TABLE IF NOT EXISTS orders (
   created_at TEXT DEFAULT (datetime('now', '+8 hours')),
   updated_at TEXT DEFAULT (datetime('now', '+8 hours')),
   contact_wechat_id TEXT NOT NULL DEFAULT '',
-  contact_whatsapp TEXT NOT NULL DEFAULT ''
+  contact_whatsapp TEXT NOT NULL DEFAULT '',
+  delivery_batch_id INTEGER
 );
+
+-- A locked delivery run keeps the original receipt and item data for later disputes.
+CREATE TABLE IF NOT EXISTS delivery_batches (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  point_key TEXT NOT NULL,
+  point_name TEXT NOT NULL,
+  delivery_date TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'locked' CHECK (status IN ('locked', 'archived')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours')),
+  archived_at TEXT,
+  UNIQUE(point_key, delivery_date)
+);
+CREATE TABLE IF NOT EXISTS delivery_batch_orders (
+  batch_id INTEGER NOT NULL,
+  order_id INTEGER NOT NULL UNIQUE,
+  snapshot TEXT NOT NULL,
+  PRIMARY KEY (batch_id, order_id)
+);
+CREATE INDEX IF NOT EXISTS idx_orders_delivery_batch ON orders(delivery_batch_id);
 
 -- Customer-facing serial numbers; keeps numbering stable when an order is deleted.
 CREATE TABLE IF NOT EXISTS order_numbers (
