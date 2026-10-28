@@ -14,6 +14,12 @@ export async function getAuthUser(request, env) {
 export async function getAdminUser(request, env) {
   const user = await getAuthUser(request, env)
   if (!user || !user.is_admin) return null
+  // Catalog editors may read the admin area, but may only write individual products.
+  // Enforce this at the API boundary so a crafted request cannot bypass the UI.
+  if (user.admin_role === 'catalog_editor' && !['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
+    const path = new URL(request.url).pathname
+    if (!/^\/api\/products(?:\/[^/]+)?\/?$/.test(path)) return null
+  }
   return user
 }
 

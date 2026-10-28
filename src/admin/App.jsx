@@ -76,10 +76,11 @@ export default function App() {
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2000) }
 
-  if (!token || !adminUser) {
+  if (!token || !adminUser?.is_admin) {
     return <AdminLogin onLogin={handleLogin} showToast={showToast} />
   }
 
+  const canManageAll = adminUser.admin_role === 'owner'
   const menu = [
     { key: 'dashboard', label: '📊 数据概览' },
     { key: 'products', label: '📦 商品管理' },
@@ -105,14 +106,15 @@ export default function App() {
         </div>
       </div>
       <div className="main-content">
+        {!canManageAll && <div className="card" role="status">当前账号：后台资料只读；商品可新增、修改和下架。订单、收款、申请及其他设置仅主管理员可处理。</div>}
         {page === 'dashboard' && <Dashboard products={products} orders={orders} categories={categories} pageViews={pageViews} />}
         {page === 'products' && <ProductManage products={products} categories={categories} reload={reload} showToast={showToast} />}
-        {page === 'orders' && <OrderManage orders={orders} reload={reload} showToast={showToast} initialOrderId={orderToOpen} />}
-        {page === 'requests' && <RequestManage requests={serviceRequests} reload={reload} showToast={showToast} />}
-        {page === 'announcements' && <AnnouncementManage announcements={announcements} reload={reload} showToast={showToast} />}
-        {page === 'users' && <UserManage users={users} authFetch={authFetch} reload={reload} showToast={showToast} adminUser={adminUser} onSelfLogout={handleLogout} onOpenOrder={id => {setOrderToOpen(id);setPage('orders')}} />}
-        {page === 'categories' && <CategoryManage categories={categories} reload={reload} showToast={showToast} />}
-        {page === 'settings' && <SettingsPage authFetch={authFetch} showToast={showToast} />}
+        {page === 'orders' && <OrderManage orders={orders} reload={reload} showToast={showToast} initialOrderId={orderToOpen} canManage={canManageAll} />}
+        {page === 'requests' && <RequestManage requests={serviceRequests} reload={reload} showToast={showToast} canManage={canManageAll} />}
+        {page === 'announcements' && <AnnouncementManage announcements={announcements} reload={reload} showToast={showToast} canManage={canManageAll} />}
+        {page === 'users' && <UserManage users={users} authFetch={authFetch} reload={reload} showToast={showToast} adminUser={adminUser} canManage={canManageAll} onSelfLogout={handleLogout} onOpenOrder={id => {setOrderToOpen(id);setPage('orders')}} />}
+        {page === 'categories' && <CategoryManage categories={categories} reload={reload} showToast={showToast} canManage={canManageAll} />}
+        {page === 'settings' && <SettingsPage authFetch={authFetch} showToast={showToast} canManage={canManageAll} />}
       </div>
       {toast && <div style={{ position: 'fixed', top: 24, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.8)', color: '#fff', padding: '10px 24px', borderRadius: 6, zIndex: 9999, fontSize: 14 }}>{toast}</div>}
     </div>
@@ -250,7 +252,7 @@ const statusText = { pending: '待付款', awaiting_confirmation: '待确认', p
 const paymentText = { cash_on_delivery: '货到付款', wechat_transfer: '微信转账', alipay_transfer: '支付宝转账', fps_transfer: '转数快 FPS' }
 const payStatusText = { pending: '待支付', paid: '已支付', confirmed: '已确认收款', refunded: '已退款' }
 
-function RequestManage({ requests, reload, showToast }) {
+function RequestManage({ requests, reload, showToast, canManage }) {
   const [notes, setNotes] = useState({})
   const [busy, setBusy] = useState(false)
   const resolve = async (entry, decision) => {
@@ -278,7 +280,7 @@ function RequestManage({ requests, reload, showToast }) {
         {entry.type === 'delivery_upgrade' && <p>单独配送加收：{upgradeFeeText(entry)}（运费基准 ¥30）</p>}
         {entry.address && <p>送货地址：{entry.address}</p>}
         {entry.admin_note && <p>处理备注：{entry.admin_note}</p>}
-        {entry.status === 'pending' && <div className="request-controls">
+        {canManage && entry.status === 'pending' && <div className="request-controls">
           <input value={notes[entry.id] || ''} onChange={e => setNotes(prev => ({ ...prev, [entry.id]: e.target.value }))} placeholder="处理备注（可选）" maxLength={500} />
           <button disabled={busy} className="btn btn-primary" onClick={() => resolve(entry, 'approve')}>{entry.type === 'refund' ? '已线下退款，完成申请' : `已收 ${upgradeFeeText(entry)}，改为送货到家`}</button>
           <button disabled={busy} className="btn btn-default" onClick={() => resolve(entry, 'reject')}>拒绝申请</button>
@@ -289,7 +291,7 @@ function RequestManage({ requests, reload, showToast }) {
   </div>
 }
 
-function AnnouncementManage({ announcements, reload, showToast }) {
+function AnnouncementManage({ announcements, reload, showToast, canManage }) {
   const [points, setPoints] = useState([])
   const [editing, setEditing] = useState(null)
   const [title, setTitle] = useState('')
@@ -314,7 +316,7 @@ function AnnouncementManage({ announcements, reload, showToast }) {
   }
   return <div>
     <div className="page-header"><h2>配送公告</h2></div>
-    <div className="card announcement-editor">
+    {canManage && <div className="card announcement-editor">
       <p>配送前一天，在这里发布取货时间；顾客会在所选服务点首页看到。群通知仍由你自行发送。</p>
       <div className="form-row"><label>标题 · 简体（必填）</label><input value={title} onChange={e => setTitle(e.target.value)} maxLength={100} placeholder="例如：周五科技大学取货安排" /></div>
       <div className="form-row"><label>服务点</label><select value={pointId} onChange={e => setPointId(e.target.value)}><option value="">所有服务点</option>{points.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
@@ -326,12 +328,12 @@ function AnnouncementManage({ announcements, reload, showToast }) {
       </fieldset>)}
       <label className="publish-toggle"><input type="checkbox" checked={published} onChange={e => setPublished(e.target.checked)} /> 立即在网站显示</label>
       <div className="announcement-actions"><button className="btn btn-primary" onClick={save}>{editing ? '保存修改' : '发布公告'}</button>{editing && <button className="btn btn-default" onClick={reset}>取消编辑</button>}</div>
-    </div>
+    </div>}
     <div className="announcement-list">{announcements.map(item => <div className="card" key={item.id}>
       <div className="request-title"><strong>{item.title}</strong><span className="tag">{item.is_published ? '已发布' : '草稿'}</span></div>
       <p>{points.find(p => p.id === item.delivery_point_id)?.name || '所有服务点'} · {item.created_at}</p>
       <p className="announcement-content">{item.content}</p>
-      <div className="announcement-actions"><button className="btn btn-default btn-sm" onClick={() => edit(item)}>编辑</button><button className="btn btn-danger btn-sm" onClick={() => remove(item.id)}>删除</button></div>
+      {canManage && <div className="announcement-actions"><button className="btn btn-default btn-sm" onClick={() => edit(item)}>编辑</button><button className="btn btn-danger btn-sm" onClick={() => remove(item.id)}>删除</button></div>}
     </div>)}</div>
   </div>
 }
@@ -591,7 +593,7 @@ function ProductManage({ products, categories, reload, showToast }) {
 }
 
 /* ========== 订单管理 ========== */
-function OrderManage({ orders, reload, showToast, initialOrderId }) {
+function OrderManage({ orders, reload, showToast, initialOrderId, canManage }) {
   const [statusFilter, setStatusFilter] = useState('')
   const [pointFilter, setPointFilter] = useState('')
   const [deliveryPoints, setDeliveryPoints] = useState([])
@@ -714,7 +716,7 @@ function OrderManage({ orders, reload, showToast, initialOrderId }) {
                   </span>
                 </td>
                 <td>
-                  <select value={o.status} onChange={e => updateStatus(o.id, e.target.value)} style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #d9d9d9' }}>
+                  <select disabled={!canManage} value={o.status} onChange={e => updateStatus(o.id, e.target.value)} style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #d9d9d9' }}>
                     {Object.entries(statusText).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </td>
@@ -722,10 +724,10 @@ function OrderManage({ orders, reload, showToast, initialOrderId }) {
                 <td>
                   <div className="action-btns">
                     <button className="btn btn-default btn-sm" onClick={() => viewDetail(o.id)}>详情</button>
-                    {(o.payment_method === 'wechat_transfer' || o.payment_method === 'alipay_transfer' || o.payment_method === 'fps_transfer') && o.payment_status !== 'confirmed' && (
+                    {canManage && (o.payment_method === 'wechat_transfer' || o.payment_method === 'alipay_transfer' || o.payment_method === 'fps_transfer') && o.payment_status !== 'confirmed' && (
                       <button className="btn btn-primary btn-sm" onClick={() => confirmPayment(o.id)}>确认收款</button>
                     )}
-                    <button className="btn btn-danger btn-sm" onClick={() => del(o.id)}>删除</button>
+                    {canManage && <button className="btn btn-danger btn-sm" onClick={() => del(o.id)}>删除</button>}
                   </div>
                 </td>
               </tr>
@@ -748,12 +750,12 @@ function OrderManage({ orders, reload, showToast, initialOrderId }) {
               <div className="form-row"><label>地址</label><div>{detail.address}</div></div>
               <div className="form-row"><label>备注</label><div>{detail.remark || '无'}</div></div>
               {(detail.contact_wechat_id || detail.contact_whatsapp) && <div className="user-help">微信号：{detail.contact_wechat_id || '—'} · WhatsApp：{detail.contact_whatsapp || '—'}</div>}
-              {editingDelivery ? <form onSubmit={saveDelivery} className="user-section">
+              {canManage && (editingDelivery ? <form onSubmit={saveDelivery} className="user-section">
                 <h4>修改收货信息与备注</h4><p className="user-help">仅修改这笔订单，不会改变金额、收款状态、商品或自取点。</p>
                 {Object.entries({customer:'收货人',phone:'联系电话',contact_wechat_id:'微信号',contact_whatsapp:'WhatsApp',address:'收货地址 / 自取说明',remark:'订单备注'}).map(([key,label]) => <div className="form-row" key={key}><label htmlFor={`order-edit-${key}`}>{label}</label>{['address','remark'].includes(key) ? <textarea id={`order-edit-${key}`} disabled={deliveryBusy} value={deliveryForm[key]} maxLength={key === 'remark' ? 1000 : 500} onChange={e => setDeliveryForm({...deliveryForm,[key]:e.target.value})} /> : <input id={`order-edit-${key}`} disabled={deliveryBusy} value={deliveryForm[key]} onChange={e => setDeliveryForm({...deliveryForm,[key]:e.target.value})} />}</div>)}
                 {deliveryError && <p className="user-form-error" role="alert">{deliveryError}</p>}
                 <div className="action-btns"><button className="btn btn-primary" disabled={deliveryBusy}>{deliveryBusy ? '正在保存…' : '保存收货信息与备注'}</button><button type="button" className="btn btn-default" disabled={deliveryBusy} onClick={() => setEditingDelivery(false)}>取消</button></div>
-              </form> : <button className="btn btn-default" onClick={() => {setDeliveryForm(Object.fromEntries(['customer','phone','contact_wechat_id','contact_whatsapp','address','remark'].map(key => [key,detail[key] || ''])));setDeliveryError('');setEditingDelivery(true)}}>修改收货信息 / 备注</button>}
+              </form> : <button className="btn btn-default" onClick={() => {setDeliveryForm(Object.fromEntries(['customer','phone','contact_wechat_id','contact_whatsapp','address','remark'].map(key => [key,detail[key] || ''])));setDeliveryError('');setEditingDelivery(true)}}>修改收货信息 / 备注</button>)}
               <div className="form-row"><label>商品明细</label>
                 <div className="order-detail-items">
                   {detail.items?.map(i => (
@@ -791,7 +793,7 @@ function OrderManage({ orders, reload, showToast, initialOrderId }) {
 }
 
 /* ========== 分类管理 ========== */
-function CategoryManage({ categories, reload, showToast }) {
+function CategoryManage({ categories, reload, showToast, canManage }) {
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState({ name: '', icon: '', sort: '' })
@@ -820,7 +822,7 @@ function CategoryManage({ categories, reload, showToast }) {
     <div>
       <div className="page-header">
         <h2>分类管理</h2>
-        <button className="btn btn-primary" onClick={openAdd}>+ 新增分类</button>
+        {canManage && <button className="btn btn-primary" onClick={openAdd}>+ 新增分类</button>}
       </div>
       <div className="card">
         <table>
@@ -832,7 +834,7 @@ function CategoryManage({ categories, reload, showToast }) {
                 <td style={{ fontSize: 24 }}>{c.icon || '📦'}</td>
                 <td>{c.name}</td>
                 <td>{c.sort}</td>
-                <td><div className="action-btns"><button className="btn btn-default btn-sm" onClick={() => openEdit(c)}>编辑</button><button className="btn btn-danger btn-sm" onClick={() => del(c.id)}>删除</button></div></td>
+                <td>{canManage ? <div className="action-btns"><button className="btn btn-default btn-sm" onClick={() => openEdit(c)}>编辑</button><button className="btn btn-danger btn-sm" onClick={() => del(c.id)}>删除</button></div> : '只读'}</td>
               </tr>
             ))}
             {categories.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', color: '#999', padding: 30 }}>暂无分类</td></tr>}
@@ -860,7 +862,7 @@ function CategoryManage({ categories, reload, showToast }) {
   )
 }
 
-function SettingsPage({ authFetch, showToast }) {
+function SettingsPage({ authFetch, showToast, canManage }) {
   const [rate, setRate] = useState(1.2)
   const [points, setPoints] = useState([])
   const [dates, setDates] = useState({})
@@ -910,10 +912,10 @@ function SettingsPage({ authFetch, showToast }) {
         </p>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <label style={{ fontSize: 14 }}>1 CNY =</label>
-          <input type="number" step="0.01" value={rate} onChange={e => setRate(e.target.value)}
+          <input disabled={!canManage} type="number" step="0.01" value={rate} onChange={e => setRate(e.target.value)}
             style={{ width: 100, padding: 8, border: '1px solid #ddd', borderRadius: 6, fontSize: 16 }} />
           <label style={{ fontSize: 14 }}>HKD</label>
-          <button onClick={save} style={{ padding: '8px 20px', background: '#ff4444', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>保存</button>
+          {canManage && <button onClick={save} style={{ padding: '8px 20px', background: '#ff4444', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>保存</button>}
         </div>
       </div>
       <section className="delivery-schedule-settings card" aria-label="服务点配送安排">
@@ -923,11 +925,11 @@ function SettingsPage({ authFetch, showToast }) {
           const active = Boolean(point.group_formed && point.delivery_date && point.delivery_date >= todayHK)
           return <div className="delivery-schedule-row" key={point.id}>
             <div className="delivery-schedule-heading"><strong>{point.name}</strong><span>{active ? `已成团 · ${point.delivery_date} 配送` : point.group_formed ? '原定日期已过 · 显示实时进度' : `凑单中 · 满 ¥${point.threshold} 起送`}</span></div>
-            <div className="delivery-schedule-actions">
+            {canManage && <div className="delivery-schedule-actions">
               <label>配送日期（香港时间）<input type="date" min={todayHK} value={dates[point.id] || ''} onChange={event => setDates(previous => ({ ...previous, [point.id]: event.target.value }))} /></label>
               <button type="button" className="btn btn-primary" disabled={savingPoint !== null} onClick={() => saveSchedule(point, true)}>发布“已成团”</button>
               {Boolean(point.group_formed) && <button type="button" className="btn btn-default" disabled={savingPoint !== null} onClick={() => saveSchedule(point, false)}>恢复进度条</button>}
-            </div>
+            </div>}
           </div>
         })}
       </section>

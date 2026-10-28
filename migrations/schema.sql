@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
   legacy_login_phone TEXT NOT NULL DEFAULT '',
   token TEXT,
   is_admin INTEGER DEFAULT 0,
+  admin_role TEXT NOT NULL DEFAULT 'owner' CHECK (admin_role IN ('owner', 'catalog_editor')),
   created_at TEXT DEFAULT (datetime('now', '+8 hours'))
 );
 
