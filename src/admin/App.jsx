@@ -638,7 +638,7 @@ function OrderManage({ orders, reload, showToast, initialOrderId, canManage }) {
   }
   const lockBatch = async () => {
     if (!pointFilter || !batchDate) { showToast('先选择服务点和配送日期'); return }
-    const candidates = getPackableOrders(orders.filter(order => !order.delivery_batch_id), pointFilter)
+    const candidates = getPackableOrders(orders.filter(order => !order.delivery_batch_id && String(order.created_at || '').slice(0, 10) <= batchDate), pointFilter)
     if (!candidates.length) { showToast('此服务点暂无可锁定订单'); return }
     const name = pointOptions.find(([id]) => id === pointFilter)?.[1] || '服务点'
     if (!window.confirm(`锁定 ${name} ${batchDate} 配送的 ${candidates.length} 笔订单？锁定后商品和收款资料将保存快照，订单不能删除或修改。`)) return
@@ -660,6 +660,36 @@ function OrderManage({ orders, reload, showToast, initialOrderId, canManage }) {
       if (!response.ok) throw new Error(data.error || '归档失败')
       reload(); loadBatches(); showToast('已配送并归档')
     } catch (error) { showToast(error.message || '归档失败') }
+    finally { setBatchBusy(false) }
+  }
+  const completeBatch = async batch => {
+    if (!window.confirm(`确认 ${batch.point_name} ${batch.delivery_date} 的 ${batch.order_count} 单均已完成配送？顾客订单将显示“已完成”，本批订单会退出凑单进度。`)) return
+    setBatchBusy(true)
+    try {
+      const response = await authFetch(`${API}/admin/delivery-batches/${batch.id}`, { method: 'PATCH', body: { action: 'complete' } })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || '整批完成失败')
+      reload(); loadBatches(); showToast(`已完成 ${data.completed_count} 单，本批订单已退出凑单进度`)
+    } catch (error) { showToast(error.message || '整批完成失败') }
+    finally { setBatchBusy(false) }
+  }
+  const completeCurrent = async () => {
+    if (!pointFilter || !batchDate) { showToast('先选择服务点和配送日期'); return }
+    const candidates = getPackableOrders(orders.filter(order => !order.delivery_batch_id && String(order.created_at || '').slice(0, 10) <= batchDate), pointFilter)
+    if (!candidates.length) { showToast('此服务点暂无可完成的已确认收款订单'); return }
+    const name = pointOptions.find(([id]) => id === pointFilter)?.[1] || '服务点'
+    if (!window.confirm(`确认 ${name} ${batchDate} 的 ${candidates.length} 单已经配送完成？系统会先保存收款与商品快照，再整批标为“已完成”并重置本批进度。`)) return
+    setBatchBusy(true)
+    try {
+      const locked = await authFetch(`${API}/admin/delivery-batches`, { method: 'POST', body: { point_key: pointFilter, delivery_date: batchDate } })
+      const batch = await locked.json()
+      if (!locked.ok) throw new Error(batch.error || '建立批次失败')
+      setSelectedBatch(batch.id)
+      const completed = await authFetch(`${API}/admin/delivery-batches/${batch.id}`, { method: 'PATCH', body: { action: 'complete' } })
+      const result = await completed.json()
+      if (!completed.ok) throw new Error(`${result.error || '整批完成失败'}；批次已锁定，可打开批次重试`)
+      setStatusFilter(''); reload(); loadBatches(); showToast(`已完成 ${result.completed_count} 单，本批订单已退出凑单进度`)
+    } catch (error) { reload(); loadBatches(); showToast(error.message || '整批完成失败') }
     finally { setBatchBusy(false) }
   }
   const unlockBatch = async batch => {
@@ -756,7 +786,7 @@ function OrderManage({ orders, reload, showToast, initialOrderId, canManage }) {
       <div className="page-header"><h2>订单管理</h2></div>
       <div className="card" style={{ marginBottom: 14 }}>
         <h3>配送批次</h3>
-        <p className="user-help">按服务点及配送日期锁定本次订单；收款报告保存锁定时的金额、商品与付款凭证。配送后整批归档，历史记录仍可查看和导出。</p>
+        <p className="user-help">按服务点及配送日期处理本次订单。配送完成后可一键标记“已完成”，本批订单退出顾客端凑单进度；新订单仍计入下一轮。收款报告保存当时的金额、商品与付款凭证。</p>
         <div className="action-btns" style={{ flexWrap: 'wrap', marginBottom: 12 }}>
           <button className={`btn ${selectedBatch === null && !showUnbatchedHistory ? 'btn-primary' : 'btn-default'}`} onClick={() => { setSelectedBatch(null); setShowUnbatchedHistory(false); setStatusFilter(''); setPointFilter('') }}>当前待处理订单</button>
           <button className={`btn ${selectedBatch === null && showUnbatchedHistory ? 'btn-primary' : 'btn-default'}`} onClick={() => { setSelectedBatch(null); setShowUnbatchedHistory(true); setStatusFilter(''); setPointFilter('') }}>未归批历史订单</button>
@@ -765,8 +795,8 @@ function OrderManage({ orders, reload, showToast, initialOrderId, canManage }) {
         {!!archivedGroups.length && <div style={{ marginBottom: 12 }}><h4 style={{ margin: '8px 0' }}>已配送档案</h4>{archivedGroups.map(group => <details key={group.name} open={group.batches.some(batch => batch.id === selectedBatch)} style={{ border: '1px solid #ddd', borderRadius: 6, padding: '7px 10px', marginBottom: 6 }}><summary style={{ cursor: 'pointer', fontWeight: 600 }}>📁 {group.name} · {group.batches.length} 批</summary><div className="action-btns" style={{ flexWrap: 'wrap', paddingTop: 8 }}>{group.batches.map(batch => <button key={batch.id} className={`btn ${selectedBatch === batch.id ? 'btn-primary' : 'btn-default'}`} onClick={() => { setSelectedBatch(batch.id); setStatusFilter(''); setPointFilter('') }}>{batch.delivery_date} 送货订单 · {batch.order_count} 单</button>)}</div></details>)}</div>}
         {selectedBatch ? (() => {
           const batch = batches.find(item => item.id === selectedBatch)
-          return batch && <div className="action-btns" style={{ flexWrap: 'wrap' }}><strong>{batch.point_name}｜{batch.delivery_date} 配送｜{batch.order_count} 单</strong><button className="btn btn-primary" onClick={() => openReport(batch)}>导出本次收款报告（含凭证）</button>{canManage && batch.status === 'locked' && <><button disabled={batchBusy} className="btn btn-default" onClick={() => archiveBatch(batch)}>配送完成，整批归档</button><button disabled={batchBusy} className="btn btn-default" onClick={() => unlockBatch(batch)}>解除锁定以更正</button></>}</div>
-        })() : canManage && !showUnbatchedHistory && <p className="user-help">锁定新批次：先在下方选择配货服务点，再选日期。锁定后可一键导出收款报告。</p>}
+          return batch && <div className="action-btns" style={{ flexWrap: 'wrap' }}><strong>{batch.point_name}｜{batch.delivery_date} 配送｜{batch.order_count} 单</strong><button className="btn btn-primary" onClick={() => openReport(batch)}>导出本次收款报告（含凭证）</button>{canManage && orders.some(order => Number(order.delivery_batch_id) === batch.id && order.status !== 'completed') && <button disabled={batchBusy} className="btn btn-primary" onClick={() => completeBatch(batch)}>整批标记已完成</button>}{canManage && batch.status === 'locked' && <><button disabled={batchBusy} className="btn btn-default" onClick={() => archiveBatch(batch)}>仅标记已发货并归档</button><button disabled={batchBusy} className="btn btn-default" onClick={() => unlockBatch(batch)}>解除锁定以更正</button></>}</div>
+        })() : canManage && !showUnbatchedHistory && <p className="user-help">先在下方选择服务点和配送日期。已送达可直接“一键完成本批”；尚未配送可先锁定并导出收款报告。</p>}
       </div>
       <div className="card">
         <div className="toolbar">
@@ -779,7 +809,7 @@ function OrderManage({ orders, reload, showToast, initialOrderId, canManage }) {
             <option value="">全部服务点（打印前请选择）</option>
             {pointOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
           </select>
-          {!selectedBatch && !showUnbatchedHistory && canManage && <><label>配送日期 <input type="date" aria-label="本批配送日期" value={batchDate} onChange={e => setBatchDate(e.target.value)} /></label><button className="btn btn-primary" disabled={batchBusy} onClick={lockBatch}>锁定本批订单</button></>}
+          {!selectedBatch && !showUnbatchedHistory && canManage && <><label>配送日期 <input type="date" aria-label="本批配送日期" value={batchDate} onChange={e => setBatchDate(e.target.value)} /></label><button className="btn btn-primary" disabled={batchBusy} onClick={completeCurrent}>一键完成本批</button><button className="btn btn-default" disabled={batchBusy} onClick={lockBatch}>先锁定本批订单</button></>}
           {!showUnbatchedHistory && (!selectedBatch || batches.find(item => item.id === selectedBatch)?.status === 'locked') && <button className="btn btn-default" onClick={exportPackingList}>🖨 打印配货单</button>}
         </div>
         <table>

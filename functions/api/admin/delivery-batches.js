@@ -29,7 +29,8 @@ export async function onRequest({ request, env }) {
     FROM orders o LEFT JOIN order_numbers n ON n.order_id = o.id LEFT JOIN users u ON o.user_id = u.id
     WHERE COALESCE(CAST(o.delivery_point_id AS TEXT), 'home') = ?
       AND o.delivery_batch_id IS NULL AND o.status = 'paid' AND o.payment_status = 'confirmed'
-    ORDER BY n.number ASC, o.id ASC`).bind(pointKey).all()
+      AND substr(o.created_at, 1, 10) <= ?
+    ORDER BY n.number ASC, o.id ASC`).bind(pointKey, body.delivery_date).all()
   if (!orders.length) return json({ error: '该服务点没有已确认收款、尚未归批的拼团订单' }, 409)
   const ids = orders.map(order => order.id)
   const pending = await env.DB.prepare(`SELECT id FROM order_requests WHERE status = 'pending' AND order_id IN (${ids.map(() => '?').join(',')}) LIMIT 1`).bind(...ids).first()
@@ -42,7 +43,8 @@ export async function onRequest({ request, env }) {
     const snapshot = JSON.stringify({ ...order, payment_amount: Number(order.payment_amount ?? (Number(order.total) + Number(order.delivery_fee || 0))), items })
     statements.push(env.DB.prepare(`UPDATE orders SET delivery_batch_id = (SELECT id FROM delivery_batches WHERE point_key = ? AND delivery_date = ?)
       WHERE id = ? AND delivery_batch_id IS NULL AND status = 'paid' AND payment_status = 'confirmed'
-      AND NOT EXISTS (SELECT 1 FROM order_requests WHERE order_id = ? AND status = 'pending')`).bind(pointKey, body.delivery_date, order.id, order.id))
+      AND substr(created_at, 1, 10) <= ?
+      AND NOT EXISTS (SELECT 1 FROM order_requests WHERE order_id = ? AND status = 'pending')`).bind(pointKey, body.delivery_date, order.id, body.delivery_date, order.id))
     statements.push(env.DB.prepare(`INSERT INTO delivery_batch_orders (batch_id, order_id, snapshot)
       SELECT o.delivery_batch_id, o.id, ? FROM orders o WHERE o.id = ? AND o.delivery_batch_id =
       (SELECT id FROM delivery_batches WHERE point_key = ? AND delivery_date = ?)`).bind(snapshot, order.id, pointKey, body.delivery_date))

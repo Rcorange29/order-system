@@ -1,4 +1,4 @@
-import { getAdminUser, json, cors } from '../../_utils.js'
+import { getAdminUser, json, cors, readBody } from '../../_utils.js'
 
 export async function onRequest({ request, env, params }) {
   if (request.method === 'OPTIONS') return cors()
@@ -13,6 +13,25 @@ export async function onRequest({ request, env, params }) {
     const { results } = await env.DB.prepare('SELECT snapshot FROM delivery_batch_orders WHERE batch_id = ? ORDER BY order_id').bind(id).all()
     const orders = results.map(row => JSON.parse(row.snapshot)).sort((a,b) => Number(a.public_no ?? a.id) - Number(b.public_no ?? b.id))
     return json({ batch, orders })
+  }
+  if (request.method === 'PATCH') {
+    const body = await readBody(request)
+    if (body.action === 'complete') {
+      const total = await env.DB.prepare('SELECT COUNT(*) AS count FROM delivery_batch_orders WHERE batch_id = ?').bind(id).first()
+      const eligible = await env.DB.prepare("SELECT COUNT(*) AS count FROM orders WHERE delivery_batch_id = ? AND status IN ('paid', 'shipped', 'completed') AND payment_status = 'confirmed'").bind(id).first()
+      if (!Number(total.count) || Number(total.count) !== Number(eligible.count)) return json({ error: '批次订单状态已变化，请先核对' }, 409)
+      const statements = [
+        env.DB.prepare("UPDATE orders SET status = 'completed', updated_at = datetime('now', '+8 hours') WHERE delivery_batch_id = ? AND status IN ('paid', 'shipped') AND payment_status = 'confirmed'").bind(id),
+        env.DB.prepare("UPDATE delivery_batches SET status = 'archived', archived_at = COALESCE(archived_at, datetime('now', '+8 hours')) WHERE id = ?").bind(id)
+      ]
+      if (batch.point_key !== 'home') {
+        statements.push(env.DB.prepare("UPDATE delivery_points SET group_formed = 0, delivery_date = '' WHERE id = ? AND delivery_date = ?")
+          .bind(Number(batch.point_key), batch.delivery_date))
+      }
+      await env.DB.batch(statements)
+      return json({ ok: true, completed_count: Number(total.count) })
+    }
+    if (body.action != null) return json({ error: '批次操作无效' }, 400)
   }
   if (batch.status !== 'locked') return json({ error: '这个批次已经归档' }, 409)
   if (request.method === 'DELETE') {

@@ -6,6 +6,7 @@ import { setupDatabase } from './helpers/d1.mjs'
 import { onRequest as batches } from '../functions/api/admin/delivery-batches.js'
 import { onRequest as batchDetail } from '../functions/api/admin/delivery-batches/[id].js'
 import { onRequest as order } from '../functions/api/admin/orders/[id].js'
+import { onRequest as stats } from '../functions/api/stats.js'
 import { summarizeCollection, buildCollectionReportHtml } from '../src/admin/collectionReport.js'
 
 function fixture() {
@@ -13,6 +14,7 @@ function fixture() {
   sqlite.exec("INSERT INTO users(id,username,password_hash,is_admin,token,admin_role) VALUES(1,'jchengat','hash',1,'owner-token','owner'),(2,'Jenny','hash',1,'editor-token','catalog_editor')")
   sqlite.exec("INSERT INTO products(id,name,price) VALUES(1,'原商品名',15)")
   sqlite.exec("INSERT INTO orders(id,order_no,user_id,customer,status,payment_status,delivery_point_id,total,payment_currency,payment_amount,payment_method,payment_screenshot) VALUES (1,'a','2','顾客A','paid','confirmed',2,15,'CNY',15,'wechat_transfer','data:image/png;base64,AAAA'),(2,'b','2','顾客B','paid','confirmed',2,20,'HKD',24,'fps_transfer','data:image/png;base64,BBBB'),(3,'c','2','顾客C','pending','pending',2,30,'CNY',30,'alipay_transfer',NULL)")
+  sqlite.exec("UPDATE orders SET created_at='2026-10-27 10:00:00' WHERE id IN (1,2,3)")
   sqlite.exec("INSERT INTO order_numbers(order_id) VALUES(1),(2),(3)")
   sqlite.exec("INSERT INTO order_items(order_id,product_id,quantity,price,variant) VALUES(1,1,1,15,''),(2,1,2,10,'小份')")
   return { sqlite, call }
@@ -89,5 +91,47 @@ test('an unresolved refund request keeps its order out of a locked batch', async
   const response = await call(batches,'POST',{point_key:'2',delivery_date:'2026-10-28'},'owner-token',1,'/api/admin/delivery-batches')
   assert.equal(response.status,409)
   assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM delivery_batches').get().count,0)
+  sqlite.close()
+})
+
+test('one action completes a locked batch, resets its schedule and removes only its orders from customer progress', async () => {
+  const { sqlite, call } = fixture()
+  sqlite.exec("UPDATE delivery_points SET group_formed=1, delivery_date='2026-10-28' WHERE id=2")
+  const created = await (await call(batches,'POST',{point_key:'2',delivery_date:'2026-10-28'},'owner-token',1,'/api/admin/delivery-batches')).json()
+  const path = `/api/admin/delivery-batches/${created.id}`
+  assert.equal((await call(batchDetail,'PATCH',{action:'complete'},'editor-token',created.id,path)).status,403)
+  const result = await call(batchDetail,'PATCH',{action:'complete'},'owner-token',created.id,path)
+  assert.equal(result.status,200)
+  assert.equal((await result.json()).completed_count,2)
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS count FROM orders WHERE delivery_batch_id=? AND status='completed'").get(created.id).count,2)
+  assert.deepEqual({ ...sqlite.prepare('SELECT group_formed,delivery_date FROM delivery_points WHERE id=2').get() },{group_formed:0,delivery_date:''})
+  const customerStats = await (await call(stats,'GET',null,'customer-token',1,'/api/stats?point=2')).json()
+  assert.equal(customerStats.confirmed_total,0)
+  assert.equal(customerStats.group_formed,false)
+  assert.equal((await call(batchDetail,'PATCH',{action:'complete'},'owner-token',created.id,path)).status,200)
+  sqlite.close()
+})
+
+test('completing an archived shipped batch preserves a newer delivery schedule and newer paid orders', async () => {
+  const { sqlite, call } = fixture()
+  const created = await (await call(batches,'POST',{point_key:'2',delivery_date:'2026-10-28'},'owner-token',1,'/api/admin/delivery-batches')).json()
+  const path = `/api/admin/delivery-batches/${created.id}`
+  assert.equal((await call(batchDetail,'PATCH',{},'owner-token',created.id,path)).status,200)
+  sqlite.exec("UPDATE delivery_points SET group_formed=1, delivery_date='2026-11-05' WHERE id=2")
+  sqlite.exec("INSERT INTO orders(order_no,status,payment_status,delivery_point_id,total) VALUES('new-round','paid','confirmed',2,11)")
+  assert.equal((await call(batchDetail,'PATCH',{action:'complete'},'owner-token',created.id,path)).status,200)
+  assert.equal(sqlite.prepare("SELECT status FROM orders WHERE order_no='new-round'").get().status,'paid')
+  assert.deepEqual({ ...sqlite.prepare('SELECT group_formed,delivery_date FROM delivery_points WHERE id=2').get() },{group_formed:1,delivery_date:'2026-11-05'})
+  const customerStats = await (await call(stats,'GET',null,'customer-token',1,'/api/stats?point=2')).json()
+  assert.equal(customerStats.confirmed_total,11)
+  sqlite.close()
+})
+
+test('an older delivery batch never captures orders placed after its delivery date', async () => {
+  const { sqlite, call } = fixture()
+  sqlite.exec("INSERT INTO orders(order_no,status,payment_status,delivery_point_id,total,created_at) VALUES('later','paid','confirmed',2,7,'2026-10-29 10:00:00')")
+  const result = await (await call(batches,'POST',{point_key:'2',delivery_date:'2026-10-28'},'owner-token',1,'/api/admin/delivery-batches')).json()
+  assert.equal(result.order_count,2)
+  assert.equal(sqlite.prepare("SELECT delivery_batch_id FROM orders WHERE order_no='later'").get().delivery_batch_id,null)
   sqlite.close()
 })
