@@ -321,6 +321,22 @@ function AnnouncementManage({ announcements, reload, showToast, canManage }) {
     showToast(response.ok ? '公告已删除' : '删除失败')
     if (response.ok) reload()
   }
+  const setArchived = async (item, archived) => {
+    const message = archived ? `把“${item.title}”标为过去消息？顾客端将不再显示，后台仍可查看。` : `把“${item.title}”恢复为当前公告？`
+    if (!window.confirm(message)) return
+    const response = await authFetch(`${API}/announcements`, { method: 'PATCH', body: { id: item.id, action: archived ? 'archive' : 'restore' } })
+    const data = await response.json()
+    showToast(response.ok ? (archived ? '已移入过去消息' : '已恢复公告') : data.error || '操作失败')
+    if (response.ok) { if (editing?.id === item.id) reset(); reload() }
+  }
+  const renderAnnouncement = item => <div className="card" key={item.id}>
+    <div className="request-title"><strong>{item.title}</strong><span className="tag">{item.is_archived ? '过去消息' : item.is_published ? '已发布' : '草稿'}</span></div>
+    <p>{points.find(p => p.id === item.delivery_point_id)?.name || '所有服务点'} · {item.created_at}</p>
+    <p className="announcement-content">{item.content}</p>
+    {canManage && <div className="announcement-actions"><button className="btn btn-default btn-sm" onClick={() => edit(item)}>编辑</button>{item.is_archived ? <button className="btn btn-default btn-sm" onClick={() => setArchived(item, false)}>恢复显示</button> : !!item.is_published && <button className="btn btn-default btn-sm" onClick={() => setArchived(item, true)}>标为过去消息</button>}<button className="btn btn-danger btn-sm" onClick={() => remove(item.id)}>删除</button></div>}
+  </div>
+  const currentAnnouncements = announcements.filter(item => !item.is_archived)
+  const pastAnnouncements = announcements.filter(item => !!item.is_archived)
   return <div>
     <div className="page-header"><h2>配送公告</h2></div>
     {canManage && <div className="card announcement-editor">
@@ -336,12 +352,9 @@ function AnnouncementManage({ announcements, reload, showToast, canManage }) {
       <label className="publish-toggle"><input type="checkbox" checked={published} onChange={e => setPublished(e.target.checked)} /> 立即在网站显示</label>
       <div className="announcement-actions"><button className="btn btn-primary" onClick={save}>{editing ? '保存修改' : '发布公告'}</button>{editing && <button className="btn btn-default" onClick={reset}>取消编辑</button>}</div>
     </div>}
-    <div className="announcement-list">{announcements.map(item => <div className="card" key={item.id}>
-      <div className="request-title"><strong>{item.title}</strong><span className="tag">{item.is_published ? '已发布' : '草稿'}</span></div>
-      <p>{points.find(p => p.id === item.delivery_point_id)?.name || '所有服务点'} · {item.created_at}</p>
-      <p className="announcement-content">{item.content}</p>
-      {canManage && <div className="announcement-actions"><button className="btn btn-default btn-sm" onClick={() => edit(item)}>编辑</button><button className="btn btn-danger btn-sm" onClick={() => remove(item.id)}>删除</button></div>}
-    </div>)}</div>
+    <h3>当前公告</h3>
+    <div className="announcement-list">{currentAnnouncements.map(renderAnnouncement)}{!currentAnnouncements.length && <div className="card">暂无当前公告</div>}</div>
+    <details style={{ marginTop: 16 }}><summary style={{ cursor: 'pointer', fontWeight: 600 }}>过去消息 · {pastAnnouncements.length}</summary><div className="announcement-list" style={{ marginTop: 10 }}>{pastAnnouncements.map(renderAnnouncement)}{!pastAnnouncements.length && <div className="card">暂无过去消息</div>}</div></details>
   </div>
 }
 

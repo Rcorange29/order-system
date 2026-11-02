@@ -149,6 +149,7 @@ CREATE TABLE IF NOT EXISTS announcements (
   title TEXT NOT NULL,
   content TEXT NOT NULL,
   is_published INTEGER NOT NULL DEFAULT 1,
+  is_archived INTEGER NOT NULL DEFAULT 0 CHECK (is_archived IN (0, 1)),
   created_at TEXT DEFAULT (datetime('now', '+8 hours')),
   title_zh_hk TEXT,
   title_en TEXT,

@@ -9,13 +9,21 @@ export async function onRequest({ request, env }) {
     const pointId = Number(url.searchParams.get('point')) || 0
     const sql = admin
       ? 'SELECT * FROM announcements ORDER BY id DESC LIMIT 100'
-      : 'SELECT id, delivery_point_id, title, content, title_zh_hk, title_en, content_zh_hk, content_en, created_at FROM announcements WHERE is_published = 1 AND (delivery_point_id IS NULL OR delivery_point_id = ?) ORDER BY id DESC LIMIT 20'
+      : 'SELECT id, delivery_point_id, title, content, title_zh_hk, title_en, content_zh_hk, content_en, created_at FROM announcements WHERE is_published = 1 AND is_archived = 0 AND (delivery_point_id IS NULL OR delivery_point_id = ?) ORDER BY id DESC LIMIT 20'
     const { results } = admin ? await env.DB.prepare(sql).all() : await env.DB.prepare(sql).bind(pointId).all()
     return json(results)
   }
   const admin = await getAdminUser(request, env)
   if (!admin) return json({ error: '需要管理员权限' }, 403)
   const body = await readBody(request)
+  if (request.method === 'PATCH') {
+    const id = Number(body.id)
+    if (!Number.isSafeInteger(id) || id < 1 || !['archive', 'restore'].includes(body.action)) return json({ error: '公告操作无效' }, 400)
+    const result = await env.DB.prepare('UPDATE announcements SET is_archived = ? WHERE id = ?')
+      .bind(body.action === 'archive' ? 1 : 0, id).run()
+    if (!result.meta.changes) return json({ error: '公告不存在' }, 404)
+    return json({ ok: true })
+  }
   if (request.method === 'POST' || request.method === 'PUT') {
     const title = String(body.title || '').trim()
     const content = String(body.content || '').trim()
