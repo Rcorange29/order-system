@@ -3,7 +3,8 @@ import { getAuthUser, json, cors, readBody } from './_utils.js'
 
 const MAX_ITEMS = 100
 const MAX_QUANTITY = 99
-const PAYMENT_METHODS = new Set(['wechat_transfer', 'alipay_transfer', 'fps_transfer'])
+// Keep Alipay data and receipt handling for past orders; pause it for new payments.
+const PAYMENT_METHODS = new Set(['wechat_transfer', 'fps_transfer'])
 
 function validMoney(value) {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0
@@ -40,7 +41,7 @@ export async function onRequest(context) {
   if (!Array.isArray(body.items) || body.items.length === 0 || body.items.length > MAX_ITEMS) {
     return json({ error: '请选择商品（最多100项）' }, 400)
   }
-  if (!PAYMENT_METHODS.has(body.payment_method)) return json({ error: '请选择微信、支付宝或转数快付款' }, 400)
+  if (!PAYMENT_METHODS.has(body.payment_method)) return json({ error: '目前请选择微信或转数快付款' }, 400)
   const paymentCurrency = body.payment_currency || 'CNY'
   if (!['CNY', 'HKD'].includes(paymentCurrency)) return json({ error: '付款币种无效' }, 400)
   if (paymentCurrency === 'HKD' && ['wechat_transfer', 'alipay_transfer'].includes(body.payment_method)) return json({ error: '微信和支付宝仅支持人民币付款，请改选转数快' }, 400)

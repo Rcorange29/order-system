@@ -87,7 +87,8 @@ test('records the chosen payment currency and server-calculated amount', async (
   assert.equal(insert.values[15], 36)
   const invalid = await call(orders, database(), '/api/orders', 'POST', { ...orderBody(), payment_currency: 'USD' })
   assert.equal(invalid.status, 400)
-  // 币种与支付渠道对应：微信/支付宝仅限人民币，转数快仅限港币
+  // 支付宝暂停：新订单只能选人民币微信或港币转数快。
+  assert.equal((await call(orders, database(), '/api/orders', 'POST', { ...orderBody(), payment_method: 'alipay_transfer' })).status, 400)
   assert.equal((await call(orders, database(), '/api/orders', 'POST', { ...orderBody(), payment_currency: 'HKD' })).status, 400)
   assert.equal((await call(orders, database(), '/api/orders', 'POST', { ...orderBody(), payment_method: 'fps_transfer', payment_currency: 'CNY' })).status, 400)
   assert.equal((await call(orders, database(), '/api/orders', 'POST', { ...orderBody(), payment_method: 'cash_on_delivery' })).status, 400)

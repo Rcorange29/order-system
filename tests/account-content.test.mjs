@@ -45,9 +45,10 @@ test('customer can switch payment method of own unpaid order freely; ownership a
  sqlite.exec("INSERT INTO products(id,name,price,unit,is_active) VALUES(1,'QA produce',15,'/pack',1)")
  const body={items:[{product_id:1,quantity:2}],delivery_type:'pickup',delivery_point_id:2,payment_method:'wechat_transfer',payment_currency:'CNY',expected_payment_amount:30,expected_cny_total:30}
  const placed=await(await call(orders,'POST',body,account.token)).json()
- assert.equal((await call(orderDetail,'PATCH',{payment_method:'alipay_transfer'},account.token,placed.id)).status,200)
- assert.equal(sqlite.prepare('SELECT payment_method FROM orders WHERE id=?').get(placed.id).payment_method,'alipay_transfer')
- // 币种与支付渠道对应：CNY 订单不能切转数快，切回微信/支付宝可
+ assert.equal((await call(orderDetail,'PATCH',{payment_method:'alipay_transfer'},account.token,placed.id)).status,400)
+ assert.equal(sqlite.prepare('SELECT payment_method FROM orders WHERE id=?').get(placed.id).payment_method,'wechat_transfer')
+ // CNY 订单不能切转数快；老支付宝订单仍可改回微信。
+ sqlite.prepare("UPDATE orders SET payment_method='alipay_transfer' WHERE id=?").run(placed.id)
  assert.equal((await call(orderDetail,'PATCH',{payment_method:'fps_transfer'},account.token,placed.id)).status,400)
  assert.equal(sqlite.prepare('SELECT payment_method FROM orders WHERE id=?').get(placed.id).payment_method,'alipay_transfer')
  assert.equal((await call(orderDetail,'PATCH',{payment_method:'wechat_transfer'},account.token,placed.id)).status,200)

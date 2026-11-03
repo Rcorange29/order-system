@@ -1,6 +1,7 @@
 import { getAuthUser, json, cors, readBody } from '../_utils.js'
 
-const PAYMENT_METHODS = new Set(['wechat_transfer', 'alipay_transfer', 'fps_transfer'])
+// Existing Alipay orders remain readable, but customers cannot select it again.
+const PAYMENT_METHODS = new Set(['wechat_transfer', 'fps_transfer'])
 
 export async function onRequest(context) {
   const { request, env } = context
@@ -19,7 +20,7 @@ export async function onRequest(context) {
       await env.DB.prepare("UPDATE orders SET status = 'cancelled', updated_at = datetime('now', '+8 hours') WHERE id = ? AND status = 'pending'").bind(id).run()
       return json({ ok: true, status: 'cancelled' })
     }
-    if (!PAYMENT_METHODS.has(body.payment_method)) return json({ error: '请选择微信、支付宝或转数快付款' }, 400)
+    if (!PAYMENT_METHODS.has(body.payment_method)) return json({ error: '目前请选择微信或转数快付款' }, 400)
     const order = await env.DB.prepare('SELECT id, user_id, payment_status, payment_currency FROM orders WHERE id = ?').bind(id).first()
     if (!order) return json({ error: '订单不存在' }, 404)
     if (order.user_id !== String(user.id)) return json({ error: '无权修改该订单' }, 403)

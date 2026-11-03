@@ -9,6 +9,7 @@ const API = '/api'
 const BOSS_WECHAT = 'jennybabi1988'
 const displayOrderNo = order => String(order?.public_no ?? order?.id ?? '').padStart(2, '0')
 const formatAmount = (amount, currency) => `${currency === 'HKD' ? 'HK$' : '¥'}${Number(amount || 0).toFixed(2)}`
+const ALIPAY_AVAILABLE = false // Temporarily paused while the receiving currency is checked.
 const orderPaymentText = order => formatAmount(order.payment_amount ?? (Number(order.total) + Number(order.delivery_fee || 0)), order.payment_currency || 'CNY')
 const formatScheduleDate = (iso, lang) => {
   if (!iso) return ''
@@ -1332,7 +1333,7 @@ export default function App() {
                   <div style={{ fontSize: 18 }}>💚</div>
                   <div style={{ fontSize: 11, marginTop: 2 }}>{t('copy091')}</div>
                 </div>}
-                {paymentCurrency === 'CNY' && <div onClick={() => setPaymentMethod('alipay_transfer')} style={{
+                {ALIPAY_AVAILABLE && paymentCurrency === 'CNY' && <div onClick={() => setPaymentMethod('alipay_transfer')} style={{
                   flex: 1, padding: '8px 4px', textAlign: 'center', borderRadius: 8, cursor: 'pointer',
                   border: paymentMethod === 'alipay_transfer' ? '2px solid var(--market-green)' : '1px solid #eee',
                   background: paymentMethod === 'alipay_transfer' ? 'var(--market-green-soft)' : '#fff'
@@ -1508,7 +1509,7 @@ export default function App() {
 
             {/* 支付方式切换 */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-              {[['wechat_transfer', t('copy091'), '#07c160'], ['alipay_transfer', t('copy092'), '#1677ff'], ['fps_transfer', t('copy093'), '#722ed1']].map(([method, label, color]) => (
+              {[['wechat_transfer', t('copy091'), '#07c160'], ['alipay_transfer', t('copy092'), '#1677ff'], ['fps_transfer', t('copy093'), '#722ed1']].filter(([method]) => ALIPAY_AVAILABLE || method !== 'alipay_transfer').map(([method, label, color]) => (
                 <button
                   key={method}
                   disabled={qrSwitching}
@@ -2149,7 +2150,7 @@ export function OrderDetailPage({ order, onBack, pn, vl, copyText, fmt, t, statu
               ['wechat_transfer', t('copy091'), '#07c160', 'CNY'],
               ['alipay_transfer', t('copy092'), '#1677ff', 'CNY'],
               ['fps_transfer', t('copy093'), '#722ed1', 'HKD']
-            ].map(([method, label, color, allowedCur]) => {
+            ].filter(([method]) => ALIPAY_AVAILABLE || method !== 'alipay_transfer').map(([method, label, color, allowedCur]) => {
               const allowed = allowedCur === (order.payment_currency || 'CNY')
               return (
                 <button
@@ -2168,7 +2169,7 @@ export function OrderDetailPage({ order, onBack, pn, vl, copyText, fmt, t, statu
               )
             })}
           </div>
-          {payMethod === 'fps_transfer' ? <div className="fps-pay-number">{t('copy265')}<br /><strong>95228191</strong></div> :
+          {!ALIPAY_AVAILABLE && payMethod === 'alipay_transfer' ? <p>{t('alipayPaused')} <button type="button" className="btn-submit" disabled={qrSwitching} onClick={() => switchPay('wechat_transfer')}>{t('switchToWechat')}</button></p> : payMethod === 'fps_transfer' ? <div className="fps-pay-number">{t('copy265')}<br /><strong>95228191</strong></div> :
             <img className="payment-detail-qr" style={{ cursor: 'zoom-in' }} src={payMethod === 'wechat_transfer' ? '/images/pay/wechat.jpg' : '/images/pay/alipay.jpg'} alt={t('copy111')} onClick={() => setQrZoom(true)} />}
           <p>{t('copy266')}{BOSS_WECHAT}。</p>
           <button className="btn-submit proof-confirm" onClick={() => setShowPaymentDetails(false)}>{t('copy267')}</button>
