@@ -1423,6 +1423,10 @@ body { background: var(--market-paper); color: var(--market-ink); }
 .payment-info-open { display: block; width: 100%; padding: 9px 0; text-align: left; background: transparent; border: 0; color: var(--market-green); font-size: 14px; font-weight: 700; cursor: pointer; }
 .payment-detail-panel { max-width: 340px; text-align: center; }
 .payment-detail-panel p { font-size: 13px; line-height: 1.55; }
+.payment-detail-panel .payment-switch-label { margin: 7px 0 5px; font-size: 14px; font-weight: 700; }
+.payment-detail-panel .payment-currency-choices { text-align: left; }
+.payment-detail-panel .payment-currency-choices small { display: block; margin-top: 3px; color: var(--market-muted); }
+.payment-detail-panel .payment-currency-hint { margin-bottom: 12px; text-align: left; }
 .payment-detail-qr { display: block; width: 210px; max-width: 100%; margin: 12px auto; }
 .fps-pay-number { padding: 18px; background: #f4f5f2; font-size: 13px; }
 .fps-pay-number strong { font-size: 26px; }

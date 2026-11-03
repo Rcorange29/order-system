@@ -27,14 +27,20 @@ export async function onRequest({ request, env }) {
       : image.startsWith('RIFF') && image.slice(8, 12) === 'WEBP' && image.length > 16
   if (!signature) return json({ error: '图片内容无效' }, 400)
 
-  const order = await env.DB.prepare('SELECT id, payment_method, payment_status, status FROM orders WHERE id = ? AND user_id = ?')
+  const order = await env.DB.prepare('SELECT id, payment_method, payment_status, status, payment_currency, payment_amount, total, delivery_fee FROM orders WHERE id = ? AND user_id = ?')
     .bind(body.order_id, String(user.id)).first()
   if (!order) return json({ error: '订单不存在' }, 404)
   if (order.payment_method === 'cash_on_delivery' || !['pending', 'paid'].includes(order.payment_status) || !['pending', 'awaiting_confirmation'].includes(order.status)) {
     return json({ error: '该订单不能上传付款凭证' }, 409)
   }
-  const updated = await env.DB.prepare("UPDATE orders SET payment_screenshot = ?, payment_status = 'paid', status = 'awaiting_confirmation', updated_at = datetime('now', '+8 hours') WHERE id = ? AND payment_status IN ('pending', 'paid') AND status IN ('pending', 'awaiting_confirmation')")
-    .bind(body.screenshot, order.id).run()
+  const expected = body.expected_payment_currency !== undefined || body.expected_payment_amount !== undefined
+  const amountCents = Math.round(Number(body.expected_payment_amount) * 100)
+  if (expected && (!['CNY', 'HKD'].includes(body.expected_payment_currency) || !Number.isSafeInteger(amountCents) || amountCents !== Math.round(Number(order.payment_amount ?? (Number(order.total) + Number(order.delivery_fee || 0))) * 100) || body.expected_payment_currency !== (order.payment_currency || 'CNY'))) {
+    return json({ error: '付款金额或币种已变化，请刷新订单后再上传凭证' }, 409)
+  }
+  const guard = expected ? ' AND payment_currency = ? AND ROUND(COALESCE(payment_amount, total + COALESCE(delivery_fee, 0)) * 100) = ?' : ''
+  const updated = await env.DB.prepare("UPDATE orders SET payment_screenshot = ?, payment_status = 'paid', status = 'awaiting_confirmation', updated_at = datetime('now', '+8 hours') WHERE id = ? AND payment_status IN ('pending', 'paid') AND status IN ('pending', 'awaiting_confirmation')" + guard)
+    .bind(body.screenshot, order.id, ...(expected ? [body.expected_payment_currency, amountCents] : [])).run()
   if (updated.meta.changes !== 1) return json({ error: '订单状态已变化，请刷新后重试' }, 409)
   return json({ ok: true })
 }

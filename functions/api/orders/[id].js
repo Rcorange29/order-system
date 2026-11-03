@@ -20,15 +20,26 @@ export async function onRequest(context) {
       await env.DB.prepare("UPDATE orders SET status = 'cancelled', updated_at = datetime('now', '+8 hours') WHERE id = ? AND status = 'pending'").bind(id).run()
       return json({ ok: true, status: 'cancelled' })
     }
-    if (!PAYMENT_METHODS.has(body.payment_method)) return json({ error: '目前请选择微信或转数快付款' }, 400)
-    const order = await env.DB.prepare('SELECT id, user_id, payment_status, payment_currency FROM orders WHERE id = ?').bind(id).first()
+    const order = await env.DB.prepare('SELECT id, user_id, status, payment_status, payment_method, payment_currency, payment_screenshot, total, delivery_fee FROM orders WHERE id = ?').bind(id).first()
     if (!order) return json({ error: '订单不存在' }, 404)
     if (order.user_id !== String(user.id)) return json({ error: '无权修改该订单' }, 403)
-    if (order.payment_currency === 'HKD' && ['wechat_transfer', 'alipay_transfer'].includes(body.payment_method)) return json({ error: '微信和支付宝仅支持人民币付款，请改选转数快' }, 400)
-    if (order.payment_currency === 'CNY' && body.payment_method === 'fps_transfer') return json({ error: '转数快仅支持港币付款，请改选微信或支付宝' }, 400)
-    if (!['pending', 'paid'].includes(order.payment_status)) return json({ error: '该订单已完成付款，无法更改支付方式' }, 409)
-    await env.DB.prepare("UPDATE orders SET payment_method = ?, updated_at = datetime('now', '+8 hours') WHERE id = ?").bind(body.payment_method, id).run()
-    return json({ ok: true, payment_method: body.payment_method })
+    if (order.status !== 'pending' || order.payment_status !== 'pending' || order.payment_screenshot) return json({ error: '只有待付款且未上传凭证的订单可以更改付款币种或方式' }, 409)
+    const currency = body.payment_currency ?? order.payment_currency ?? 'CNY'
+    if (!['CNY', 'HKD'].includes(currency)) return json({ error: '付款币种无效' }, 400)
+    const method = body.payment_method ?? (currency !== order.payment_currency ? currency === 'HKD' ? 'fps_transfer' : 'wechat_transfer' : order.payment_method)
+    if (!PAYMENT_METHODS.has(method)) return json({ error: '目前请选择微信或转数快付款' }, 400)
+    if (currency === 'HKD' && method !== 'fps_transfer') return json({ error: '港币订单请使用转数快付款' }, 400)
+    if (currency === 'CNY' && method !== 'wechat_transfer') return json({ error: '人民币订单请使用微信付款' }, 400)
+    const amountCents = Math.round(Number(order.total) * 100) + Math.round(Number(order.delivery_fee || 0) * 100)
+    if (!Number.isSafeInteger(amountCents) || amountCents < 0) return json({ error: '订单金额无效' }, 409)
+    const rateRow = currency === 'HKD' ? await env.DB.prepare("SELECT value FROM settings WHERE key = 'exchange_rate'").first() : null
+    const exchangeRate = Number(rateRow?.value || 1.2)
+    if (!Number.isFinite(exchangeRate) || exchangeRate <= 0 || exchangeRate > 100) return json({ error: '汇率设置无效' }, 500)
+    const paymentAmount = Math.round(amountCents * (currency === 'HKD' ? exchangeRate : 1)) / 100
+    const updated = await env.DB.prepare("UPDATE orders SET payment_currency = ?, payment_method = ?, payment_amount = ?, updated_at = datetime('now', '+8 hours') WHERE id = ? AND user_id = ? AND status = 'pending' AND payment_status = 'pending' AND COALESCE(payment_screenshot, '') = '' AND payment_currency = ? AND payment_method = ?")
+      .bind(currency, method, paymentAmount, id, String(user.id), order.payment_currency, order.payment_method).run()
+    if (updated.meta?.changes !== 1) return json({ error: '订单已变化，请刷新后重试' }, 409)
+    return json({ ok: true, payment_method: method, payment_currency: currency, payment_amount: paymentAmount })
   }
 
   if (request.method !== 'GET') return json({ error: 'Method not allowed' }, 405)

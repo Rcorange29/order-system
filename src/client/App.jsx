@@ -188,7 +188,7 @@ const setIntroReadCookie = () => {
   try { document.cookie = 'intro_read=1; max-age=31536000; path=/; SameSite=Lax' } catch {}
 }
 
-async function uploadProofFile(file, orderId, t) {
+async function uploadProofFile(file, orderId, t, expectedCurrency, expectedAmount) {
   if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return t('copy001')
   const original = await new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -238,7 +238,7 @@ async function uploadProofFile(file, orderId, t) {
   const response = await authFetch(`${API}/orders/upload-proof`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ order_id: orderId, screenshot })
+    body: JSON.stringify({ order_id: orderId, screenshot, expected_payment_currency: expectedCurrency, expected_payment_amount: expectedAmount })
   })
   if (response.ok) return null
   const data = await response.json().catch(() => ({}))
@@ -770,14 +770,17 @@ export default function App() {
   }
 
   if (tab === 'orderDetail' && selectedOrder) {
-    return <><OrderDetailPage order={selectedOrder} onBack={() => setTab('myOrders')} pn={pn} vl={vl} copyText={copyText} fmt={fmt} t={t} statusTxt={statusTxt} showToast={showToast} onRefresh={async () => {
+    return <><OrderDetailPage order={selectedOrder} exchangeRate={exchangeRate} onBack={() => setTab('myOrders')} pn={pn} vl={vl} copyText={copyText} fmt={fmt} t={t} statusTxt={statusTxt} showToast={showToast} onRefresh={async () => {
       const [response, detailResponse] = await Promise.all([authFetch(`${API}/orders`), authFetch(`${API}/orders/${selectedOrder.id}`)])
       if (response.ok) {
         const next = await response.json()
         setOrders(next)
       }
-      if (detailResponse.ok) setSelectedOrder(await detailResponse.json())
+      if (!detailResponse.ok) throw new Error(t('paymentRefreshFailed'))
+      const detail = await detailResponse.json()
+      setSelectedOrder(detail)
       loadStats()
+      return detail
     }} />{toast && <div className="toast" role="status">{toast}</div>}</>
   }
 
@@ -1604,7 +1607,7 @@ export default function App() {
             <button className="btn-submit proof-confirm" disabled={!proofFile || proofUploading} onClick={async () => {
               setProofUploading(true)
               try {
-                const error = await uploadProofFile(proofFile, lastOrderId, t)
+                const error = await uploadProofFile(proofFile, lastOrderId, t, paidOrderCurrency, paidOrderAmount)
                 if (error) showToast(error)
                 else {
                   showToast(t('copy131'))
@@ -1984,7 +1987,7 @@ function AddressEditPage({ t, addr, onSave, onBack }) {
 }
 
 /* ========== 订单详情页 ========== */
-export function OrderDetailPage({ order, onBack, pn, vl, copyText, fmt, t, statusTxt, showToast, onRefresh }) {
+export function OrderDetailPage({ order, exchangeRate = 1.2, onBack, pn, vl, copyText, fmt, t, statusTxt, showToast, onRefresh }) {
   const [proofFile, setProofFile] = useState(null)
   const [proofUploading, setProofUploading] = useState(false)
   const [deliveryAddress, setDeliveryAddress] = useState('')
@@ -1993,24 +1996,28 @@ export function OrderDetailPage({ order, onBack, pn, vl, copyText, fmt, t, statu
   const [qrSwitching, setQrSwitching] = useState(false)
   const [qrZoom, setQrZoom] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  useEffect(() => setPayMethod(order.payment_method), [order.id, order.payment_method])
   const cnyDue = Number(order.total) + Number(order.delivery_fee || 0)
+  const hkdDue = order.payment_currency === 'HKD' && order.payment_amount != null ? Number(order.payment_amount) : Math.round(cnyDue * exchangeRate * 100) / 100
   const orderRate = order.payment_currency === 'HKD' && order.payment_amount != null && cnyDue > 0 ? Number(order.payment_amount) / cnyDue : 1
   const orderFmt = amount => formatAmount(Number(amount) * orderRate, order.payment_currency || 'CNY')
-  const switchPay = async method => {
-    if (method === payMethod || qrSwitching) return
+  const switchPay = async (method, currency = order.payment_currency || 'CNY') => {
+    if ((method === payMethod && currency === (order.payment_currency || 'CNY')) || qrSwitching || proofUploading) return
     setQrSwitching(true)
     try {
       const res = await authFetch(`${API}/orders/${order.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payment_method: method })
+        body: JSON.stringify({ payment_method: method, payment_currency: currency })
       })
       const data = await res.json()
       if (!res.ok) { showToast(apiError(t, data)); return }
-      setPayMethod(method)
+      const refreshed = await onRefresh()
+      if (refreshed?.payment_currency !== currency || refreshed?.payment_method !== method) throw new Error('ORDER_REFRESH_FAILED')
+      setPayMethod(refreshed.payment_method)
+      setProofFile(null)
       showToast(t('paymentMethodUpdated'))
-      await onRefresh()
-    } catch { showToast(t('connectionFailed')) }
+    } catch { setShowPaymentDetails(false); showToast(t('paymentRefreshFailed')) }
     finally { setQrSwitching(false) }
   }
   const submitRequest = async (type) => {
@@ -2059,11 +2066,11 @@ export function OrderDetailPage({ order, onBack, pn, vl, copyText, fmt, t, statu
             <h4>{order.status === 'pending' ? t('copy231') : t('copy232')}</h4>
             <p>{order.status === 'pending' ? t('copy233', { '0': orderPaymentText(order) }) : t('copy234')}</p>
             <button type="button" className="payment-info-open" onClick={() => setShowPaymentDetails(true)}>{t('copy235')}</button>
-            <label className="proof-file-picker">{t('copy236')}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={proofUploading} onChange={e => setProofFile(e.target.files[0] || null)} /></label>
-            {proofFile && <><small className="proof-selected">{t('copy130')}{proofFile.name}</small><button className="btn-submit proof-confirm" disabled={proofUploading} onClick={async () => {
+            <label className="proof-file-picker">{t('copy236')}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={proofUploading || qrSwitching} onChange={e => { setProofFile(e.target.files[0] || null); e.target.value = '' }} /></label>
+            {proofFile && <><small className="proof-selected">{t('copy130')}{proofFile.name}</small><button className="btn-submit proof-confirm" disabled={proofUploading || qrSwitching} onClick={async () => {
               setProofUploading(true)
               try {
-                const error = await uploadProofFile(proofFile, order.id, t)
+                const error = await uploadProofFile(proofFile, order.id, t, order.payment_currency || 'CNY', order.payment_amount ?? cnyDue)
                 if (error) showToast(error)
                 else { showToast(t('copy131')); setProofFile(null); await onRefresh() }
                 } catch (error) { showToast(error.message || t('copy004')) }
@@ -2144,32 +2151,37 @@ export function OrderDetailPage({ order, onBack, pn, vl, copyText, fmt, t, statu
       {showPaymentDetails && <div className="checkout-overlay" onClick={() => setShowPaymentDetails(false)}>
         <div className="checkout-panel payment-detail-panel" onClick={e => e.stopPropagation()}>
           <h3>{t('copy264')}</h3><p>{t('copy106')}{displayOrderNo(order)}</p>
-          <div className="payment-due">{t('copy242')} {orderPaymentText(order)}</div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div className="payment-due">{qrSwitching ? t('paymentUpdating') : <>{t('copy242')} {orderPaymentText(order)}</>}</div>
+          {order.status === 'pending' && order.payment_status === 'pending' && <>
+            <p className="payment-switch-label">{t('selectActualPaymentCurrency')}</p>
+            <div className="payment-currency-choices">
+              <button type="button" className={order.payment_currency !== 'HKD' ? 'selected' : ''} disabled={qrSwitching || proofUploading} onClick={() => switchPay('wechat_transfer', 'CNY')}><span>{t('copy087')}</span><strong>¥{cnyDue.toFixed(2)}</strong><small>{t('copy091')}</small></button>
+              <button type="button" className={order.payment_currency === 'HKD' ? 'selected' : ''} disabled={qrSwitching || proofUploading} onClick={() => switchPay('fps_transfer', 'HKD')}><span>{t('copy088')}</span><strong>HK${hkdDue.toFixed(2)}</strong><small>{t('copy093')}</small></button>
+            </div>
+            <small className="payment-currency-hint">{t('paymentSwitchHint')}</small>
+          </>}
+          {ALIPAY_AVAILABLE && order.status === 'pending' && order.payment_status === 'pending' && <div style={{ display: 'flex', gap: 8, marginBottom: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
             {[
               ['wechat_transfer', t('copy091'), '#07c160', 'CNY'],
               ['alipay_transfer', t('copy092'), '#1677ff', 'CNY'],
               ['fps_transfer', t('copy093'), '#722ed1', 'HKD']
-            ].filter(([method]) => ALIPAY_AVAILABLE || method !== 'alipay_transfer').map(([method, label, color, allowedCur]) => {
-              const allowed = allowedCur === (order.payment_currency || 'CNY')
-              return (
+            ].filter(([method, , , allowedCur]) => (ALIPAY_AVAILABLE || method !== 'alipay_transfer') && allowedCur === (order.payment_currency || 'CNY')).map(([method, label, color]) => (
                 <button
                   key={method}
-                  disabled={qrSwitching || !allowed}
+                  disabled={qrSwitching || proofUploading}
                   onClick={() => switchPay(method)}
                   style={{
-                    fontSize: 13, padding: '7px 14px', borderRadius: 20, cursor: qrSwitching || !allowed ? 'not-allowed' : 'pointer',
+                    fontSize: 13, padding: '7px 14px', borderRadius: 20, cursor: qrSwitching ? 'not-allowed' : 'pointer',
                     border: payMethod === method ? `2px solid ${color}` : '1px solid #ddd',
-                    background: payMethod === method && allowed ? color : '#fff',
-                    color: payMethod === method && allowed ? '#fff' : (allowed ? '#555' : '#aaa'),
+                    background: payMethod === method ? color : '#fff',
+                    color: payMethod === method ? '#fff' : '#555',
                     fontWeight: payMethod === method ? 600 : 400,
-                    opacity: qrSwitching || !allowed ? 0.45 : 1
+                    opacity: qrSwitching ? 0.45 : 1
                   }}
-                >{label}{!allowed && <span style={{ display: 'block', fontSize: 10, lineHeight: 1.2 }}>{allowedCur === 'HKD' ? t('copy276') : t('copy275')}</span>}</button>
-              )
-            })}
-          </div>
-          {!ALIPAY_AVAILABLE && payMethod === 'alipay_transfer' ? <p>{t('alipayPaused')} <button type="button" className="btn-submit" disabled={qrSwitching} onClick={() => switchPay('wechat_transfer')}>{t('switchToWechat')}</button></p> : payMethod === 'fps_transfer' ? <div className="fps-pay-number">{t('copy265')}<br /><strong>95228191</strong></div> :
+                >{label}</button>
+            ))}
+          </div>}
+          {qrSwitching ? <p>{t('paymentUpdating')}</p> : !ALIPAY_AVAILABLE && payMethod === 'alipay_transfer' ? <p>{order.status === 'pending' && order.payment_status === 'pending' ? <>{t('alipayPaused')} <button type="button" className="btn-submit" onClick={() => switchPay('wechat_transfer')}>{t('switchToWechat')}</button></> : t('alipayProofSubmitted')}</p> : payMethod === 'fps_transfer' ? <div className="fps-pay-number">{t('copy265')}<br /><strong>95228191</strong></div> :
             <img className="payment-detail-qr" style={{ cursor: 'zoom-in' }} src={payMethod === 'wechat_transfer' ? '/images/pay/wechat.jpg' : '/images/pay/alipay.jpg'} alt={t('copy111')} onClick={() => setQrZoom(true)} />}
           <p>{t('copy266')}{BOSS_WECHAT}。</p>
           <button className="btn-submit proof-confirm" onClick={() => setShowPaymentDetails(false)}>{t('copy267')}</button>
